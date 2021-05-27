@@ -71,8 +71,8 @@ impl<C: CompoundType + Into<JodinType>> Registrable<JodinTypeReference> for C {
         let this_id = self.type_name();
         for (_, field, field_type) in self.all_members() {
             let new_id = Identifier::with_parent(&this_id, field);
-            register.register_with_identifier(field_type.clone(), new_id);
+            register.insert_with_identifier(field_type.clone(), new_id);
         }
-        register.register_with_identifier(self.into().into(), this_id)
+        register.insert_with_identifier(self.into().into(), this_id)
     }
 }

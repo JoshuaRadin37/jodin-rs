@@ -84,7 +84,7 @@ impl IdentifierResolver {
     }
 
     /// Creates an absolute path based off the current namesapce
-    pub fn create_absolute_path(&mut self, id: Identifier) -> Identifier {
+    pub fn create_absolute_path(&mut self, id: &Identifier) -> Identifier {
         /*
         if self.current_namespace.is_none() {
             if !self.tree.get_base_values().contains(&id) {
@@ -170,6 +170,10 @@ impl IdentifierResolver {
         } else {
             base.clone()
         }
+    }
+
+    pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
+        self.tree.get_from_absolute_identifier(path).is_ok()
     }
 }
 

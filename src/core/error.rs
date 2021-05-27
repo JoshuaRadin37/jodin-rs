@@ -9,6 +9,10 @@ pub enum JodinError {
     },
     IdentifierDoesNotExist(Identifier),
     IdentifierAlreadyExists(Identifier),
+    MaxNumOfTagExceeded {
+        tag_type: String,
+        max: u32,
+    },
 }
 
 /// Convenience result

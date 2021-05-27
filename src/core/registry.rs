@@ -18,25 +18,36 @@ impl<T> Registry<T> {
         }
     }
 
-    pub fn register(&mut self, val: T) -> JodinResult<Identifier>
+    pub fn with_resolver(resolver: IdentifierResolver) -> Self {
+        Self {
+            resolver,
+            mapping: Default::default(),
+        }
+    }
+
+    pub fn insert(&mut self, val: T) -> JodinResult<Identifier>
     where
         T: Namespaced,
     {
         let identifier = val.get_identifier().clone();
-        self.register_with_identifier(val, identifier)
+        self.insert_with_identifier(val, identifier)
     }
 
-    pub fn register_with_identifier(
-        &mut self,
-        val: T,
-        path: Identifier,
-    ) -> JodinResult<Identifier> {
-        let path = self.resolver.create_absolute_path(path);
+    pub fn insert_with_identifier(&mut self, val: T, path: Identifier) -> JodinResult<Identifier> {
+        let path = self.resolver.create_absolute_path(&path);
         if self.mapping.contains_key(&path) {
             return Err(JodinError::IdentifierAlreadyExists(path));
         }
         self.mapping.insert(path.clone(), val);
         Ok(path)
+    }
+
+    pub fn update_absolute_identity(&mut self, absolute: &Identifier, val: T) -> JodinResult<&T> {
+        if !self.resolver.contains_absolute_identifier(absolute) {
+            return Err(JodinError::IdentifierDoesNotExist(absolute.clone()));
+        }
+        self.mapping.insert(absolute.clone(), val);
+        Ok(&self.mapping[absolute])
     }
 
     /// Pushes a namespace onto the current namespace
@@ -105,13 +116,13 @@ mod tests {
     fn insert_entries() {
         let mut register = Registry::new();
         register.push_namespace(Identifier::from("std"));
-        register.register_with_identifier(3, Identifier::from("best value"));
+        register.insert_with_identifier(3, Identifier::from("best value"));
         let value = &register[Identifier::from_iter(&["std", "best value"])];
         assert_eq!(*value, 3);
 
         let mut registry = Registry::new();
-        registry.register(Identifiable::new("val1", 1)).unwrap();
-        registry.register(Identifiable::new("val2", 2)).unwrap();
-        registry.register(Identifiable::new("val3", 3)).unwrap();
+        registry.insert(Identifiable::new("val1", 1)).unwrap();
+        registry.insert(Identifiable::new("val2", 2)).unwrap();
+        registry.insert(Identifiable::new("val3", 3)).unwrap();
     }
 }

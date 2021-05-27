@@ -34,7 +34,7 @@ pub enum JodinNodeInner {
         expressions: Vec<JodinNode>,
     },
     StructureDefinition {
-        name: Option<JodinNode>,
+        name: JodinNode,
         members: Vec<JodinNode>,
     },
     NamedValue {

@@ -8,9 +8,9 @@ pub trait Tag {
     fn tag_info(&self) -> String {
         format!("{:?}", self.tag_type())
     }
-    fn max_of_this_tag(&self) -> i32;
+    fn max_of_this_tag(&self) -> u32;
 
-    fn is_attribute(&self, other: &str) -> bool {
+    fn is_tag(&self, other: &str) -> bool {
         self.tag_type() == other
     }
 }
@@ -28,7 +28,7 @@ impl Tag for TypeTag {
         format!("[{}]", self.jodin_type.borrow().type_name())
     }
 
-    fn max_of_this_tag(&self) -> i32 {
+    fn max_of_this_tag(&self) -> u32 {
         1
     }
 }
