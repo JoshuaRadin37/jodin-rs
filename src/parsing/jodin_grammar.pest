@@ -1,0 +1,25 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/"  | "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+
+// tokens
+D = { '0'..'9' }
+L = { ASCII_ALPHA | "_" }
+H = { ASCII_ALPHANUMERIC }
+FS =  { "f"|"F"|"l"|"L" }
+IS =  { ("u"|"U"|"l"|"L")* }
+
+t_break = { "break" }
+t_case = { "case" }
+t_char = { "char" }
+t_const = { "const" }
+t_continue = { "continue" }
+t_default = { "default" }
+t_double = { "double" }
+
+
+identifier = ${ single_identifier ~ ( "::" ~ identifier )* }
+single_identifier = ${( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_")*}
+
+
+
+
