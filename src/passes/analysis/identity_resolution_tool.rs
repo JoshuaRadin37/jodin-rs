@@ -1,3 +1,4 @@
+use crate::core::error::{JodinError, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
 use crate::core::registry::Registry;
@@ -6,26 +7,29 @@ use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::ast::node_type::JodinNodeInner::Block;
 use crate::parsing::ast::tags::Tag;
-use crate::passes::toolchain::{Tool, Toolchain, ToolchainUtilities};
+use crate::passes::toolchain::{
+    FallibleTool, FallibleToolchain, FallibleToolchainUtilities, JodinFallibleTool, Tool, Toolchain,
+};
+use std::any::Any;
 
 pub struct IdentityResolutionTool {
-    chain: Toolchain<JodinNode, (JodinNode, IdentifierResolver)>,
+    chain: FallibleToolchain<JodinError, JodinNode, (JodinNode, IdentifierResolver)>,
 }
 
 impl IdentityResolutionTool {
     pub fn new() -> Self {
-        Self {
-            chain: IdentifierCreator.append_tool(IdentifierSetter),
-        }
+        let chain =
+            FallibleToolchainUtilities::append_tool(IdentifierCreator::new(), IdentifierSetter);
+        Self { chain }
     }
 }
 
-impl Tool for IdentityResolutionTool {
+impl JodinFallibleTool for IdentityResolutionTool {
     type Input = JodinNode;
     type Output = (JodinNode, IdentifierResolver);
 
-    fn invoke(&mut self, input: Self::Input) -> Self::Output {
-        self.chain.invoke(input)
+    fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
+        FallibleTool::invoke(&mut self.chain, input)
     }
 }
 #[derive(Debug)]
@@ -33,12 +37,16 @@ pub struct IdentifierCreator {
     block_num: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResolvedIdentityTag(Identifier);
 
 impl ResolvedIdentityTag {
     pub fn absolute_id(&self) -> &Identifier {
         &self.0
+    }
+
+    pub fn new<I: Into<Identifier>>(id: I) -> Self {
+        ResolvedIdentityTag(id.into())
     }
 }
 
@@ -53,6 +61,14 @@ impl Tag for ResolvedIdentityTag {
 
     fn max_of_this_tag(&self) -> u32 {
         1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }
 
@@ -77,64 +93,108 @@ impl Tag for BlockIdentifier {
     fn max_of_this_tag(&self) -> u32 {
         1
     }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl IdentifierCreator {
+    fn new() -> Self {
+        Self { block_num: 0 }
+    }
+
     fn get_block_num(&mut self) -> usize {
         let ret = self.block_num;
         self.block_num += 1;
         ret
     }
 
-    fn create_identities(&mut self, tree: &mut JodinNode, id_resolver: &mut IdentifierResolver) {
+    fn create_identities(
+        &mut self,
+        tree: &mut JodinNode,
+        id_resolver: &mut IdentifierResolver,
+    ) -> JodinResult<()> {
         match tree.inner_mut() {
-            JodinNodeInner::Type(_) => {}
-            JodinNodeInner::Keyword(_) => {}
-            JodinNodeInner::Literal(_) => {}
             // This one only occurs when requested
             JodinNodeInner::Identifier(id) => {
                 let abs = id_resolver.create_absolute_path(id);
                 let tag = ResolvedIdentityTag(abs);
-                tree.add_tag(tag);
+                tree.add_tag(tag)?;
             }
             JodinNodeInner::VarDeclaration { name, .. } => {
-                self.create_identities(name, id_resolver);
+                self.create_identities(name, id_resolver)?;
             }
-            JodinNodeInner::Function { .. } => {}
+            JodinNodeInner::FunctionDefinition { .. } => {}
             JodinNodeInner::Block { expressions } => {
                 let block_num = self.get_block_num();
                 let tag = BlockIdentifier::new(block_num);
-                tree.add_tag(tag);
+
                 id_resolver.push_namespace(Identifier::from(format!("{{block {}}}", block_num)));
                 for expression in expressions {
-                    self.create_identities(expression, id_resolver);
+                    self.create_identities(expression, id_resolver)?;
                 }
+                tree.add_tag(tag)?;
                 id_resolver.pop_namespace();
             }
-            JodinNodeInner::StructureDefinition { name, members } => {}
-            JodinNodeInner::NamedValue { .. } => {}
+            JodinNodeInner::StructureDefinition {
+                name,
+                generic_parameters,
+                members,
+            } => {
+                self.create_identities(name, id_resolver)?;
+                let tag = name.get_tag::<ResolvedIdentityTag>()?;
+                // tags_to_add.push(Box::new(tag.clone()));
+                let name = tag.absolute_id();
+                id_resolver.push_namespace(name.clone());
+                todo!("Add generic parameters identity resolution");
+                for member in members {
+                    self.create_identities(member, id_resolver)?;
+                }
+                tree.add_tag(tag.clone())?;
+                id_resolver.pop_namespace();
+            }
+            JodinNodeInner::NamedValue { name, .. } => {
+                self.create_identities(name, id_resolver);
+            }
+            _ => {}
         }
+        Ok(())
     }
 }
 
-impl Tool for IdentifierCreator {
+impl JodinFallibleTool for IdentifierCreator {
     type Input = JodinNode;
     type Output = (JodinNode, IdentifierResolver);
 
-    fn invoke(&mut self, mut input: Self::Input) -> Self::Output {
+    fn invoke(&mut self, mut input: Self::Input) -> JodinResult<Self::Output> {
         let mut resolver = IdentifierResolver::new();
-        self.create_identities(&mut input, &mut resolver);
-        (input, resolver)
+        self.create_identities(&mut input, &mut resolver)?;
+        Ok((input, resolver))
     }
 }
 
 pub struct IdentifierSetter;
 
-impl Tool for IdentifierSetter {
+impl JodinFallibleTool for IdentifierSetter {
     type Input = (JodinNode, IdentifierResolver);
     type Output = (JodinNode, IdentifierResolver);
 
-    fn invoke(&mut self, input: Self::Input) -> Self::Output {
-        input
+    fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
+        Ok(input)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::error::JodinResult;
+
+    #[test]
+    fn label_structure_members() -> JodinResult<()> {
+        Ok(())
     }
 }

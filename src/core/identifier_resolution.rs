@@ -190,12 +190,12 @@ mod test {
         resolver.add_namespace(Identifier::from_iter("n1::n2::n3".split("::")));
         resolver.add_namespace(Identifier::from_iter("n1::n2::n4".split("::")));
         let path =
-            resolver.create_absolute_path(Identifier::from_iter("n1::n2::object".split("::")));
+            resolver.create_absolute_path(&Identifier::from_iter("n1::n2::object".split("::")));
         println!("{:#?}", resolver);
         assert_eq!(path, "n1::n2::object");
         resolver.push_namespace(Identifier::from("n2"));
         println!("{:#?}", resolver);
-        let path = resolver.create_absolute_path(Identifier::from("object"));
+        let path = resolver.create_absolute_path(&Identifier::from("object"));
         assert_eq!(path, "n2::object");
         println!("{:#?}", resolver);
         let result = resolver

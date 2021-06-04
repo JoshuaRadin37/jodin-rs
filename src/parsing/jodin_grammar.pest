@@ -2,11 +2,6 @@ WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/"  | "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
 // tokens
-D = { '0'..'9' }
-L = { ASCII_ALPHA | "_" }
-H = { ASCII_ALPHANUMERIC }
-FS =  { "f"|"F"|"l"|"L" }
-IS =  { ("u"|"U"|"l"|"L")* }
 
 t_break = { "break" }
 t_case = { "case" }
@@ -15,10 +10,471 @@ t_const = { "const" }
 t_continue = { "continue" }
 t_default = { "default" }
 t_double = { "double" }
+t_do = { "do" }
+t_else = { "else" }
+t_float = { "float" }
+t_for = { "for" }
+t_if = { "if" }
+t_int = { "int" }
+t_long = { "long" }
+t_return = { "return" }
+t_short = { "short" }
+t_static = { "static" }
+t_typedef = { "typedef" }
+t_union = { "union" }
+t_unsigned = { "unsigned" }
+t_struct = { "struct" }
+t_void = { "void" }
+t_while = { "while" }
+t_class = { "class" }
+t_public = { "public" }
+t_private = { "private" }
+t_new = { "new" }
+t_super = { "super" }
+t_virtual = { "virtual" }
+t_sizeof = { "sizeof" }
+t_boolean = { "boolean" }
+t_in = { "in" }
+t_implement = { "implement" }
+t_internal = { "internal" }
+t_using = { "using" }
+t_typeof = { "typeof" }
+t_true = { "true" }
+t_false = { "false" }
+t_abstract = { "abstract" }
+t_is = { "is" }
+t_trait = { "trait" }
+t_enum = { "enum" }
+t_switch = { "switch" }
+
+special_keyword = { "__" ~ identifier }
+
+keywords = {
+    t_break |
+    t_case |
+    t_char |
+    t_const |
+    t_continue |
+    t_default |
+    t_double |
+    t_do |
+    t_else |
+    t_float |
+    t_for |
+    t_if |
+    t_int |
+    t_long |
+    t_return |
+    t_short |
+    t_static |
+    t_typedef |
+    t_union |
+    t_unsigned |
+    t_struct |
+    t_void |
+    t_while |
+    t_class |
+    t_public |
+    t_private |
+    t_new |
+    t_super |
+    t_virtual |
+    t_sizeof |
+    t_boolean |
+    t_in |
+    t_implement |
+    t_internal |
+    t_using |
+    t_typeof |
+    t_true |
+    t_false |
+    t_abstract |
+    t_is |
+    t_trait |
+    t_enum |
+    t_switch
+}
+
+// operators
 
 
-identifier = ${ single_identifier ~ ( "::" ~ identifier )* }
-single_identifier = ${( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_")*}
+
+t_plus = { "+" }
+t_minus = { "-" }
+t_inc = { "++"}
+t_dec = { "--" }
+add_op = { t_plus | t_minus }
+
+t_star = { "*" }
+t_div = { "/" }
+t_mod = { "%" }
+mul_op = { t_star | t_div | t_mod }
+
+t_bang = { "!" }
+t_xor = { "^" }
+
+t_and = { "&" }
+t_dand = { "&&"}
+t_or = { "|" }
+t_dor = { "||"}
+t_lcarot = { "<" }
+t_rcarot = { ">" }
+
+t_lshift = { "<<" }
+t_rshift = { ">>" }
+shift = { t_lshift | t_rshift }
+
+t_eq = { "==" }
+t_neq = { "!=" }
+equality = { t_eq | t_neq }
+
+t_lte = { "<=" }
+t_gte = { ">=" }
+comparison = { t_lcarot | t_rcarot | t_lte | t_gte }
+
+t_assign = { "=" }
+t_assign_plus = { "+=" }
+t_assign_minus = { "-=" }
+t_assign_star = { "*=" }
+t_assign_div = { "/=" }
+t_assign_mod = { "%=" }
+t_assign_or = { "|=" }
+t_assign_and = { "&=" }
+t_assign_xor = { "^=" }
+
+assignment_operator = {
+    t_assign |
+    t_assign_plus |
+    t_assign_minus |
+    t_assign_star |
+    t_assign_div |
+    t_assign_mod |
+    t_assign_or |
+    t_assign_and |
+    t_assign_xor
+}
+
+
+t_comma = { "," }
+t_semic = { ";" }
+t_colon = { ":" }
+t_qmark = { "?" }
+t_lparen = { "(" }
+t_rparen = { ")" }
+t_lbrac = { "[" }
+t_rbrac = { "]" }
+t_lcurl = { "{" }
+t_rcurl = { "}" }
+
+t_dot = { "." }
+t_arrow = { "->" }
+
+uni_ops = {
+    t_minus |
+    t_bang |
+    t_star |
+    t_and |
+    t_plus |
+    t_inc |
+    t_dec
+}
+
+
+
+// components
+
+
+identifier = ${ single_identifier ~ ( "::" ~ single_identifier )* }
+single_identifier = ${!keywords ~ ( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_")*}
+
+
+exact_string = @{(!"\"*)" ~ ANY)*}
+escapable_string = ${ ("\\" ~ escape_sequence | (!(NEWLINE | "\"") ~ ANY))*}
+
+escape_sequence = {
+    "u" ~ ASCII_HEX_DIGIT{4} |
+    (!NEWLINE ~ ANY)
+}
+
+string = ${
+    "(*\"" ~ exact_string ~ "\"*)" |
+    "\"" ~ escapable_string ~ "\""
+}
+
+H = { ASCII_HEX_DIGIT }
+IS = @{ ("u" | "U" | "l" | "L")* }
+E = @{ ("E" | "e") ~ ("+" | "-")? ~ ASCII_DIGIT+ }
+FS = @{ "f" | "F" | "l" | "L" }
+
+literal = @{
+    "0" ~ ("x" | "X") ~ H+ ~ IS |
+    ASCII_DIGIT+ ~ IS |
+    "'" ~ ("\\" ~ escape_sequence | !("\\" | "'") ~ ANY) ~ "'" |
+    ASCII_DIGIT+ ~ E ~ FS? |
+    ASCII_DIGIT* ~ "." ~ ASCII_DIGIT+ ~ E? ~ FS? |
+    ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* ~ E? ~ FS?
+}
+
+type_specifier = {
+    identifier |
+    t_boolean |
+    t_double |
+    t_float |
+    t_unsigned? ~ (t_char | t_short | t_int | t_long)
+}
+
+// Categories
+
+top_level_declarations = {
+    top_level_declaration*
+}
+
+top_level_declaration = {
+    function_definition |
+    struct_definition |
+    declaration
+}
+
+function_definition = {
+    declaration_specifiers ~ declarator ~ compound_statement
+}
+
+
+
+declarator = {
+    pointer? ~ direct_declarator
+}
+
+direct_declarator = {
+    (identifier | "(" ~ declarator ~ ")")
+        ~ (array_declarator | function_declarator)*
+}
+
+array_declarator = {
+    t_lbrac ~ expression? ~ t_rbrac
+}
+
+function_declarator = {
+    "(" ~ (parameter_list | id_list)? ~ ")"
+}
+
+parameter_list = {
+    parameter_declaration ~ ("," ~ parameter_declaration)*
+}
+
+parameter_declaration = {
+    declaration_specifiers ~ (declarator | abstract_declarator)?
+}
+
+declaration_specifiers = {
+    storage_class_specifiers* ~ type_specifier
+}
+
+storage_class_specifiers = {
+    t_typedef |
+    t_static |
+    t_const
+}
+
+abstract_declarator = {
+    (pointer ~ direct_abstract_declarator?) |
+    direct_abstract_declarator
+}
+
+direct_abstract_declarator = {
+    "(" ~ abstract_declarator ~ ")"
+    ~ (
+        array_declarator |
+        parameter_list
+    )*
+}
+
+declaration = {
+    declaration_specifiers ~ init_declarator_list ~ t_semic
+}
+
+init_declarator_list = {
+    init_declarator ~ ("," ~ init_declarator)*
+}
+
+init_declarator = {
+    declarator ~ ("=" ~ initializer)?
+}
+
+initializer = {
+    expression |
+    "{" ~ initializer_list ~ ","? ~ "}"
+}
+
+initializer_list = {
+    initializer ~ ("," ~ initializer)*
+}
+
+compound_statement = {
+    "{" ~ statement* ~ "}"
+}
+
+statement = {
+    labeled_statement |
+    compound_statement |
+    expression_statement |
+    selection_statement |
+    iteration_statement |
+    jump_statement
+}
+
+labeled_statement = {
+    single_identifier ~ ":" ~ statement |
+    t_case ~ expression ~ ":" ~ statement |
+    t_default ~ ":" ~ statement
+}
+
+expression_statement = {
+   expression? ~ t_semic
+}
+
+selection_statement = {
+    t_if ~ "(" ~ expression ~ ")" ~ statement ~ (t_else ~ statement)? |
+    t_switch ~ "(" ~ expression ~ ")"
+}
+
+iteration_statement = {
+    t_while ~ "(" ~ expression ~ ")" ~ statement |
+    t_do ~ statement ~ t_while ~ "(" ~ expression ~ ")" |
+    t_for ~ "(" ~ expression_statement ~ expression_statement ~ expression? ~ ")" ~ statement
+}
+
+jump_statement = {
+    (
+        t_continue |
+        t_break |
+        t_return ~ expression?
+    ) ~ t_semic
+}
+
+expression = {
+    !(t_semic | t_rparen | t_rbrac | t_rcurl) ~ double_or_expression ~ (t_qmark ~ expression ~ t_colon ~ expression)?
+}
+
+double_or_expression = {
+    double_and_expression ~ (t_dor ~ double_or_expression)?
+}
+
+double_and_expression = {
+    or_expression ~( t_dand ~ double_and_expression)?
+}
+
+or_expression = {
+    xor_expression ~ (t_or ~ or_expression)?
+}
+
+xor_expression = {
+    and_expression ~ (t_xor ~ xor_expression)?
+}
+
+and_expression = {
+    equation ~ (t_and ~ and_expression)?
+}
+
+equation = {
+    c_expression ~ (equality ~ equation)?
+}
+
+c_expression = {
+    g_expression ~ (comparison ~ c_expression)?
+}
+
+g_expression = {
+    t_expression ~ (shift ~ g_expression )?
+
+}
+
+t_expression = {
+    factor ~ (add_op ~ t_expression)?
+}
+
+factor = {
+    (uni_ops ~ factor |
+    string |
+    literal |
+    t_true |
+    t_false |
+    cast_expression |
+    atom) ~ (mul_op ~ factor)?
+}
+
+cast_expression = {
+    "(" ~ type_specifier ~ ")" ~ factor
+}
+
+sizeof_expression = {
+    t_sizeof ~ "(" ~ type_specifier ~ ")"
+}
+
+typeof_expression = {
+    t_typeof ~ "(" ~ type_specifier ~ ")"
+}
+
+atom = {
+    "(" ~ expression ~ ")" ~ atom_tail? |
+    identifier ~ atom_tail? |
+    t_super ~ atom_tail? |
+    t_new ~ type_specifier ~ generic_instance? ~ "(" ~ args_list ~ ")"
+}
+
+atom_tail = {
+    generic_instance? ~ function_call ~ atom_tail? |
+    (t_arrow | t_dot) ~ identifier ~ atom_tail? |
+    t_lbrac ~ expression ~ t_rbrac ~ atom_tail? |
+    (t_dec | t_inc)
+}
+
+args_list = {
+    (!")" ~ expression ~ ("," ~ expression)*)?
+}
+
+id_list = {
+    (identifier ~ ("," ~ identifier)*)?
+}
+
+function_call = {
+    "(" ~ args_list ~ ")"
+}
+
+generic_instance = {
+    "<" ~ id_list ~ ">"
+}
+
+pointer = {
+    "*" ~ t_const? ~ pointer?
+}
+
+struct_definition = {
+    t_struct ~ identifier ~ generics_declaration? ~ "{" ~
+        (struct_field_declaration ~ ";")*
+    ~ "};"
+}
+
+struct_field_declaration = {
+    t_const? ~ type_specifier ~ declarator
+}
+
+generics_declaration = {
+    "<" ~ generic_declaration ~ ("," ~ generics_declaration)* ~ ">"
+}
+
+generic_declaration = {
+    single_identifier ~ (super_generic | child_generic)?
+}
+
+super_generic = {
+    "->" ~ type_specifier
+}
+
+child_generic = {
+    "<-" ~ type_specifier
+}
+
 
 
 

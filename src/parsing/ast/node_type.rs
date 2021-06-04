@@ -1,5 +1,6 @@
 use crate::core::identifier::Identifier;
 use crate::core::literal::Literal;
+use crate::core::operator::Operator;
 use crate::core::types::{JodinType, JodinTypeReference};
 use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::keywords::Keyword;
@@ -23,7 +24,7 @@ pub enum JodinNodeInner {
         var_type: JodinNode,
         value: JodinNode,
     },
-    Function {
+    FunctionDefinition {
         name: JodinNode,
         return_type: JodinNode,
         parameters: Vec<JodinNode>,
@@ -35,10 +36,49 @@ pub enum JodinNodeInner {
     },
     StructureDefinition {
         name: JodinNode,
+        generic_parameters: Vec<JodinNode>,
         members: Vec<JodinNode>,
     },
     NamedValue {
         name: JodinNode,
         var_type: JodinType,
     },
+    Uniop {
+        op: Operator,
+        inner: JodinNode,
+    },
+    Postop {
+        op: Operator,
+        inner: JodinNode,
+    },
+    Binop {
+        op: Operator,
+        lhs: JodinNode,
+        rhs: JodinNode,
+    },
+    Index {
+        indexed: JodinNode,
+        expression: JodinNode,
+    },
+    Call {
+        called: JodinNode,
+        generics_instance: Vec<JodinNode>,
+        parameters: Vec<JodinNode>,
+    },
+    GetMember {
+        compound: JodinNode,
+        id: JodinNode,
+    },
+}
+
+impl JodinNodeInner {
+    pub fn into_result<E>(self) -> Result<JodinNode, E> {
+        Ok(self.into())
+    }
+}
+
+impl From<JodinNodeInner> for JodinNode {
+    fn from(i: JodinNodeInner) -> Self {
+        JodinNode::new(i)
+    }
 }

@@ -1,12 +1,13 @@
 use crate::core::error::{JodinError, JodinResult};
 use crate::parsing::ast::node_type::JodinNodeInner;
-use crate::parsing::ast::tags::Tag;
+use crate::parsing::ast::tags::{Tag, TagUtilities};
+use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
 
 pub struct JodinNode {
     jodin_node_type: Box<JodinNodeInner>,
-    tags: Vec<Box<dyn Tag>>,
+    tags: Vec<Box<dyn 'static + Tag>>,
 }
 
 impl JodinNode {
@@ -26,7 +27,7 @@ impl JodinNode {
     }
 
     pub fn add_tag<T: 'static + Tag>(&mut self, tag: T) -> JodinResult<()> {
-        if self.get_tags(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
+        if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
             return Err(JodinError::MaxNumOfTagExceeded {
                 tag_type: tag.tag_type(),
                 max: tag.max_of_this_tag(),
@@ -37,12 +38,31 @@ impl JodinNode {
         Ok(())
     }
 
-    /// Gets the first tag it finds for a tag type
-    pub fn get_tag(&self, tag_type: &str) -> Option<&dyn Tag> {
-        self.get_tags(tag_type).first().map(|t| *t)
+    pub fn add_boxed_tags<I: IntoIterator<Item = Box<dyn Tag>>>(
+        &mut self,
+        iter: I,
+    ) -> JodinResult<()> {
+        for tag in iter.into_iter() {
+            if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
+                return Err(JodinError::MaxNumOfTagExceeded {
+                    tag_type: tag.tag_type(),
+                    max: tag.max_of_this_tag(),
+                });
+            }
+            self.tags.push(tag);
+        }
+        Ok(())
     }
 
-    pub fn get_tags(&self, tag_type: &str) -> Vec<&dyn Tag> {
+    /// Gets the first tag it finds for a tag type
+    pub fn get_tag_by_type(&self, tag_type: &str) -> JodinResult<&dyn Tag> {
+        self.get_tags_by_type(tag_type)
+            .into_iter()
+            .nth(0)
+            .ok_or(JodinError::TagNotPresent)
+    }
+
+    pub fn get_tags_by_type(&self, tag_type: &str) -> Vec<&dyn Tag> {
         self.tags
             .iter()
             .filter(|tag| tag.is_tag(tag_type))
@@ -51,15 +71,44 @@ impl JodinNode {
     }
 
     /// Gets the first tag it finds for a tag type
-    pub fn get_tag_mut(&mut self, tag_type: &str) -> Option<&mut Box<dyn Tag>> {
-        self.get_tags_mut(tag_type).into_iter().next()
+    pub fn get_tag_mut_by_type(&mut self, tag_type: &str) -> Option<&mut Box<dyn Tag>> {
+        self.get_tags_mut_by_type(tag_type).into_iter().next()
     }
 
-    pub fn get_tags_mut(&mut self, tag_type: &str) -> Vec<&mut Box<dyn Tag>> {
+    pub fn get_tags_mut_by_type(&mut self, tag_type: &str) -> Vec<&mut Box<dyn Tag>> {
         self.tags
             .iter_mut()
             .filter(|tag| tag.is_tag(tag_type))
             .collect()
+    }
+
+    pub fn get_tag<T: 'static + Tag>(&self) -> JodinResult<&T> {
+        self.get_tags::<T>()
+            .into_iter()
+            .nth(0)
+            .ok_or(JodinError::TagNotPresent)
+    }
+
+    pub fn get_tags<T: 'static + Tag>(&self) -> Vec<&T> {
+        self.tags
+            .iter()
+            .filter_map(|tag| tag.as_tag_type::<T>().ok())
+            .collect()
+    }
+
+    pub fn get_tag_mut<T: 'static + Tag>(&mut self) -> Option<&mut T> {
+        self.get_tags_mut::<T>().into_iter().nth(0)
+    }
+
+    pub fn get_tags_mut<T: 'static + Tag>(&mut self) -> Vec<&mut T> {
+        self.tags
+            .iter_mut()
+            .filter_map(|tag| tag.as_tag_type_mut::<T>().ok())
+            .collect()
+    }
+
+    pub fn tags(&self) -> &Vec<Box<dyn Tag>> {
+        &self.tags
     }
 }
 
@@ -80,5 +129,28 @@ impl Debug for JodinNode {
                 self.jodin_node_type,
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::identifier::Identifier;
+    use crate::parsing::ast::jodin_node::JodinNode;
+    use crate::parsing::ast::node_type::JodinNodeInner;
+    use crate::parsing::ast::tags::{DummyTag, Tag, TagUtilities};
+    use crate::passes::analysis::identity_resolution_tool::{BlockIdentifier, ResolvedIdentityTag};
+
+    #[test]
+    fn get_tags_of_type() {
+        let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("hi")));
+        node.add_tag(DummyTag);
+        node.add_tag(BlockIdentifier::new(5));
+        node.add_tag(DummyTag);
+        assert_eq!(node.tags().len(), 3);
+        let id_tag = node.get_tag::<BlockIdentifier>().unwrap();
+        assert_eq!(id_tag.block_num(), 5);
+        let dummy_tags = node.get_tags::<DummyTag>();
+        assert_eq!(dummy_tags.len(), 2);
+        assert!(node.get_tag::<ResolvedIdentityTag>().is_err());
     }
 }
