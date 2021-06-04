@@ -1,4 +1,4 @@
-use crate::core::error::JodinError;
+use crate::core::error::{JodinError, JodinResult};
 use regex::Regex;
 use std::str::FromStr;
 
@@ -17,6 +17,29 @@ pub enum Literal {
     UnsignedShort(u16),
     UnsignedInt(u32),
     UnsignedLong(u64),
+}
+
+impl Literal {
+    fn parse_escape_sequence(string: &str) -> JodinResult<(char, usize)> {
+        match &string[..=1] {
+            r"\n" => return Ok(('\n', 2)),
+            r"\t" => return Ok(('\t', 2)),
+            r"\r" => return Ok(('\r', 2)),
+            _ => {}
+        }
+
+        if string.starts_with(r"\u") {
+            let code_str = &string[2..6];
+            let code: u32 = u32::from_str_radix(code_str, 16)?;
+            return Ok((
+                char::from_u32(code)
+                    .ok_or(JodinError::InvalidEscapeSequence(string[..6].to_string()))?,
+                6,
+            ));
+        }
+
+        Err(JodinError::InvalidEscapeSequence(string[..=1].to_string()))
+    }
 }
 
 lazy_static! {
@@ -67,8 +90,34 @@ impl FromStr for Literal {
             }
             if s.starts_with("'") && s.ends_with("'") {
                 let c_string = &s[1..s.len() - 1];
-                let c: char = c_string.parse()?;
+                let c: char;
+                if c_string.starts_with('\\') {
+                    c = Literal::parse_escape_sequence(c_string)?.0;
+                } else {
+                    c = c_string.parse()?;
+                }
                 return Ok(Literal::Char(c));
+            }
+            if s.starts_with('"') && s.ends_with('"') {
+                let c_string = &s[1..s.len() - 1];
+                let mut built = String::new();
+                let mut chars: Box<dyn Iterator<Item = (_, _)>> = Box::new(c_string.char_indices());
+                while let Some((index, c)) = chars.next() {
+                    match c {
+                        '\\' => {
+                            let (escaped_char, pops) =
+                                Literal::parse_escape_sequence(&c_string[index..])?;
+                            built.push(escaped_char);
+                            chars = Box::new(chars.skip(pops - 1));
+                        }
+                        c => built.push(c),
+                    }
+                }
+                return Ok(Literal::String(built));
+            }
+            if s.starts_with("(*\"") && s.ends_with("\"*)") {
+                let c_string = &s[3..s.len() - 3];
+                return Ok(Literal::String(c_string.to_string()));
             }
         }
 
@@ -99,5 +148,23 @@ mod tests {
     #[test]
     fn parse_chars() {
         assert_eq!(Literal::Char('c'), "'c'".parse().unwrap());
+        assert_eq!(Literal::Char('\n'), "'\\n'".parse().unwrap());
+        assert_eq!(Literal::Char('\u{298}'), "'\\u0298'".parse().unwrap());
+    }
+
+    #[test]
+    fn parse_strings() {
+        assert_eq!(
+            Literal::String("Hello, World!".to_string()),
+            "\"Hello, World!\"".parse().unwrap()
+        );
+        assert_eq!(
+            Literal::String("Hello\n\tWorld!".to_string()),
+            "\"Hello\\n\\tWorld!\"".parse().unwrap()
+        );
+        assert_eq!(
+            Literal::String("Hello\"World!".to_string()),
+            "(*\"Hello\"World!\"*)".parse().unwrap()
+        );
     }
 }
