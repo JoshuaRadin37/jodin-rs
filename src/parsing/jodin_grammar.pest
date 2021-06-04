@@ -46,6 +46,7 @@ t_is = { "is" }
 t_trait = { "trait" }
 t_enum = { "enum" }
 t_switch = { "switch" }
+t_as = { "as" }
 
 special_keyword = { "__" ~ identifier }
 
@@ -92,7 +93,8 @@ keywords = {
     t_is |
     t_trait |
     t_enum |
-    t_switch
+    t_switch |
+    t_as
 }
 
 // operators
@@ -474,6 +476,20 @@ super_generic = {
 child_generic = {
     "<-" ~ type_specifier
 }
+
+using_statement = {
+    "using" ~ using_path ~ ";"
+}
+
+using_path = {
+    identifier ~
+        (
+            "::" ~ (t_star | "{" ~ using_path ~ ("," ~ using_path)* ~"}") |
+            t_as ~ single_identifier
+       )?
+
+}
+
 
 
 

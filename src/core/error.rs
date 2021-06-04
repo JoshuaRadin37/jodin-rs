@@ -26,6 +26,7 @@ pub enum JodinError {
     IncompleteParse,
     InnerError(Box<dyn Error>),
     InvalidEscapeSequence(String),
+    EmptyJodinTree,
 }
 
 impl From<pest::error::Error<crate::parsing::parser::Rule>> for JodinError {

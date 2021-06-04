@@ -1,4 +1,5 @@
 use crate::core::identifier::Identifier;
+use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 use crate::core::types::{JodinType, JodinTypeReference};
@@ -68,6 +69,16 @@ pub enum JodinNodeInner {
     GetMember {
         compound: JodinNode,
         id: JodinNode,
+    },
+    TopLevelDeclarations {
+        decs: Vec<JodinNode>,
+    },
+    InNamespace {
+        namespace: JodinNode,
+        inner: JodinNode,
+    },
+    UsingIdentifier {
+        import_data: Import,
     },
 }
 

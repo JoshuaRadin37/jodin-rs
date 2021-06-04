@@ -28,10 +28,10 @@ impl Type for Primitive {
             Primitive::Short => "short",
             Primitive::Int => "int",
             Primitive::Long => "long",
-            Primitive::UnsignedByte => "ubyte",
-            Primitive::UnsignedShort => "ushort",
-            Primitive::UnsignedInt => "uint",
-            Primitive::UnsignedLong => "ulong",
+            Primitive::UnsignedByte => "unsigned byte",
+            Primitive::UnsignedShort => "unsigned short",
+            Primitive::UnsignedInt => "unsigned int",
+            Primitive::UnsignedLong => "unsigned long",
         };
         Identifier::from(str)
     }

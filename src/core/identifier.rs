@@ -1,5 +1,6 @@
 use pest::Span;
 
+use std::array::IntoIter;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
@@ -12,6 +13,10 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    pub fn from_array<S: AsRef<str>, const N: usize>(array: [S; N]) -> Self {
+        Self::from_iter(IntoIter::new(array))
+    }
+
     pub fn parent(&self) -> &Option<Box<Identifier>> {
         &self.parent
     }

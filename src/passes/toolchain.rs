@@ -7,6 +7,18 @@ pub trait Tool {
     fn invoke(&mut self, input: Self::Input) -> Self::Output;
 }
 
+#[derive(Default)]
+struct DummyTool<I, O>(PhantomData<I>, PhantomData<O>);
+
+impl<I, O> Tool for DummyTool<I, O> {
+    type Input = I;
+    type Output = O;
+
+    fn invoke(&mut self, input: Self::Input) -> Self::Output {
+        panic!("Can't call a dummy tool")
+    }
+}
+
 pub struct Toolchain<S, M = S, E = M> {
     start: Box<dyn Tool<Input = S, Output = M>>,
     end: Box<dyn Tool<Input = M, Output = E>>,
@@ -198,5 +210,123 @@ impl<T: Tool, E> FallibleTool for FallibleWrapper<T, E> {
 
     fn invoke(&mut self, input: Self::Input) -> Result<Self::Output, Self::Error> {
         Ok(self.0.invoke(input))
+    }
+}
+
+pub trait CollectorTool {
+    type Input;
+    type Output;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(&mut self, input_iter: I) -> Self::Output;
+}
+
+pub trait FallibleCollectorTool {
+    type Input;
+    type Output;
+    type Error;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(
+        &mut self,
+        input_iter: I,
+    ) -> Result<Self::Output, Self::Error>;
+}
+
+impl<F: FallibleCollectorTool> CollectorTool for F {
+    type Input = F::Input;
+    type Output = Result<F::Output, F::Error>;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(&mut self, input_iter: I) -> Self::Output {
+        FallibleCollectorTool::invoke(self, input_iter)
+    }
+}
+
+pub trait JodinFallibleCollectorTool {
+    type Input;
+    type Output;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(
+        &mut self,
+        input_iter: I,
+    ) -> JodinResult<Self::Output>;
+}
+
+pub struct CollectorToolchain<T, CT, Input, Mid, Output>
+where
+    T: Tool<Input = Input, Output = Mid>,
+    CT: CollectorTool<Input = Mid, Output = Output>,
+{
+    input: T,
+    collector: CT,
+}
+
+impl<T, CT, Input, Mid, Output> CollectorTool for CollectorToolchain<T, CT, Input, Mid, Output>
+where
+    T: Tool<Input = Input, Output = Mid>,
+    CT: CollectorTool<Input = Mid, Output = Output>,
+{
+    type Input = Input;
+    type Output = Output;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(&mut self, input_iter: I) -> Self::Output {
+        let vec: Vec<_> = input_iter
+            .into_iter()
+            .map(|item| self.input.invoke(item))
+            .collect();
+        self.collector.invoke(vec)
+    }
+}
+
+impl<T, CT, Input, Mid, Output> CollectorToolchain<T, CT, Input, Mid, Output>
+where
+    T: Tool<Input = Input, Output = Mid>,
+    CT: CollectorTool<Input = Mid, Output = Output>,
+{
+    pub fn new(input: T, collector: CT) -> Self {
+        CollectorToolchain { input, collector }
+    }
+}
+
+pub struct FallibleCollectorToolchain<T, CT, Input, Mid, Output, Error1, Error2>
+where
+    T: Tool<Input = Input, Output = Result<Mid, Error1>>,
+    CT: CollectorTool<Input = Mid, Output = Result<Output, Error2>>,
+    Error1: Into<Error2>,
+{
+    input: T,
+    collector: CT,
+}
+
+impl<T, CT, Input, Mid, Output, Error1, Error2>
+    FallibleCollectorToolchain<T, CT, Input, Mid, Output, Error1, Error2>
+where
+    T: Tool<Input = Input, Output = Result<Mid, Error1>>,
+    CT: CollectorTool<Input = Mid, Output = Result<Output, Error2>>,
+    Error1: Into<Error2>,
+{
+    pub fn new(input: T, collector: CT) -> Self {
+        FallibleCollectorToolchain { input, collector }
+    }
+}
+
+impl<T, CT, Input, Mid, Output, Error1, Error2> FallibleCollectorTool
+    for FallibleCollectorToolchain<T, CT, Input, Mid, Output, Error1, Error2>
+where
+    T: Tool<Input = Input, Output = Result<Mid, Error1>>,
+    CT: CollectorTool<Input = Mid, Output = Result<Output, Error2>>,
+    Error2: From<Error1>,
+{
+    type Input = Input;
+    type Output = Output;
+    type Error = Error2;
+
+    fn invoke<I: IntoIterator<Item = Self::Input>>(
+        &mut self,
+        input_iter: I,
+    ) -> Result<Self::Output, Self::Error> {
+        let mut vec = vec![];
+        for item in input_iter {
+            vec.push(self.input.invoke(item)?)
+        }
+        self.collector.invoke(vec)
     }
 }
