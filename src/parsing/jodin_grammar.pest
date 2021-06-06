@@ -227,14 +227,20 @@ type_specifier = {
 
 // Categories
 
+jodin_file = {
+    top_level_declarations ~ EOI
+}
+
 top_level_declarations = {
     top_level_declaration*
 }
 
 top_level_declaration = {
+    using_statement |
     function_definition |
     struct_definition |
-    declaration
+    declaration |
+    in_namespace
 }
 
 function_definition = {
@@ -490,7 +496,16 @@ using_path = {
 
 }
 
+in_namespace = {
+    "in" ~ identifier ~ (
+        "{" ~ top_level_declarations ~ "}" |
+        top_level_declaration
+    )
+}
 
+canonical_type = {
+    type_specifier ~ (pointer | array_declarator)
+}
 
 
 

@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::types::{JodinTypeReference, Type};
 
 /// An attribute is an addition bit of information that can be attached to
@@ -32,14 +32,14 @@ impl TagUtilities for Box<dyn Tag> {
         let boxed_any: &dyn Any = self.as_any();
         boxed_any
             .downcast_ref::<T>()
-            .ok_or(JodinError::TagCastError)
+            .ok_or(JodinErrorType::TagCastError.into())
     }
 
     fn as_tag_type_mut<T: 'static + Tag>(&mut self) -> JodinResult<&mut T> {
         let boxed_any: &mut dyn Any = self.as_any_mut();
         boxed_any
             .downcast_mut::<T>()
-            .ok_or(JodinError::TagCastError)
+            .ok_or(JodinErrorType::TagCastError.into())
     }
 }
 

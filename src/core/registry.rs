@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, Namespaced};
 use crate::core::identifier_resolution::IdentifierResolver;
 use crate::core::types::{CompoundType, JodinTypeReference};
@@ -36,7 +36,7 @@ impl<T> Registry<T> {
     pub fn insert_with_identifier(&mut self, val: T, path: Identifier) -> JodinResult<Identifier> {
         let path = self.resolver.create_absolute_path(&path);
         if self.mapping.contains_key(&path) {
-            return Err(JodinError::IdentifierAlreadyExists(path));
+            return Err(JodinErrorType::IdentifierAlreadyExists(path).into());
         }
         self.mapping.insert(path.clone(), val);
         Ok(path)
@@ -44,7 +44,7 @@ impl<T> Registry<T> {
 
     pub fn update_absolute_identity(&mut self, absolute: &Identifier, val: T) -> JodinResult<&T> {
         if !self.resolver.contains_absolute_identifier(absolute) {
-            return Err(JodinError::IdentifierDoesNotExist(absolute.clone()));
+            return Err(JodinErrorType::IdentifierDoesNotExist(absolute.clone()).into());
         }
         self.mapping.insert(absolute.clone(), val);
         Ok(&self.mapping[absolute])
@@ -74,14 +74,14 @@ impl<T> Registry<T> {
         let full_path = self.resolver.resolve_path(path.clone())?;
         self.mapping
             .get(&full_path)
-            .ok_or(JodinError::IdentifierDoesNotExist(path.clone()))
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
     pub fn get_mut(&mut self, path: &Identifier) -> JodinResult<&mut T> {
         let full_path = self.resolver.resolve_path(path.clone())?;
         self.mapping
             .get_mut(&full_path)
-            .ok_or(JodinError::IdentifierDoesNotExist(path.clone()))
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 }
 

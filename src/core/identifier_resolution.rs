@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, Namespaced};
 use crate::core::namespace_tree::NamespaceTree;
 use std::collections::HashSet;
@@ -52,12 +52,12 @@ impl IdentifierResolver {
             .tree
             .get_namespaces(self.current_namespace.as_ref(), &namespace);
         if resolved_set.is_empty() {
-            return Err(JodinError::IdentifierDoesNotExist(namespace));
+            return Err(JodinErrorType::IdentifierDoesNotExist(namespace))?;
         } else if resolved_set.len() >= 2 {
-            return Err(JodinError::AmbiguousIdentifierError {
+            return Err(JodinErrorType::AmbiguousIdentifierError {
                 given: namespace,
                 found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
-            });
+            })?;
         }
         let resolved = resolved_set.into_iter().next().cloned().unwrap();
         self.using_namespaces.push(resolved);
@@ -71,12 +71,13 @@ impl IdentifierResolver {
             .tree
             .get_namespaces(self.current_namespace.as_ref(), &namespace);
         if resolved_set.is_empty() {
-            return Err(JodinError::IdentifierDoesNotExist(namespace));
+            return Err(JodinErrorType::IdentifierDoesNotExist(namespace).into());
         } else if resolved_set.len() >= 2 {
-            return Err(JodinError::AmbiguousIdentifierError {
+            return Err(JodinErrorType::AmbiguousIdentifierError {
                 given: namespace,
                 found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
-            });
+            }
+            .into());
         }
         let resolved = resolved_set.into_iter().next().unwrap();
         self.using_namespaces.retain(|id| id != resolved);
@@ -139,7 +140,7 @@ impl IdentifierResolver {
         }
 
         match output.len() {
-            0 => Err(JodinError::IdentifierDoesNotExist(path)),
+            0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
             1 => Ok(output
                 .into_iter()
                 .next()
@@ -147,7 +148,7 @@ impl IdentifierResolver {
                 .unwrap()
                 .strip_highest_parent()
                 .unwrap()),
-            _ => Err(JodinError::AmbiguousIdentifierError {
+            _ => Err(JodinErrorType::AmbiguousIdentifierError {
                 given: path,
                 found: Vec::from_iter(
                     output
@@ -155,7 +156,7 @@ impl IdentifierResolver {
                         .cloned()
                         .map(|id| id.strip_highest_parent().unwrap()),
                 ),
-            }),
+            })?,
         }
     }
 
@@ -179,7 +180,7 @@ impl IdentifierResolver {
 
 #[cfg(test)]
 mod test {
-    use crate::core::error::JodinError;
+    use crate::core::error::JodinErrorType;
     use crate::core::identifier::Identifier;
     use crate::core::identifier_resolution::IdentifierResolver;
     use std::iter::FromIterator;
@@ -206,7 +207,7 @@ mod test {
         resolver.push_namespace(Identifier::from("n1"));
         println!("{:#?}", resolver);
         let result = resolver.resolve_path(Identifier::from_iter(&["n2", "object"]));
-        if let Err(JodinError::AmbiguousIdentifierError { given: _, found }) = result {
+        if let Err(JodinErrorType::AmbiguousIdentifierError { given: _, found }) = result {
             assert!(
                 (found
                     == vec![

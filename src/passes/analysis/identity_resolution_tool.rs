@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
 use crate::core::registry::Registry;

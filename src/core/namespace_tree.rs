@@ -1,5 +1,5 @@
-use crate::core::error::JodinError::IdentifierDoesNotExist;
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
+use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierIterator, Namespaced};
 use ptree::{write_tree, Style, TreeBuilder, TreeItem};
 use std::borrow::Cow;
@@ -227,13 +227,13 @@ impl<T: Namespaced> NamespaceTree<T> {
                     if output.is_none() {
                         output = Some(object);
                     } else {
-                        return Err(JodinError::IdentifierDoesNotExist(path.clone()));
+                        return Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into());
                     }
                 }
             }
         }
 
-        output.ok_or(JodinError::IdentifierDoesNotExist(path.clone()))
+        output.ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
     pub fn get_from_absolute_identifier(&self, path: &Identifier) -> JodinResult<&T> {
@@ -255,7 +255,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 }
             }
             if !found {
-                return Err(IdentifierDoesNotExist(path.clone()));
+                return Err(IdentifierDoesNotExist(path.clone()).into());
             }
         }
         let last_ptr = ptr;
@@ -265,7 +265,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 return Ok(value);
             }
         }
-        Err(JodinError::IdentifierDoesNotExist(path.clone()))
+        Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 }
 
