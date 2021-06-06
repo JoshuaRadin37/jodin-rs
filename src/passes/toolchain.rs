@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use std::marker::PhantomData;
 
 pub trait Tool {

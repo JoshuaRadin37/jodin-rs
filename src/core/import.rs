@@ -64,7 +64,7 @@ pub enum ImportType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::error::JodinError;
+    use crate::core::error::JodinErrorType;
     use crate::parsing::parser::complete_parse;
     use std::iter::FromIterator;
 
@@ -72,7 +72,7 @@ mod tests {
     fn parse_using_path() {
         let string = "std::{vec::*, map, a::b as c}";
         match complete_parse(JodinRule::using_path, string) {
-            Err(JodinError::ParserError(e, ..)) => {
+            Err(JodinErrorType::ParserError(e, ..)) => {
                 println!("{}", e);
                 panic!()
             }

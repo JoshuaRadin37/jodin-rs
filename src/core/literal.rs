@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use regex::Regex;
 use std::str::FromStr;
 
@@ -32,13 +32,16 @@ impl Literal {
             let code_str = &string[2..6];
             let code: u32 = u32::from_str_radix(code_str, 16)?;
             return Ok((
-                char::from_u32(code)
-                    .ok_or(JodinError::InvalidEscapeSequence(string[..6].to_string()))?,
+                char::from_u32(code).ok_or(JodinErrorType::InvalidEscapeSequence(
+                    string[..6].to_string(),
+                ))?,
                 6,
             ));
         }
 
-        Err(JodinError::InvalidEscapeSequence(string[..=1].to_string()))
+        Err(JodinErrorType::InvalidEscapeSequence(
+            string[..=1].to_string(),
+        ))?
     }
 }
 

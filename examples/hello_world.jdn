@@ -1,0 +1,7 @@
+using std::String;
+using stdio::*;
+
+int main(int argc, String args[]) {
+    println("Hello world!");
+    return 0;
+}

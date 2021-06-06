@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult};
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::ast::tags::{Tag, TagUtilities};
 use std::any::Any;
@@ -28,10 +28,11 @@ impl JodinNode {
 
     pub fn add_tag<T: 'static + Tag>(&mut self, tag: T) -> JodinResult<()> {
         if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
-            return Err(JodinError::MaxNumOfTagExceeded {
+            return Err(JodinErrorType::MaxNumOfTagExceeded {
                 tag_type: tag.tag_type(),
                 max: tag.max_of_this_tag(),
-            });
+            }
+            .into());
         }
 
         self.tags.push(Box::new(tag));
@@ -44,10 +45,11 @@ impl JodinNode {
     ) -> JodinResult<()> {
         for tag in iter.into_iter() {
             if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
-                return Err(JodinError::MaxNumOfTagExceeded {
+                return Err(JodinErrorType::MaxNumOfTagExceeded {
                     tag_type: tag.tag_type(),
                     max: tag.max_of_this_tag(),
-                });
+                }
+                .into());
             }
             self.tags.push(tag);
         }
@@ -59,7 +61,7 @@ impl JodinNode {
         self.get_tags_by_type(tag_type)
             .into_iter()
             .nth(0)
-            .ok_or(JodinError::TagNotPresent)
+            .ok_or(JodinErrorType::TagNotPresent.into())
     }
 
     pub fn get_tags_by_type(&self, tag_type: &str) -> Vec<&dyn Tag> {
@@ -86,7 +88,7 @@ impl JodinNode {
         self.get_tags::<T>()
             .into_iter()
             .nth(0)
-            .ok_or(JodinError::TagNotPresent)
+            .ok_or(JodinErrorType::TagNotPresent.into())
     }
 
     pub fn get_tags<T: 'static + Tag>(&self) -> Vec<&T> {
@@ -117,7 +119,7 @@ impl Debug for JodinNode {
         if f.alternate() {
             write!(
                 f,
-                "JodinNode {{\nattributes: {:?}\ninner: {:?}\n}}",
+                "JodinNode {{\n\tattributes: {:?}\n\tinner: {:#?}\n}}",
                 self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>(),
                 self.jodin_node_type,
             )
