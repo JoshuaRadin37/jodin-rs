@@ -1,0 +1,27 @@
+JodinNode {
+	attributes: []
+	inner: TopLevelDeclarations {
+    decs: [
+        JodinNode {
+        	attributes: []
+        	inner: UsingIdentifier {
+            import_data: Import {
+                id: std,
+                import_type: Children {
+                    children: [
+                        Import {
+                            id: String,
+                            import_type: Direct,
+                        },
+                        Import {
+                            id: stdio,
+                            import_type: Wildcard,
+                        },
+                    ],
+                },
+            },
+        }
+        },
+    ],
+}
+}

@@ -1,6 +1,8 @@
-use crate::core::error::{JodinErrorType, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult, JodinError};
 use pest::iterators::{Pair, Pairs};
 use pest::{ParseResult, Parser, RuleType};
+use crate::parsing::error::ParseError;
+use crate::parsing::ast::node_type::JodinNodeInner;
 
 #[derive(Parser, Debug)]
 #[grammar = "parsing/jodin_grammar.pest"]
@@ -9,7 +11,11 @@ pub struct JodinParser;
 pub type JodinRule = Rule;
 
 pub fn complete_parse(rule: Rule, input: &str) -> JodinResult<Pairs<Rule>> {
-    Ok(JodinParser::parse(rule, input)?)
+    let result: Result<_, pest::error::Error<_>> = JodinParser::parse(rule, input);
+    result.map_err(
+        |err| JodinErrorType::ParserError(err, None).into()
+    )
+    //Ok(result)
 }
 
 #[cfg(test)]

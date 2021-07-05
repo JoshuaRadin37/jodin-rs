@@ -181,6 +181,37 @@ impl SingleJodinNodeTreeCreator<'_> {
                 let literal: Literal = literal_string.parse()?;
                 JodinNodeInner::Literal(literal).into()
             }
+            JodinRule::declaration => {
+                let mut inner = pair.into_inner();
+                let canonical_type = self.create_node_from_pair(inner.nth(0).unwrap())?;
+                let mut declarator_list = inner.nth(0).unwrap();
+                let pairs = declarator_list
+                    .into_inner()
+                    .into_iter();
+                let mut names = Vec::new();
+                let mut values = Vec::new();
+                for init_declarator in pairs {
+                    let mut inner = init_declarator.into_inner();
+                    let name = self.create_node_from_pair(inner.nth(0).unwrap())?;
+                    let value = match inner.nth(0) {
+                        Some(initializer) => {
+                            Some(self.create_node_from_pair(initializer)?)
+                        },
+                        None => None
+                    };
+                    names.push(name);
+                    values.push(value);
+                }
+
+                JodinNodeInner::VarDeclarations {
+                    var_type: canonical_type,
+                    names,
+                    values
+                }.into()
+            },
+            JodinRule::canonical_type => {
+                todo!()
+            }
             // just go into inner
             JodinRule::top_level_declaration | JodinRule::jodin_file => {
                 let inner = pair.into_inner().nth(0).unwrap();

@@ -1,49 +1,49 @@
 Pair {
     rule: jodin_file,
     span: Span {
-        str: "using std::String;\r\nusing stdio::*;\r\n\r\nint main(int argc, String args[]) {\r\n    println(\"Hello world!\");\r\n    return 0;\r\n}\r\n",
+        str: "using std::{String, stdio::*};\n\n\nint(int,String[]) main;\nstruct Basic {\n    int val1;\n}\n\nint main(int argc, String[] args) {\n    println(\"Hello world!\");\n    return 0;\n}\n\n",
         start: 0,
-        end: 124,
+        end: 171,
     },
     inner: [
         Pair {
             rule: top_level_declarations,
             span: Span {
-                str: "using std::String;\r\nusing stdio::*;\r\n\r\nint main(int argc, String args[]) {\r\n    println(\"Hello world!\");\r\n    return 0;\r\n}",
+                str: "using std::{String, stdio::*};\n\n\nint(int,String[]) main;\nstruct Basic {\n    int val1;\n}\n\nint main(int argc, String[] args) {\n    println(\"Hello world!\");\n    return 0;\n}",
                 start: 0,
-                end: 122,
+                end: 169,
             },
             inner: [
                 Pair {
                     rule: top_level_declaration,
                     span: Span {
-                        str: "using std::String;",
+                        str: "using std::{String, stdio::*};",
                         start: 0,
-                        end: 18,
+                        end: 30,
                     },
                     inner: [
                         Pair {
                             rule: using_statement,
                             span: Span {
-                                str: "using std::String;",
+                                str: "using std::{String, stdio::*};",
                                 start: 0,
-                                end: 18,
+                                end: 30,
                             },
                             inner: [
                                 Pair {
                                     rule: using_path,
                                     span: Span {
-                                        str: "std::String",
+                                        str: "std::{String, stdio::*}",
                                         start: 6,
-                                        end: 17,
+                                        end: 29,
                                     },
                                     inner: [
                                         Pair {
                                             rule: identifier,
                                             span: Span {
-                                                str: "std::String",
+                                                str: "std",
                                                 start: 6,
-                                                end: 17,
+                                                end: 9,
                                             },
                                             inner: [
                                                 Pair {
@@ -55,368 +55,231 @@ Pair {
                                                     },
                                                     inner: [],
                                                 },
-                                                Pair {
-                                                    rule: single_identifier,
-                                                    span: Span {
-                                                        str: "String",
-                                                        start: 11,
-                                                        end: 17,
-                                                    },
-                                                    inner: [],
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                Pair {
-                    rule: top_level_declaration,
-                    span: Span {
-                        str: "using stdio::*;",
-                        start: 20,
-                        end: 35,
-                    },
-                    inner: [
-                        Pair {
-                            rule: using_statement,
-                            span: Span {
-                                str: "using stdio::*;",
-                                start: 20,
-                                end: 35,
-                            },
-                            inner: [
-                                Pair {
-                                    rule: using_path,
-                                    span: Span {
-                                        str: "stdio::*",
-                                        start: 26,
-                                        end: 34,
-                                    },
-                                    inner: [
-                                        Pair {
-                                            rule: identifier,
-                                            span: Span {
-                                                str: "stdio",
-                                                start: 26,
-                                                end: 31,
-                                            },
-                                            inner: [
-                                                Pair {
-                                                    rule: single_identifier,
-                                                    span: Span {
-                                                        str: "stdio",
-                                                        start: 26,
-                                                        end: 31,
-                                                    },
-                                                    inner: [],
-                                                },
                                             ],
                                         },
                                         Pair {
-                                            rule: t_star,
+                                            rule: using_path,
                                             span: Span {
-                                                str: "*",
-                                                start: 33,
-                                                end: 34,
-                                            },
-                                            inner: [],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                Pair {
-                    rule: top_level_declaration,
-                    span: Span {
-                        str: "int main(int argc, String args[]) {\r\n    println(\"Hello world!\");\r\n    return 0;\r\n}",
-                        start: 39,
-                        end: 122,
-                    },
-                    inner: [
-                        Pair {
-                            rule: function_definition,
-                            span: Span {
-                                str: "int main(int argc, String args[]) {\r\n    println(\"Hello world!\");\r\n    return 0;\r\n}",
-                                start: 39,
-                                end: 122,
-                            },
-                            inner: [
-                                Pair {
-                                    rule: declaration_specifiers,
-                                    span: Span {
-                                        str: "int",
-                                        start: 39,
-                                        end: 42,
-                                    },
-                                    inner: [
-                                        Pair {
-                                            rule: type_specifier,
-                                            span: Span {
-                                                str: "int",
-                                                start: 39,
-                                                end: 42,
-                                            },
-                                            inner: [
-                                                Pair {
-                                                    rule: t_int,
-                                                    span: Span {
-                                                        str: "int",
-                                                        start: 39,
-                                                        end: 42,
-                                                    },
-                                                    inner: [],
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                                Pair {
-                                    rule: declarator,
-                                    span: Span {
-                                        str: "main(int argc, String args[])",
-                                        start: 43,
-                                        end: 72,
-                                    },
-                                    inner: [
-                                        Pair {
-                                            rule: direct_declarator,
-                                            span: Span {
-                                                str: "main(int argc, String args[])",
-                                                start: 43,
-                                                end: 72,
+                                                str: "String",
+                                                start: 12,
+                                                end: 18,
                                             },
                                             inner: [
                                                 Pair {
                                                     rule: identifier,
                                                     span: Span {
-                                                        str: "main",
-                                                        start: 43,
-                                                        end: 47,
+                                                        str: "String",
+                                                        start: 12,
+                                                        end: 18,
                                                     },
                                                     inner: [
                                                         Pair {
                                                             rule: single_identifier,
                                                             span: Span {
-                                                                str: "main",
-                                                                start: 43,
-                                                                end: 47,
+                                                                str: "String",
+                                                                start: 12,
+                                                                end: 18,
+                                                            },
+                                                            inner: [],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                        Pair {
+                                            rule: using_path,
+                                            span: Span {
+                                                str: "stdio::*",
+                                                start: 20,
+                                                end: 28,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: identifier,
+                                                    span: Span {
+                                                        str: "stdio",
+                                                        start: 20,
+                                                        end: 25,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: single_identifier,
+                                                            span: Span {
+                                                                str: "stdio",
+                                                                start: 20,
+                                                                end: 25,
                                                             },
                                                             inner: [],
                                                         },
                                                     ],
                                                 },
                                                 Pair {
-                                                    rule: function_declarator,
+                                                    rule: t_star,
                                                     span: Span {
-                                                        str: "(int argc, String args[])",
-                                                        start: 47,
-                                                        end: 72,
+                                                        str: "*",
+                                                        start: 27,
+                                                        end: 28,
+                                                    },
+                                                    inner: [],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Pair {
+                    rule: top_level_declaration,
+                    span: Span {
+                        str: "int(int,String[]) main;",
+                        start: 33,
+                        end: 56,
+                    },
+                    inner: [
+                        Pair {
+                            rule: declaration,
+                            span: Span {
+                                str: "int(int,String[]) main;",
+                                start: 33,
+                                end: 56,
+                            },
+                            inner: [
+                                Pair {
+                                    rule: canonical_type,
+                                    span: Span {
+                                        str: "int(int,String[])",
+                                        start: 33,
+                                        end: 50,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: type_specifier,
+                                            span: Span {
+                                                str: "int",
+                                                start: 33,
+                                                end: 36,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: t_int,
+                                                    span: Span {
+                                                        str: "int",
+                                                        start: 33,
+                                                        end: 36,
+                                                    },
+                                                    inner: [],
+                                                },
+                                            ],
+                                        },
+                                        Pair {
+                                            rule: function_declarator,
+                                            span: Span {
+                                                str: "(int,String[])",
+                                                start: 36,
+                                                end: 50,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: type_list,
+                                                    span: Span {
+                                                        str: "int,String[]",
+                                                        start: 37,
+                                                        end: 49,
                                                     },
                                                     inner: [
                                                         Pair {
-                                                            rule: parameter_list,
+                                                            rule: canonical_type,
                                                             span: Span {
-                                                                str: "int argc, String args[]",
-                                                                start: 48,
-                                                                end: 71,
+                                                                str: "int",
+                                                                start: 37,
+                                                                end: 40,
                                                             },
                                                             inner: [
                                                                 Pair {
-                                                                    rule: parameter_declaration,
+                                                                    rule: type_specifier,
                                                                     span: Span {
-                                                                        str: "int argc",
-                                                                        start: 48,
-                                                                        end: 56,
+                                                                        str: "int",
+                                                                        start: 37,
+                                                                        end: 40,
                                                                     },
                                                                     inner: [
                                                                         Pair {
-                                                                            rule: declaration_specifiers,
+                                                                            rule: t_int,
                                                                             span: Span {
                                                                                 str: "int",
-                                                                                start: 48,
-                                                                                end: 51,
+                                                                                start: 37,
+                                                                                end: 40,
                                                                             },
-                                                                            inner: [
-                                                                                Pair {
-                                                                                    rule: type_specifier,
-                                                                                    span: Span {
-                                                                                        str: "int",
-                                                                                        start: 48,
-                                                                                        end: 51,
-                                                                                    },
-                                                                                    inner: [
-                                                                                        Pair {
-                                                                                            rule: t_int,
-                                                                                            span: Span {
-                                                                                                str: "int",
-                                                                                                start: 48,
-                                                                                                end: 51,
-                                                                                            },
-                                                                                            inner: [],
-                                                                                        },
-                                                                                    ],
-                                                                                },
-                                                                            ],
+                                                                            inner: [],
                                                                         },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        Pair {
+                                                            rule: canonical_type,
+                                                            span: Span {
+                                                                str: "String[]",
+                                                                start: 41,
+                                                                end: 49,
+                                                            },
+                                                            inner: [
+                                                                Pair {
+                                                                    rule: type_specifier,
+                                                                    span: Span {
+                                                                        str: "String",
+                                                                        start: 41,
+                                                                        end: 47,
+                                                                    },
+                                                                    inner: [
                                                                         Pair {
-                                                                            rule: declarator,
+                                                                            rule: identifier,
                                                                             span: Span {
-                                                                                str: "argc",
-                                                                                start: 52,
-                                                                                end: 56,
+                                                                                str: "String",
+                                                                                start: 41,
+                                                                                end: 47,
                                                                             },
                                                                             inner: [
                                                                                 Pair {
-                                                                                    rule: direct_declarator,
+                                                                                    rule: single_identifier,
                                                                                     span: Span {
-                                                                                        str: "argc",
-                                                                                        start: 52,
-                                                                                        end: 56,
+                                                                                        str: "String",
+                                                                                        start: 41,
+                                                                                        end: 47,
                                                                                     },
-                                                                                    inner: [
-                                                                                        Pair {
-                                                                                            rule: identifier,
-                                                                                            span: Span {
-                                                                                                str: "argc",
-                                                                                                start: 52,
-                                                                                                end: 56,
-                                                                                            },
-                                                                                            inner: [
-                                                                                                Pair {
-                                                                                                    rule: single_identifier,
-                                                                                                    span: Span {
-                                                                                                        str: "argc",
-                                                                                                        start: 52,
-                                                                                                        end: 56,
-                                                                                                    },
-                                                                                                    inner: [],
-                                                                                                },
-                                                                                            ],
-                                                                                        },
-                                                                                    ],
+                                                                                    inner: [],
                                                                                 },
                                                                             ],
                                                                         },
                                                                     ],
                                                                 },
                                                                 Pair {
-                                                                    rule: parameter_declaration,
+                                                                    rule: array_declarator,
                                                                     span: Span {
-                                                                        str: "String args[]",
-                                                                        start: 58,
-                                                                        end: 71,
+                                                                        str: "[]",
+                                                                        start: 47,
+                                                                        end: 49,
                                                                     },
                                                                     inner: [
                                                                         Pair {
-                                                                            rule: declaration_specifiers,
+                                                                            rule: t_lbrac,
                                                                             span: Span {
-                                                                                str: "String",
-                                                                                start: 58,
-                                                                                end: 64,
+                                                                                str: "[",
+                                                                                start: 47,
+                                                                                end: 48,
                                                                             },
-                                                                            inner: [
-                                                                                Pair {
-                                                                                    rule: type_specifier,
-                                                                                    span: Span {
-                                                                                        str: "String",
-                                                                                        start: 58,
-                                                                                        end: 64,
-                                                                                    },
-                                                                                    inner: [
-                                                                                        Pair {
-                                                                                            rule: identifier,
-                                                                                            span: Span {
-                                                                                                str: "String",
-                                                                                                start: 58,
-                                                                                                end: 64,
-                                                                                            },
-                                                                                            inner: [
-                                                                                                Pair {
-                                                                                                    rule: single_identifier,
-                                                                                                    span: Span {
-                                                                                                        str: "String",
-                                                                                                        start: 58,
-                                                                                                        end: 64,
-                                                                                                    },
-                                                                                                    inner: [],
-                                                                                                },
-                                                                                            ],
-                                                                                        },
-                                                                                    ],
-                                                                                },
-                                                                            ],
+                                                                            inner: [],
                                                                         },
                                                                         Pair {
-                                                                            rule: declarator,
+                                                                            rule: t_rbrac,
                                                                             span: Span {
-                                                                                str: "args[]",
-                                                                                start: 65,
-                                                                                end: 71,
+                                                                                str: "]",
+                                                                                start: 48,
+                                                                                end: 49,
                                                                             },
-                                                                            inner: [
-                                                                                Pair {
-                                                                                    rule: direct_declarator,
-                                                                                    span: Span {
-                                                                                        str: "args[]",
-                                                                                        start: 65,
-                                                                                        end: 71,
-                                                                                    },
-                                                                                    inner: [
-                                                                                        Pair {
-                                                                                            rule: identifier,
-                                                                                            span: Span {
-                                                                                                str: "args",
-                                                                                                start: 65,
-                                                                                                end: 69,
-                                                                                            },
-                                                                                            inner: [
-                                                                                                Pair {
-                                                                                                    rule: single_identifier,
-                                                                                                    span: Span {
-                                                                                                        str: "args",
-                                                                                                        start: 65,
-                                                                                                        end: 69,
-                                                                                                    },
-                                                                                                    inner: [],
-                                                                                                },
-                                                                                            ],
-                                                                                        },
-                                                                                        Pair {
-                                                                                            rule: array_declarator,
-                                                                                            span: Span {
-                                                                                                str: "[]",
-                                                                                                start: 69,
-                                                                                                end: 71,
-                                                                                            },
-                                                                                            inner: [
-                                                                                                Pair {
-                                                                                                    rule: t_lbrac,
-                                                                                                    span: Span {
-                                                                                                        str: "[",
-                                                                                                        start: 69,
-                                                                                                        end: 70,
-                                                                                                    },
-                                                                                                    inner: [],
-                                                                                                },
-                                                                                                Pair {
-                                                                                                    rule: t_rbrac,
-                                                                                                    span: Span {
-                                                                                                        str: "]",
-                                                                                                        start: 70,
-                                                                                                        end: 71,
-                                                                                                    },
-                                                                                                    inner: [],
-                                                                                                },
-                                                                                            ],
-                                                                                        },
-                                                                                    ],
-                                                                                },
-                                                                            ],
+                                                                            inner: [],
                                                                         },
                                                                     ],
                                                                 },
@@ -429,139 +292,505 @@ Pair {
                                     ],
                                 },
                                 Pair {
+                                    rule: init_declarator_list,
+                                    span: Span {
+                                        str: "main",
+                                        start: 51,
+                                        end: 55,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: init_declarator,
+                                            span: Span {
+                                                str: "main",
+                                                start: 51,
+                                                end: 55,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: single_identifier,
+                                                    span: Span {
+                                                        str: "main",
+                                                        start: 51,
+                                                        end: 55,
+                                                    },
+                                                    inner: [],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                                Pair {
+                                    rule: t_semic,
+                                    span: Span {
+                                        str: ";",
+                                        start: 55,
+                                        end: 56,
+                                    },
+                                    inner: [],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Pair {
+                    rule: top_level_declaration,
+                    span: Span {
+                        str: "struct Basic {\n    int val1;\n}",
+                        start: 57,
+                        end: 87,
+                    },
+                    inner: [
+                        Pair {
+                            rule: struct_definition,
+                            span: Span {
+                                str: "struct Basic {\n    int val1;\n}",
+                                start: 57,
+                                end: 87,
+                            },
+                            inner: [
+                                Pair {
+                                    rule: t_struct,
+                                    span: Span {
+                                        str: "struct",
+                                        start: 57,
+                                        end: 63,
+                                    },
+                                    inner: [],
+                                },
+                                Pair {
+                                    rule: identifier,
+                                    span: Span {
+                                        str: "Basic",
+                                        start: 64,
+                                        end: 69,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: single_identifier,
+                                            span: Span {
+                                                str: "Basic",
+                                                start: 64,
+                                                end: 69,
+                                            },
+                                            inner: [],
+                                        },
+                                    ],
+                                },
+                                Pair {
+                                    rule: struct_field_declaration,
+                                    span: Span {
+                                        str: "int val1",
+                                        start: 76,
+                                        end: 84,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: canonical_type,
+                                            span: Span {
+                                                str: "int ",
+                                                start: 76,
+                                                end: 80,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: type_specifier,
+                                                    span: Span {
+                                                        str: "int",
+                                                        start: 76,
+                                                        end: 79,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: t_int,
+                                                            span: Span {
+                                                                str: "int",
+                                                                start: 76,
+                                                                end: 79,
+                                                            },
+                                                            inner: [],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                        Pair {
+                                            rule: single_identifier,
+                                            span: Span {
+                                                str: "val1",
+                                                start: 80,
+                                                end: 84,
+                                            },
+                                            inner: [],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                Pair {
+                    rule: top_level_declaration,
+                    span: Span {
+                        str: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    return 0;\n}",
+                        start: 89,
+                        end: 169,
+                    },
+                    inner: [
+                        Pair {
+                            rule: function_definition,
+                            span: Span {
+                                str: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    return 0;\n}",
+                                start: 89,
+                                end: 169,
+                            },
+                            inner: [
+                                Pair {
+                                    rule: canonical_type,
+                                    span: Span {
+                                        str: "int ",
+                                        start: 89,
+                                        end: 93,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: type_specifier,
+                                            span: Span {
+                                                str: "int",
+                                                start: 89,
+                                                end: 92,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: t_int,
+                                                    span: Span {
+                                                        str: "int",
+                                                        start: 89,
+                                                        end: 92,
+                                                    },
+                                                    inner: [],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                                Pair {
+                                    rule: identifier,
+                                    span: Span {
+                                        str: "main",
+                                        start: 93,
+                                        end: 97,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: single_identifier,
+                                            span: Span {
+                                                str: "main",
+                                                start: 93,
+                                                end: 97,
+                                            },
+                                            inner: [],
+                                        },
+                                    ],
+                                },
+                                Pair {
+                                    rule: parameter_list,
+                                    span: Span {
+                                        str: "int argc, String[] args",
+                                        start: 98,
+                                        end: 121,
+                                    },
+                                    inner: [
+                                        Pair {
+                                            rule: parameter_declaration,
+                                            span: Span {
+                                                str: "int argc",
+                                                start: 98,
+                                                end: 106,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: canonical_type,
+                                                    span: Span {
+                                                        str: "int ",
+                                                        start: 98,
+                                                        end: 102,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: type_specifier,
+                                                            span: Span {
+                                                                str: "int",
+                                                                start: 98,
+                                                                end: 101,
+                                                            },
+                                                            inner: [
+                                                                Pair {
+                                                                    rule: t_int,
+                                                                    span: Span {
+                                                                        str: "int",
+                                                                        start: 98,
+                                                                        end: 101,
+                                                                    },
+                                                                    inner: [],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                                Pair {
+                                                    rule: identifier,
+                                                    span: Span {
+                                                        str: "argc",
+                                                        start: 102,
+                                                        end: 106,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: single_identifier,
+                                                            span: Span {
+                                                                str: "argc",
+                                                                start: 102,
+                                                                end: 106,
+                                                            },
+                                                            inner: [],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                        Pair {
+                                            rule: parameter_declaration,
+                                            span: Span {
+                                                str: "String[] args",
+                                                start: 108,
+                                                end: 121,
+                                            },
+                                            inner: [
+                                                Pair {
+                                                    rule: canonical_type,
+                                                    span: Span {
+                                                        str: "String[]",
+                                                        start: 108,
+                                                        end: 116,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: type_specifier,
+                                                            span: Span {
+                                                                str: "String",
+                                                                start: 108,
+                                                                end: 114,
+                                                            },
+                                                            inner: [
+                                                                Pair {
+                                                                    rule: identifier,
+                                                                    span: Span {
+                                                                        str: "String",
+                                                                        start: 108,
+                                                                        end: 114,
+                                                                    },
+                                                                    inner: [
+                                                                        Pair {
+                                                                            rule: single_identifier,
+                                                                            span: Span {
+                                                                                str: "String",
+                                                                                start: 108,
+                                                                                end: 114,
+                                                                            },
+                                                                            inner: [],
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                        Pair {
+                                                            rule: array_declarator,
+                                                            span: Span {
+                                                                str: "[]",
+                                                                start: 114,
+                                                                end: 116,
+                                                            },
+                                                            inner: [
+                                                                Pair {
+                                                                    rule: t_lbrac,
+                                                                    span: Span {
+                                                                        str: "[",
+                                                                        start: 114,
+                                                                        end: 115,
+                                                                    },
+                                                                    inner: [],
+                                                                },
+                                                                Pair {
+                                                                    rule: t_rbrac,
+                                                                    span: Span {
+                                                                        str: "]",
+                                                                        start: 115,
+                                                                        end: 116,
+                                                                    },
+                                                                    inner: [],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                                Pair {
+                                                    rule: identifier,
+                                                    span: Span {
+                                                        str: "args",
+                                                        start: 117,
+                                                        end: 121,
+                                                    },
+                                                    inner: [
+                                                        Pair {
+                                                            rule: single_identifier,
+                                                            span: Span {
+                                                                str: "args",
+                                                                start: 117,
+                                                                end: 121,
+                                                            },
+                                                            inner: [],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                                Pair {
                                     rule: compound_statement,
                                     span: Span {
-                                        str: "{\r\n    println(\"Hello world!\");\r\n    return 0;\r\n}",
-                                        start: 73,
-                                        end: 122,
+                                        str: "{\n    println(\"Hello world!\");\n    return 0;\n}",
+                                        start: 123,
+                                        end: 169,
                                     },
                                     inner: [
                                         Pair {
                                             rule: statement,
                                             span: Span {
                                                 str: "println(\"Hello world!\");",
-                                                start: 80,
-                                                end: 104,
+                                                start: 129,
+                                                end: 153,
                                             },
                                             inner: [
                                                 Pair {
                                                     rule: expression_statement,
                                                     span: Span {
                                                         str: "println(\"Hello world!\");",
-                                                        start: 80,
-                                                        end: 104,
+                                                        start: 129,
+                                                        end: 153,
                                                     },
                                                     inner: [
                                                         Pair {
                                                             rule: expression,
                                                             span: Span {
                                                                 str: "println(\"Hello world!\")",
-                                                                start: 80,
-                                                                end: 103,
+                                                                start: 129,
+                                                                end: 152,
                                                             },
                                                             inner: [
                                                                 Pair {
                                                                     rule: double_or_expression,
                                                                     span: Span {
                                                                         str: "println(\"Hello world!\")",
-                                                                        start: 80,
-                                                                        end: 103,
+                                                                        start: 129,
+                                                                        end: 152,
                                                                     },
                                                                     inner: [
                                                                         Pair {
                                                                             rule: double_and_expression,
                                                                             span: Span {
                                                                                 str: "println(\"Hello world!\")",
-                                                                                start: 80,
-                                                                                end: 103,
+                                                                                start: 129,
+                                                                                end: 152,
                                                                             },
                                                                             inner: [
                                                                                 Pair {
                                                                                     rule: or_expression,
                                                                                     span: Span {
                                                                                         str: "println(\"Hello world!\")",
-                                                                                        start: 80,
-                                                                                        end: 103,
+                                                                                        start: 129,
+                                                                                        end: 152,
                                                                                     },
                                                                                     inner: [
                                                                                         Pair {
                                                                                             rule: xor_expression,
                                                                                             span: Span {
                                                                                                 str: "println(\"Hello world!\")",
-                                                                                                start: 80,
-                                                                                                end: 103,
+                                                                                                start: 129,
+                                                                                                end: 152,
                                                                                             },
                                                                                             inner: [
                                                                                                 Pair {
                                                                                                     rule: and_expression,
                                                                                                     span: Span {
                                                                                                         str: "println(\"Hello world!\")",
-                                                                                                        start: 80,
-                                                                                                        end: 103,
+                                                                                                        start: 129,
+                                                                                                        end: 152,
                                                                                                     },
                                                                                                     inner: [
                                                                                                         Pair {
                                                                                                             rule: equation,
                                                                                                             span: Span {
                                                                                                                 str: "println(\"Hello world!\")",
-                                                                                                                start: 80,
-                                                                                                                end: 103,
+                                                                                                                start: 129,
+                                                                                                                end: 152,
                                                                                                             },
                                                                                                             inner: [
                                                                                                                 Pair {
                                                                                                                     rule: c_expression,
                                                                                                                     span: Span {
                                                                                                                         str: "println(\"Hello world!\")",
-                                                                                                                        start: 80,
-                                                                                                                        end: 103,
+                                                                                                                        start: 129,
+                                                                                                                        end: 152,
                                                                                                                     },
                                                                                                                     inner: [
                                                                                                                         Pair {
                                                                                                                             rule: g_expression,
                                                                                                                             span: Span {
                                                                                                                                 str: "println(\"Hello world!\")",
-                                                                                                                                start: 80,
-                                                                                                                                end: 103,
+                                                                                                                                start: 129,
+                                                                                                                                end: 152,
                                                                                                                             },
                                                                                                                             inner: [
                                                                                                                                 Pair {
                                                                                                                                     rule: t_expression,
                                                                                                                                     span: Span {
                                                                                                                                         str: "println(\"Hello world!\")",
-                                                                                                                                        start: 80,
-                                                                                                                                        end: 103,
+                                                                                                                                        start: 129,
+                                                                                                                                        end: 152,
                                                                                                                                     },
                                                                                                                                     inner: [
                                                                                                                                         Pair {
                                                                                                                                             rule: factor,
                                                                                                                                             span: Span {
                                                                                                                                                 str: "println(\"Hello world!\")",
-                                                                                                                                                start: 80,
-                                                                                                                                                end: 103,
+                                                                                                                                                start: 129,
+                                                                                                                                                end: 152,
                                                                                                                                             },
                                                                                                                                             inner: [
                                                                                                                                                 Pair {
                                                                                                                                                     rule: atom,
                                                                                                                                                     span: Span {
                                                                                                                                                         str: "println(\"Hello world!\")",
-                                                                                                                                                        start: 80,
-                                                                                                                                                        end: 103,
+                                                                                                                                                        start: 129,
+                                                                                                                                                        end: 152,
                                                                                                                                                     },
                                                                                                                                                     inner: [
                                                                                                                                                         Pair {
                                                                                                                                                             rule: identifier,
                                                                                                                                                             span: Span {
                                                                                                                                                                 str: "println",
-                                                                                                                                                                start: 80,
-                                                                                                                                                                end: 87,
+                                                                                                                                                                start: 129,
+                                                                                                                                                                end: 136,
                                                                                                                                                             },
                                                                                                                                                             inner: [
                                                                                                                                                                 Pair {
                                                                                                                                                                     rule: single_identifier,
                                                                                                                                                                     span: Span {
                                                                                                                                                                         str: "println",
-                                                                                                                                                                        start: 80,
-                                                                                                                                                                        end: 87,
+                                                                                                                                                                        start: 129,
+                                                                                                                                                                        end: 136,
                                                                                                                                                                     },
                                                                                                                                                                     inner: [],
                                                                                                                                                                 },
@@ -571,128 +800,128 @@ Pair {
                                                                                                                                                             rule: atom_tail,
                                                                                                                                                             span: Span {
                                                                                                                                                                 str: "(\"Hello world!\")",
-                                                                                                                                                                start: 87,
-                                                                                                                                                                end: 103,
+                                                                                                                                                                start: 136,
+                                                                                                                                                                end: 152,
                                                                                                                                                             },
                                                                                                                                                             inner: [
                                                                                                                                                                 Pair {
                                                                                                                                                                     rule: function_call,
                                                                                                                                                                     span: Span {
                                                                                                                                                                         str: "(\"Hello world!\")",
-                                                                                                                                                                        start: 87,
-                                                                                                                                                                        end: 103,
+                                                                                                                                                                        start: 136,
+                                                                                                                                                                        end: 152,
                                                                                                                                                                     },
                                                                                                                                                                     inner: [
                                                                                                                                                                         Pair {
                                                                                                                                                                             rule: args_list,
                                                                                                                                                                             span: Span {
                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                start: 88,
-                                                                                                                                                                                end: 102,
+                                                                                                                                                                                start: 137,
+                                                                                                                                                                                end: 151,
                                                                                                                                                                             },
                                                                                                                                                                             inner: [
                                                                                                                                                                                 Pair {
                                                                                                                                                                                     rule: expression,
                                                                                                                                                                                     span: Span {
                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                        end: 151,
                                                                                                                                                                                     },
                                                                                                                                                                                     inner: [
                                                                                                                                                                                         Pair {
                                                                                                                                                                                             rule: double_or_expression,
                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                end: 151,
                                                                                                                                                                                             },
                                                                                                                                                                                             inner: [
                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                     rule: double_and_expression,
                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                                        end: 151,
                                                                                                                                                                                                     },
                                                                                                                                                                                                     inner: [
                                                                                                                                                                                                         Pair {
                                                                                                                                                                                                             rule: or_expression,
                                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                                end: 151,
                                                                                                                                                                                                             },
                                                                                                                                                                                                             inner: [
                                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                                     rule: xor_expression,
                                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                                                        end: 151,
                                                                                                                                                                                                                     },
                                                                                                                                                                                                                     inner: [
                                                                                                                                                                                                                         Pair {
                                                                                                                                                                                                                             rule: and_expression,
                                                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                                                end: 151,
                                                                                                                                                                                                                             },
                                                                                                                                                                                                                             inner: [
                                                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                                                     rule: equation,
                                                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                                                                        end: 151,
                                                                                                                                                                                                                                     },
                                                                                                                                                                                                                                     inner: [
                                                                                                                                                                                                                                         Pair {
                                                                                                                                                                                                                                             rule: c_expression,
                                                                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                                                                end: 151,
                                                                                                                                                                                                                                             },
                                                                                                                                                                                                                                             inner: [
                                                                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                                                                     rule: g_expression,
                                                                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                                                                                        end: 151,
                                                                                                                                                                                                                                                     },
                                                                                                                                                                                                                                                     inner: [
                                                                                                                                                                                                                                                         Pair {
                                                                                                                                                                                                                                                             rule: t_expression,
                                                                                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                                                                                end: 151,
                                                                                                                                                                                                                                                             },
                                                                                                                                                                                                                                                             inner: [
                                                                                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                                                                                     rule: factor,
                                                                                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                                                                                         str: "\"Hello world!\"",
-                                                                                                                                                                                                                                                                        start: 88,
-                                                                                                                                                                                                                                                                        end: 102,
+                                                                                                                                                                                                                                                                        start: 137,
+                                                                                                                                                                                                                                                                        end: 151,
                                                                                                                                                                                                                                                                     },
                                                                                                                                                                                                                                                                     inner: [
                                                                                                                                                                                                                                                                         Pair {
                                                                                                                                                                                                                                                                             rule: string,
                                                                                                                                                                                                                                                                             span: Span {
                                                                                                                                                                                                                                                                                 str: "\"Hello world!\"",
-                                                                                                                                                                                                                                                                                start: 88,
-                                                                                                                                                                                                                                                                                end: 102,
+                                                                                                                                                                                                                                                                                start: 137,
+                                                                                                                                                                                                                                                                                end: 151,
                                                                                                                                                                                                                                                                             },
                                                                                                                                                                                                                                                                             inner: [
                                                                                                                                                                                                                                                                                 Pair {
                                                                                                                                                                                                                                                                                     rule: escapable_string,
                                                                                                                                                                                                                                                                                     span: Span {
                                                                                                                                                                                                                                                                                         str: "Hello world!",
-                                                                                                                                                                                                                                                                                        start: 89,
-                                                                                                                                                                                                                                                                                        end: 101,
+                                                                                                                                                                                                                                                                                        start: 138,
+                                                                                                                                                                                                                                                                                        end: 150,
                                                                                                                                                                                                                                                                                     },
                                                                                                                                                                                                                                                                                     inner: [],
                                                                                                                                                                                                                                                                                 },
@@ -754,8 +983,8 @@ Pair {
                                                             rule: t_semic,
                                                             span: Span {
                                                                 str: ";",
-                                                                start: 103,
-                                                                end: 104,
+                                                                start: 152,
+                                                                end: 153,
                                                             },
                                                             inner: [],
                                                         },
@@ -767,24 +996,24 @@ Pair {
                                             rule: statement,
                                             span: Span {
                                                 str: "return 0;",
-                                                start: 110,
-                                                end: 119,
+                                                start: 158,
+                                                end: 167,
                                             },
                                             inner: [
                                                 Pair {
                                                     rule: jump_statement,
                                                     span: Span {
                                                         str: "return 0;",
-                                                        start: 110,
-                                                        end: 119,
+                                                        start: 158,
+                                                        end: 167,
                                                     },
                                                     inner: [
                                                         Pair {
                                                             rule: t_return,
                                                             span: Span {
                                                                 str: "return",
-                                                                start: 110,
-                                                                end: 116,
+                                                                start: 158,
+                                                                end: 164,
                                                             },
                                                             inner: [],
                                                         },
@@ -792,96 +1021,96 @@ Pair {
                                                             rule: expression,
                                                             span: Span {
                                                                 str: "0",
-                                                                start: 117,
-                                                                end: 118,
+                                                                start: 165,
+                                                                end: 166,
                                                             },
                                                             inner: [
                                                                 Pair {
                                                                     rule: double_or_expression,
                                                                     span: Span {
                                                                         str: "0",
-                                                                        start: 117,
-                                                                        end: 118,
+                                                                        start: 165,
+                                                                        end: 166,
                                                                     },
                                                                     inner: [
                                                                         Pair {
                                                                             rule: double_and_expression,
                                                                             span: Span {
                                                                                 str: "0",
-                                                                                start: 117,
-                                                                                end: 118,
+                                                                                start: 165,
+                                                                                end: 166,
                                                                             },
                                                                             inner: [
                                                                                 Pair {
                                                                                     rule: or_expression,
                                                                                     span: Span {
                                                                                         str: "0",
-                                                                                        start: 117,
-                                                                                        end: 118,
+                                                                                        start: 165,
+                                                                                        end: 166,
                                                                                     },
                                                                                     inner: [
                                                                                         Pair {
                                                                                             rule: xor_expression,
                                                                                             span: Span {
                                                                                                 str: "0",
-                                                                                                start: 117,
-                                                                                                end: 118,
+                                                                                                start: 165,
+                                                                                                end: 166,
                                                                                             },
                                                                                             inner: [
                                                                                                 Pair {
                                                                                                     rule: and_expression,
                                                                                                     span: Span {
                                                                                                         str: "0",
-                                                                                                        start: 117,
-                                                                                                        end: 118,
+                                                                                                        start: 165,
+                                                                                                        end: 166,
                                                                                                     },
                                                                                                     inner: [
                                                                                                         Pair {
                                                                                                             rule: equation,
                                                                                                             span: Span {
                                                                                                                 str: "0",
-                                                                                                                start: 117,
-                                                                                                                end: 118,
+                                                                                                                start: 165,
+                                                                                                                end: 166,
                                                                                                             },
                                                                                                             inner: [
                                                                                                                 Pair {
                                                                                                                     rule: c_expression,
                                                                                                                     span: Span {
                                                                                                                         str: "0",
-                                                                                                                        start: 117,
-                                                                                                                        end: 118,
+                                                                                                                        start: 165,
+                                                                                                                        end: 166,
                                                                                                                     },
                                                                                                                     inner: [
                                                                                                                         Pair {
                                                                                                                             rule: g_expression,
                                                                                                                             span: Span {
                                                                                                                                 str: "0",
-                                                                                                                                start: 117,
-                                                                                                                                end: 118,
+                                                                                                                                start: 165,
+                                                                                                                                end: 166,
                                                                                                                             },
                                                                                                                             inner: [
                                                                                                                                 Pair {
                                                                                                                                     rule: t_expression,
                                                                                                                                     span: Span {
                                                                                                                                         str: "0",
-                                                                                                                                        start: 117,
-                                                                                                                                        end: 118,
+                                                                                                                                        start: 165,
+                                                                                                                                        end: 166,
                                                                                                                                     },
                                                                                                                                     inner: [
                                                                                                                                         Pair {
                                                                                                                                             rule: factor,
                                                                                                                                             span: Span {
                                                                                                                                                 str: "0",
-                                                                                                                                                start: 117,
-                                                                                                                                                end: 118,
+                                                                                                                                                start: 165,
+                                                                                                                                                end: 166,
                                                                                                                                             },
                                                                                                                                             inner: [
                                                                                                                                                 Pair {
                                                                                                                                                     rule: literal,
                                                                                                                                                     span: Span {
                                                                                                                                                         str: "0",
-                                                                                                                                                        start: 117,
-                                                                                                                                                        end: 118,
+                                                                                                                                                        start: 165,
+                                                                                                                                                        end: 166,
                                                                                                                                                     },
                                                                                                                                                     inner: [],
                                                                                                                                                 },
@@ -911,8 +1140,8 @@ Pair {
                                                             rule: t_semic,
                                                             span: Span {
                                                                 str: ";",
-                                                                start: 118,
-                                                                end: 119,
+                                                                start: 166,
+                                                                end: 167,
                                                             },
                                                             inner: [],
                                                         },
@@ -932,8 +1161,8 @@ Pair {
             rule: EOI,
             span: Span {
                 str: "",
-                start: 124,
-                end: 124,
+                start: 171,
+                end: 171,
             },
             inner: [],
         },

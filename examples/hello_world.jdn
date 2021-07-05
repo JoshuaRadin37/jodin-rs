@@ -1,7 +1,13 @@
-using std::String;
-using stdio::*;
+using std::{String, stdio::*};
 
-int main(int argc, String args[]) {
+
+int(int,String[]) main;
+struct Basic {
+    int val1;
+}
+
+int main(int argc, String[] args) {
     println("Hello world!");
     return 0;
 }
+

@@ -20,10 +20,10 @@ pub enum JodinNodeInner {
     Keyword(Keyword),
     Literal(Literal),
     Identifier(Identifier),
-    VarDeclaration {
-        name: JodinNode,
+    VarDeclarations {
         var_type: JodinNode,
-        value: JodinNode,
+        names: Vec<JodinNode>,
+        values: Vec<Option<JodinNode>>,
     },
     FunctionDefinition {
         name: JodinNode,

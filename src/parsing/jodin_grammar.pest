@@ -240,30 +240,21 @@ top_level_declaration = {
     function_definition |
     struct_definition |
     declaration |
-    in_namespace
+    in_namespace |
+    ";"
 }
 
 function_definition = {
-    declaration_specifiers ~ declarator ~ compound_statement
+    canonical_type ~ identifier ~ "(" ~ parameter_list ~ ")" ~ compound_statement
 }
 
-
-
-declarator = {
-    pointer? ~ direct_declarator
-}
-
-direct_declarator = {
-    (identifier | "(" ~ declarator ~ ")")
-        ~ (array_declarator | function_declarator)*
-}
 
 array_declarator = {
     t_lbrac ~ expression? ~ t_rbrac
 }
 
 function_declarator = {
-    "(" ~ (parameter_list | id_list)? ~ ")"
+    "(" ~ (parameter_list | type_list)? ~ ")"
 }
 
 parameter_list = {
@@ -271,11 +262,11 @@ parameter_list = {
 }
 
 parameter_declaration = {
-    declaration_specifiers ~ (declarator | abstract_declarator)?
+    canonical_type ~ identifier
 }
 
-declaration_specifiers = {
-    storage_class_specifiers* ~ type_specifier
+type_list = {
+    canonical_type ~ ("," ~ canonical_type)*
 }
 
 storage_class_specifiers = {
@@ -298,7 +289,7 @@ direct_abstract_declarator = {
 }
 
 declaration = {
-    declaration_specifiers ~ init_declarator_list ~ t_semic
+    canonical_type ~ init_declarator_list ~ t_semic
 }
 
 init_declarator_list = {
@@ -306,7 +297,7 @@ init_declarator_list = {
 }
 
 init_declarator = {
-    declarator ~ ("=" ~ initializer)?
+    single_identifier ~ ("=" ~ initializer)?
 }
 
 initializer = {
@@ -460,11 +451,11 @@ pointer = {
 struct_definition = {
     t_struct ~ identifier ~ generics_declaration? ~ "{" ~
         (struct_field_declaration ~ ";")*
-    ~ "};"
+    ~ "}"
 }
 
 struct_field_declaration = {
-    t_const? ~ type_specifier ~ declarator
+    canonical_type ~ single_identifier
 }
 
 generics_declaration = {
@@ -504,7 +495,7 @@ in_namespace = {
 }
 
 canonical_type = {
-    type_specifier ~ (pointer | array_declarator)
+    (t_const)? ~ type_specifier ~ (pointer | array_declarator | function_declarator)*
 }
 
 
