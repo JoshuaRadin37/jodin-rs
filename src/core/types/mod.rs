@@ -14,6 +14,7 @@ use std::any::Any;
 
 pub mod primitives;
 pub mod structure;
+pub mod type_tracker;
 
 #[derive(Debug)]
 pub enum JodinType {
@@ -53,7 +54,7 @@ impl Type for JodinType {
 
 pub type JodinTypeReference = Rc<RefCell<JodinType>>;
 
-pub static NEXT_TYPE_ID: AtomicU32 = AtomicU32::new(10);
+pub static NEXT_TYPE_ID: AtomicU32 = AtomicU32::new(100);
 
 pub fn get_type_id() -> u32 {
     NEXT_TYPE_ID.fetch_add(1, Ordering::AcqRel)

@@ -3,20 +3,16 @@ use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 use crate::core::types::{JodinType, JodinTypeReference};
+use crate::parsing::ast::intermediate_type::IntermediateType;
 use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::keywords::Keyword;
+use crate::parsing::parser::JodinRule;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Debug)]
-pub enum ResolvedType {
-    Type(JodinTypeReference),
-    Unresolved(Identifier),
-}
-
-#[derive(Debug)]
 pub enum JodinNodeInner {
-    Type(JodinTypeReference),
+    Type(IntermediateType),
     Keyword(Keyword),
     Literal(Literal),
     Identifier(Identifier),
@@ -48,6 +44,10 @@ pub enum JodinNodeInner {
         op: Operator,
         inner: JodinNode,
     },
+    CastExpression {
+        to_type: IntermediateType,
+        factor: JodinNode,
+    },
     Postop {
         op: Operator,
         inner: JodinNode,
@@ -56,6 +56,11 @@ pub enum JodinNodeInner {
         op: Operator,
         lhs: JodinNode,
         rhs: JodinNode,
+    },
+    Ternary {
+        cond: JodinNode,
+        yes: JodinNode,
+        no: JodinNode,
     },
     Index {
         indexed: JodinNode,
@@ -79,6 +84,9 @@ pub enum JodinNodeInner {
     },
     UsingIdentifier {
         import_data: Import,
+    },
+    Unimplemented {
+        jodin_rule: JodinRule,
     },
 }
 

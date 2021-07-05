@@ -222,6 +222,7 @@ type_specifier = {
     t_boolean |
     t_double |
     t_float |
+    t_void |
     t_unsigned? ~ (t_char | t_short | t_int | t_long)
 }
 
@@ -393,7 +394,7 @@ t_expression = {
 }
 
 factor = {
-    (uni_ops ~ factor |
+    (uni_op |
     string |
     literal |
     t_true |
@@ -402,8 +403,12 @@ factor = {
     atom) ~ (mul_op ~ factor)?
 }
 
+uni_op = {
+    uni_ops ~ factor
+}
+
 cast_expression = {
-    "(" ~ type_specifier ~ ")" ~ factor
+    "(" ~ canonical_type ~ ")" ~ factor
 }
 
 sizeof_expression = {
@@ -418,7 +423,7 @@ atom = {
     "(" ~ expression ~ ")" ~ atom_tail? |
     identifier ~ atom_tail? |
     t_super ~ atom_tail? |
-    t_new ~ type_specifier ~ generic_instance? ~ "(" ~ args_list ~ ")"
+    t_new ~ canonical_type ~ generic_instance? ~ "(" ~ args_list ~ ")"
 }
 
 atom_tail = {
@@ -495,7 +500,7 @@ in_namespace = {
 }
 
 canonical_type = {
-    (t_const)? ~ type_specifier ~ (pointer | array_declarator | function_declarator)*
+    (t_const)? ~ type_specifier ~ ("<" ~ type_list ~ ">")? ~ (pointer | array_declarator | "(" ~ type_list ~ ")")*
 }
 
 

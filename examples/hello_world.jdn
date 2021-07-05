@@ -1,13 +1,19 @@
-using std::{String, stdio::*};
+List<int> lists;
+std::Map<int, String> mapping;
+
+using std::{String, stdio::*, stdio};
 
 
-int(int,String[]) main;
-struct Basic {
-    int val1;
-}
+int(int,String[!0x12]) main;
+const unsigned long[] array;
+boolean yes = true;
+
 
 int main(int argc, String[] args) {
     println("Hello world!");
+    stdio::println("Hello world!");
     return 0;
 }
+
+
 

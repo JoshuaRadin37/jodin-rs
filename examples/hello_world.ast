@@ -4,6 +4,90 @@ JodinNode {
     decs: [
         JodinNode {
         	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: false,
+                    type_specifier: Id(
+                        List,
+                    ),
+                    generics: [
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Primitive(
+                                Int,
+                            ),
+                            generics: [],
+                            tails: [],
+                        },
+                    ],
+                    tails: [],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    lists,
+                )
+                },
+            ],
+            values: [
+                None,
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: false,
+                    type_specifier: Id(
+                        std::Map,
+                    ),
+                    generics: [
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Primitive(
+                                Int,
+                            ),
+                            generics: [],
+                            tails: [],
+                        },
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Id(
+                                String,
+                            ),
+                            generics: [],
+                            tails: [],
+                        },
+                    ],
+                    tails: [],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    mapping,
+                )
+                },
+            ],
+            values: [
+                None,
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
         	inner: UsingIdentifier {
             import_data: Import {
                 id: std,
@@ -17,9 +101,153 @@ JodinNode {
                             id: stdio,
                             import_type: Wildcard,
                         },
+                        Import {
+                            id: stdio,
+                            import_type: Direct,
+                        },
                     ],
                 },
             },
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: false,
+                    type_specifier: Primitive(
+                        Int,
+                    ),
+                    generics: [
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Primitive(
+                                Int,
+                            ),
+                            generics: [],
+                            tails: [],
+                        },
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Id(
+                                String,
+                            ),
+                            generics: [],
+                            tails: [
+                                Array(
+                                    Some(
+                                        JodinNode {
+                                        	attributes: []
+                                        	inner: Uniop {
+                                            op: Not,
+                                            inner: JodinNode {
+                                            	attributes: []
+                                            	inner: Literal(
+                                                Int(
+                                                    18,
+                                                ),
+                                            )
+                                            },
+                                        }
+                                        },
+                                    ),
+                                ),
+                            ],
+                        },
+                    ],
+                    tails: [],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    main,
+                )
+                },
+            ],
+            values: [
+                None,
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: true,
+                    type_specifier: Primitive(
+                        UnsignedLong,
+                    ),
+                    generics: [],
+                    tails: [
+                        Array(
+                            None,
+                        ),
+                    ],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    array,
+                )
+                },
+            ],
+            values: [
+                None,
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: false,
+                    type_specifier: Primitive(
+                        Boolean,
+                    ),
+                    generics: [],
+                    tails: [],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    yes,
+                )
+                },
+            ],
+            values: [
+                Some(
+                    JodinNode {
+                    	attributes: []
+                    	inner: Unimplemented {
+                        jodin_rule: initializer,
+                    }
+                    },
+                ),
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: Unimplemented {
+            jodin_rule: function_definition,
         }
         },
     ],

@@ -16,6 +16,8 @@ pub enum Primitive {
     UnsignedShort,
     UnsignedInt,
     UnsignedLong,
+    Float,
+    Double
 }
 
 impl Type for Primitive {
@@ -32,6 +34,8 @@ impl Type for Primitive {
             Primitive::UnsignedShort => "unsigned short",
             Primitive::UnsignedInt => "unsigned int",
             Primitive::UnsignedLong => "unsigned long",
+            Primitive::Float => "float",
+            Primitive::Double => "double"
         };
         Identifier::from(str)
     }
@@ -49,6 +53,8 @@ impl Type for Primitive {
             Primitive::UnsignedShort => 8,
             Primitive::UnsignedInt => 9,
             Primitive::UnsignedLong => 10,
+            Primitive::Float => 11,
+            Primitive::Double => 12,
         }
     }
 }
