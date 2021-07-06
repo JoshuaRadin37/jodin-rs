@@ -207,7 +207,9 @@ mod test {
         resolver.push_namespace(Identifier::from("n1"));
         println!("{:#?}", resolver);
         let result = resolver.resolve_path(Identifier::from_iter(&["n2", "object"]));
-        if let Err(JodinErrorType::AmbiguousIdentifierError { given: _, found }) = result {
+        if let Err(JodinErrorType::AmbiguousIdentifierError { given: _, found }) =
+            result.map_err(|err| err.into_err_and_bt().0)
+        {
             assert!(
                 (found
                     == vec![

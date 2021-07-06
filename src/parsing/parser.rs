@@ -1,8 +1,8 @@
-use crate::core::error::{JodinErrorType, JodinResult, JodinError};
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::parsing::ast::node_type::JodinNodeInner;
+use crate::parsing::error::ParseError;
 use pest::iterators::{Pair, Pairs};
 use pest::{ParseResult, Parser, RuleType};
-use crate::parsing::error::ParseError;
-use crate::parsing::ast::node_type::JodinNodeInner;
 
 #[derive(Parser, Debug)]
 #[grammar = "parsing/jodin_grammar.pest"]
@@ -12,9 +12,7 @@ pub type JodinRule = Rule;
 
 pub fn complete_parse(rule: Rule, input: &str) -> JodinResult<Pairs<Rule>> {
     let result: Result<_, pest::error::Error<_>> = JodinParser::parse(rule, input);
-    result.map_err(
-        |err| JodinErrorType::ParserError(err, None).into()
-    )
+    result.map_err(|err| JodinErrorType::ParserError(err, None).into())
     //Ok(result)
 }
 
@@ -104,7 +102,7 @@ mod tests {
     #[test]
     fn parse_declaration() {
         let p = complete_parse(Rule::declaration, "unsigned int red;");
-        match p {
+        match p.map_err(|e| e.into_err_and_bt().0) {
             Ok(o) => println!("{:#?}", o),
             Err(JodinErrorType::ParserError(e, None)) => {
                 println!("{}", e);
@@ -115,7 +113,7 @@ mod tests {
             }
         }
         let p = complete_parse(Rule::declaration, "unsigned int red(int n);");
-        match p {
+        match p.map_err(|e| e.into_err_and_bt().0) {
             Ok(o) => println!("{:#?}", o),
             Err(JodinErrorType::ParserError(e, None)) => {
                 println!("{}", e);
@@ -133,7 +131,7 @@ mod tests {
         if (n == 0) return 0;\
         return factorial(n- 1) * n; }";
         let p = complete_parse(Rule::function_definition, string);
-        match p {
+        match p.map_err(|e| e.into_err_and_bt().0) {
             Ok(o) => println!("{:#?}", o),
             Err(JodinErrorType::ParserError(e, None)) => {
                 println!("{:#?}", e);

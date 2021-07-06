@@ -4,90 +4,6 @@ JodinNode {
     decs: [
         JodinNode {
         	attributes: []
-        	inner: VarDeclarations {
-            var_type: JodinNode {
-            	attributes: []
-            	inner: Type(
-                IntermediateType {
-                    is_const: false,
-                    type_specifier: Id(
-                        List,
-                    ),
-                    generics: [
-                        IntermediateType {
-                            is_const: false,
-                            type_specifier: Primitive(
-                                Int,
-                            ),
-                            generics: [],
-                            tails: [],
-                        },
-                    ],
-                    tails: [],
-                },
-            )
-            },
-            names: [
-                JodinNode {
-                	attributes: []
-                	inner: Identifier(
-                    lists,
-                )
-                },
-            ],
-            values: [
-                None,
-            ],
-        }
-        },
-        JodinNode {
-        	attributes: []
-        	inner: VarDeclarations {
-            var_type: JodinNode {
-            	attributes: []
-            	inner: Type(
-                IntermediateType {
-                    is_const: false,
-                    type_specifier: Id(
-                        std::Map,
-                    ),
-                    generics: [
-                        IntermediateType {
-                            is_const: false,
-                            type_specifier: Primitive(
-                                Int,
-                            ),
-                            generics: [],
-                            tails: [],
-                        },
-                        IntermediateType {
-                            is_const: false,
-                            type_specifier: Id(
-                                String,
-                            ),
-                            generics: [],
-                            tails: [],
-                        },
-                    ],
-                    tails: [],
-                },
-            )
-            },
-            names: [
-                JodinNode {
-                	attributes: []
-                	inner: Identifier(
-                    mapping,
-                )
-                },
-            ],
-            values: [
-                None,
-            ],
-        }
-        },
-        JodinNode {
-        	attributes: []
         	inner: UsingIdentifier {
             import_data: Import {
                 id: std,
@@ -138,22 +54,7 @@ JodinNode {
                             generics: [],
                             tails: [
                                 Array(
-                                    Some(
-                                        JodinNode {
-                                        	attributes: []
-                                        	inner: Uniop {
-                                            op: Not,
-                                            inner: JodinNode {
-                                            	attributes: []
-                                            	inner: Literal(
-                                                Int(
-                                                    18,
-                                                ),
-                                            )
-                                            },
-                                        }
-                                        },
-                                    ),
+                                    None,
                                 ),
                             ],
                         },
@@ -189,7 +90,58 @@ JodinNode {
                     generics: [],
                     tails: [
                         Array(
-                            None,
+                            Some(
+                                JodinNode {
+                                	attributes: []
+                                	inner: Binop {
+                                    op: Plus,
+                                    lhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Literal(
+                                        Int(
+                                            9,
+                                        ),
+                                    )
+                                    },
+                                    rhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Binop {
+                                        op: Minus,
+                                        lhs: JodinNode {
+                                        	attributes: []
+                                        	inner: Literal(
+                                            Int(
+                                                2,
+                                            ),
+                                        )
+                                        },
+                                        rhs: JodinNode {
+                                        	attributes: []
+                                        	inner: Binop {
+                                            op: Plus,
+                                            lhs: JodinNode {
+                                            	attributes: []
+                                            	inner: Literal(
+                                                Int(
+                                                    3,
+                                                ),
+                                            )
+                                            },
+                                            rhs: JodinNode {
+                                            	attributes: []
+                                            	inner: Literal(
+                                                Int(
+                                                    4,
+                                                ),
+                                            )
+                                            },
+                                        }
+                                        },
+                                    }
+                                    },
+                                }
+                                },
+                            ),
                         ),
                     ],
                 },
@@ -238,6 +190,7 @@ JodinNode {
                     	attributes: []
                     	inner: Unimplemented {
                         jodin_rule: initializer,
+                        affected_string: "true",
                     }
                     },
                 ),
@@ -248,6 +201,7 @@ JodinNode {
         	attributes: []
         	inner: Unimplemented {
             jodin_rule: function_definition,
+            affected_string: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    stdio::println(\"Hello world!\");\n    return 0;\n}",
         }
         },
     ],

@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn parse_using_path() {
         let string = "std::{vec::*, map, a::b as c}";
-        match complete_parse(JodinRule::using_path, string) {
+        match complete_parse(JodinRule::using_path, string).map_err(|e| e.into_err_and_bt().0) {
             Err(JodinErrorType::ParserError(e, ..)) => {
                 println!("{}", e);
                 panic!()

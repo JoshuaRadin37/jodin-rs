@@ -1,11 +1,8 @@
-List<int> lists;
-std::Map<int, String> mapping;
-
 using std::{String, stdio::*, stdio};
 
 
-int(int,String[!0x12]) main;
-const unsigned long[] array;
+int(int,String[]) main;
+const unsigned long[9+2-3+4] array;
 boolean yes = true;
 
 

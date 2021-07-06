@@ -1,6 +1,7 @@
 use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierIterator, Namespaced};
+use crate::utility::Tree;
 use ptree::{write_tree, Style, TreeBuilder, TreeItem};
 use std::borrow::Cow;
 use std::collections::hash_map::RandomState;
@@ -266,6 +267,12 @@ impl<T: Namespaced> NamespaceTree<T> {
             }
         }
         Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
+    }
+}
+
+impl<T: Namespaced> Tree for Node<T> {
+    fn direct_children(&self) -> Vec<&Self> {
+        self.children.iter().collect()
     }
 }
 

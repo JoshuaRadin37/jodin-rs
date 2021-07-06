@@ -1,6 +1,7 @@
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::ast::tags::{Tag, TagUtilities};
+use crate::utility::Tree;
 use std::any::Any;
 use std::borrow::Cow;
 use std::fmt::{Debug, Formatter};
@@ -18,6 +19,9 @@ impl JodinNode {
         }
     }
 
+    pub fn into_inner(self) -> JodinNodeInner {
+        *self.jodin_node_type
+    }
     pub fn inner(&self) -> &JodinNodeInner {
         &*self.jodin_node_type
     }
@@ -131,6 +135,12 @@ impl Debug for JodinNode {
                 self.jodin_node_type,
             )
         }
+    }
+}
+
+impl Tree for JodinNode {
+    fn direct_children(&self) -> Vec<&Self> {
+        self.inner().children().into_iter().collect()
     }
 }
 
