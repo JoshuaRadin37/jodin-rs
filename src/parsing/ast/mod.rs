@@ -449,11 +449,14 @@ impl SingleJodinNodeTreeCreator<'_> {
         let mut tails = vec![];
         for tail in vector {
             let tail: TypeTail = match tail.as_rule() {
-                JodinRule::type_list => {
-                    let mut inner = tail.into_inner();
+                JodinRule::function_declarator => {
+                    let inner = tail.into_inner().nth(0);
+                    //let mut inner = tail.into_inner();
                     let mut inner_types = vec![];
-                    for pair in inner {
-                        inner_types.push(self.new_intermediate(pair)?)
+                    if let Some(inner) = inner {
+                        for pair in inner.into_inner() {
+                            inner_types.push(self.new_intermediate(pair)?)
+                        }
                     }
                     TypeTail::Function(inner_types)
                 }

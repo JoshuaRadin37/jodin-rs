@@ -37,29 +37,34 @@ JodinNode {
                     type_specifier: Primitive(
                         Int,
                     ),
-                    generics: [
-                        IntermediateType {
-                            is_const: false,
-                            type_specifier: Primitive(
-                                Int,
-                            ),
-                            generics: [],
-                            tails: [],
-                        },
-                        IntermediateType {
-                            is_const: false,
-                            type_specifier: Id(
-                                String,
-                            ),
-                            generics: [],
-                            tails: [
-                                Array(
-                                    None,
-                                ),
+                    generics: [],
+                    tails: [
+                        Pointer,
+                        Function(
+                            [
+                                IntermediateType {
+                                    is_const: false,
+                                    type_specifier: Primitive(
+                                        Int,
+                                    ),
+                                    generics: [],
+                                    tails: [],
+                                },
+                                IntermediateType {
+                                    is_const: false,
+                                    type_specifier: Id(
+                                        String,
+                                    ),
+                                    generics: [],
+                                    tails: [
+                                        Array(
+                                            None,
+                                        ),
+                                    ],
+                                },
                             ],
-                        },
+                        ),
                     ],
-                    tails: [],
                 },
             )
             },
@@ -194,6 +199,57 @@ JodinNode {
                     }
                     },
                 ),
+            ],
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: VarDeclarations {
+            var_type: JodinNode {
+            	attributes: []
+            	inner: Type(
+                IntermediateType {
+                    is_const: false,
+                    type_specifier: Id(
+                        Option,
+                    ),
+                    generics: [
+                        IntermediateType {
+                            is_const: false,
+                            type_specifier: Primitive(
+                                Double,
+                            ),
+                            generics: [],
+                            tails: [],
+                        },
+                    ],
+                    tails: [
+                        Function(
+                            [
+                                IntermediateType {
+                                    is_const: false,
+                                    type_specifier: Primitive(
+                                        Double,
+                                    ),
+                                    generics: [],
+                                    tails: [],
+                                },
+                            ],
+                        ),
+                    ],
+                },
+            )
+            },
+            names: [
+                JodinNode {
+                	attributes: []
+                	inner: Identifier(
+                    sqrt,
+                )
+                },
+            ],
+            values: [
+                None,
             ],
         }
         },

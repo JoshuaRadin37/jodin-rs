@@ -1,10 +1,11 @@
 using std::{String, stdio::*, stdio};
 
 
-int(int,String[]) main;
+int* (int,String[]) main;
 const unsigned long[9+2-3+4] array;
 boolean yes = true;
 
+Option<double> (double) sqrt;
 
 int main(int argc, String[] args) {
     println("Hello world!");

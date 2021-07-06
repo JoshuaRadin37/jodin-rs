@@ -255,7 +255,7 @@ array_declarator = {
 }
 
 function_declarator = {
-    "(" ~ (parameter_list | type_list)? ~ ")"
+    "(" ~ type_list? ~ ")"
 }
 
 parameter_list = {
@@ -446,7 +446,7 @@ function_call = {
 }
 
 generic_instance = {
-    "<" ~ id_list ~ ">"
+    "<" ~ canonical_type ~ ">"
 }
 
 pointer = {
@@ -500,7 +500,7 @@ in_namespace = {
 }
 
 canonical_type = {
-    (t_const)? ~ type_specifier ~ ("<" ~ type_list ~ ">")? ~ (pointer | array_declarator | "(" ~ type_list ~ ")")*
+    (t_const)? ~ type_specifier ~ ("<" ~ type_list ~ ">")? ~ (pointer | array_declarator | function_declarator)*
 }
 
 
