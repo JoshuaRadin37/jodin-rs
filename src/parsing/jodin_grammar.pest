@@ -238,15 +238,17 @@ top_level_declarations = {
 
 top_level_declaration = {
     using_statement |
+    in_namespace |
     function_definition |
     struct_definition |
-    declaration |
-    in_namespace |
+    declaration|
+
+    class_definition |
     ";"
 }
 
 function_definition = {
-    canonical_type ~ identifier ~ "(" ~ parameter_list ~ ")" ~ compound_statement
+    visibility? ~ generic_declarator? ~ canonical_type ~ identifier ~ "(" ~ parameter_list ~ ")" ~ compound_statement
 }
 
 
@@ -290,7 +292,7 @@ direct_abstract_declarator = {
 }
 
 declaration = {
-    canonical_type ~ init_declarator_list ~ t_semic
+    visibility? ~ canonical_type ~ init_declarator_list ~ t_semic
 }
 
 init_declarator_list = {
@@ -320,6 +322,7 @@ statement = {
     expression_statement |
     selection_statement |
     iteration_statement |
+    declaration |
     jump_statement
 }
 
@@ -454,7 +457,7 @@ pointer = {
 }
 
 struct_definition = {
-    t_struct ~ identifier ~ generics_declaration? ~ "{" ~
+    visibility? ~ t_struct ~ identifier ~ generics_declaration? ~ "{" ~
         (struct_field_declaration ~ ";")*
     ~ "}"
 }
@@ -501,6 +504,32 @@ in_namespace = {
 
 canonical_type = {
     (t_const)? ~ type_specifier ~ ("<" ~ type_list ~ ">")? ~ (pointer | array_declarator | function_declarator)*
+}
+
+class_definition = {
+    visibility? ~ generic_declarator? ~ t_class ~ PUSH(identifier) ~ inheritance? ~ "{" ~ class_level_definition* ~ !POP ~ "}"
+}
+
+class_level_definition = {
+    visibility? ~ (
+        function_definition |
+        declaration |
+        constructor
+    )
+}
+
+visibility = { t_private | t_public }
+
+inheritance = {
+    ":" ~ identifier
+}
+
+constructor = {
+    generic_declarator? ~ PEEK ~ t_lparen ~ t_rparen ~ compound_statement
+}
+
+generic_declarator = {
+    t_for ~ generics_declaration
 }
 
 

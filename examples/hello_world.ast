@@ -256,6 +256,27 @@ JodinNode {
         JodinNode {
         	attributes: []
         	inner: Unimplemented {
+            jodin_rule: class_definition,
+            affected_string: "class Hello {\n    Hello() {}\n}",
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: Unimplemented {
+            jodin_rule: class_definition,
+            affected_string: "class Jello : Hi  {\n\n    Jello() {\n        int a = (int) 3+2*7/8;\n    }\n}",
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: Unimplemented {
+            jodin_rule: class_definition,
+            affected_string: "private for <T> class Option {\n\n}",
+        }
+        },
+        JodinNode {
+        	attributes: []
+        	inner: Unimplemented {
             jodin_rule: function_definition,
             affected_string: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    stdio::println(\"Hello world!\");\n    return 0;\n}",
         }

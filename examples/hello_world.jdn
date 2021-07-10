@@ -7,11 +7,23 @@ boolean yes = true;
 
 Option<double> (double) sqrt;
 
+class Hello {
+    Hello() {}
+}
+
+class Jello : Hi  {
+
+    Jello() {
+        int a = (int) 3+2*7/8;
+    }
+}
+
+private for <T> class Option {
+
+}
+
 int main(int argc, String[] args) {
     println("Hello world!");
     stdio::println("Hello world!");
     return 0;
 }
-
-
-
