@@ -1,7 +1,7 @@
 using std::{String, stdio::*, stdio};
 
 
-int* (int,String[]) main;
+public int* (int,String[]) main;
 const unsigned long[9+2-3+4] array;
 boolean yes = true;
 
@@ -18,8 +18,31 @@ class Jello : Hi  {
     }
 }
 
-private for <T> class Option {
 
+/*
+for<T> enum Option {
+    Some { public T val },
+    None;
+
+
+}
+
+// converts to
+for<T> class Option {
+    class Some : Option {
+        T val;
+    }
+
+    class None : Option {
+
+    }
+
+}
+
+*/
+
+struct a1 {
+    int a;
 }
 
 int main(int argc, String[] args) {

@@ -13,6 +13,7 @@ use crate::passes::toolchain::{
     FallibleCollectorTool, JodinFallibleCollectorTool, JodinFallibleTool,
 };
 use pest::iterators::{Pair, Pairs};
+use pest::RuleType;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs::File;
@@ -142,6 +143,9 @@ impl SingleJodinNodeTreeCreator<'_> {
         pair: Pair<JodinRule>,
         inherits: Vec<JodinNode>,
     ) -> JodinResult<JodinNode> {
+        let inner_rules: Box<[JodinRule]> = pair_as_rules(&pair);
+        println!("Rule: {:?} -> {:?}", pair.as_rule(), inner_rules);
+
         Ok(match pair.as_rule() {
             JodinRule::top_level_declarations => {
                 let mut decs = vec![];
@@ -195,12 +199,26 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::t_false => JodinNodeInner::Literal(Literal::Boolean(false)).into(),
             JodinRule::declaration => {
                 let mut inner = pair.into_inner();
+
+                match *inner_rules {
+                    [JodinRule::visibility, JodinRule::canonical_type, JodinRule::init_declarator_list, ..] =>
+                    {
+                        println!("Visibility present")
+                    }
+                    [JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
+                        println!("Visibility not present")
+                    }
+                    _ => unreachable!(),
+                }
+
                 let canonical_type = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
                 let mut declarator_list = inner.nth(0).unwrap();
                 let pairs = declarator_list.into_inner().into_iter();
                 let mut names = Vec::new();
                 let mut values = Vec::new();
+
                 for init_declarator in pairs {
+                    println!("init declarator: {:?}", init_declarator.as_str());
                     let mut inner = init_declarator.into_inner();
                     let name = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
                     let value = match inner.nth(0) {
@@ -541,6 +559,18 @@ impl<'a> IndexedPair<'a> {
 
         Ok(vec)
     }
+}
+
+fn as_rules<R: RuleType>(pairs: &Pairs<R>) -> Box<[R]> {
+    let pairs = pairs.clone();
+    let vec: Vec<_> = pairs.map(|pair| pair.as_rule()).collect();
+    vec.into_boxed_slice()
+}
+
+fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
+    let pairs = pair.clone();
+    let vec: Vec<_> = pairs.into_inner().map(|pair| pair.as_rule()).collect();
+    vec.into_boxed_slice()
 }
 
 #[cfg(test)]

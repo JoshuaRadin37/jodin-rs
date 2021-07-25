@@ -48,7 +48,7 @@ t_enum = { "enum" }
 t_switch = { "switch" }
 t_as = { "as" }
 
-special_keyword = { "__" ~ identifier }
+special_keyword = @{ "__" ~ identifier }
 
 keywords = {
     t_break |
@@ -94,7 +94,8 @@ keywords = {
     t_trait |
     t_enum |
     t_switch |
-    t_as
+    t_as |
+    special_keyword
 }
 
 // operators
@@ -242,8 +243,8 @@ top_level_declaration = {
     function_definition |
     struct_definition |
     declaration|
-
     class_definition |
+    enum_definition |
     ";"
 }
 
@@ -457,7 +458,7 @@ pointer = {
 }
 
 struct_definition = {
-    visibility? ~ t_struct ~ identifier ~ generics_declaration? ~ "{" ~
+    visibility? ~ t_struct ~ identifier ~ "{" ~
         (struct_field_declaration ~ ";")*
     ~ "}"
 }
@@ -514,7 +515,8 @@ class_level_definition = {
     visibility? ~ (
         function_definition |
         declaration |
-        constructor
+        constructor |
+        !visibility ~ class_definition
     )
 }
 
@@ -532,6 +534,9 @@ generic_declarator = {
     t_for ~ generics_declaration
 }
 
+enum_definition = {
+    visibility? ~ generics_declaration? ~ t_enum ~ identifier ~ "{" ~ id_list ~ "}"
+}
 
 
 
