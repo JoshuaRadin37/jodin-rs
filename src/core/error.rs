@@ -4,7 +4,7 @@
 //! [JodinError]: crate::core::error::JodinError
 
 use crate::core::identifier::Identifier;
-use crate::parsing::parser::JodinRule;
+use crate::parsing::JodinRule;
 use backtrace::Backtrace;
 use std::char::ParseCharError;
 use std::error::Error;
@@ -41,10 +41,7 @@ pub enum JodinErrorType {
     /// The [pest] parser through an error.
     ///
     /// [pest]: pest
-    ParserError(
-        pest::error::Error<crate::parsing::parser::Rule>,
-        Option<String>,
-    ),
+    ParserError(pest::error::Error<crate::parsing::Rule>, Option<String>),
     /// The entire string was not parsed.
     IncompleteParse {
         /// The extra text that was not parsed.
@@ -121,6 +118,6 @@ macro_rules! wrap_error {
 wrap_error!(ParseIntError);
 wrap_error!(ParseCharError);
 wrap_error!(std::io::Error);
-wrap_error!(pest::error::Error<crate::parsing::parser::Rule>);
+wrap_error!(pest::error::Error<crate::parsing::Rule>);
 /// Convenience result
 pub type JodinResult<T> = Result<T, JodinError>;

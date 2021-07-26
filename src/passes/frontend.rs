@@ -1,22 +1,33 @@
-use crate::compilation_settings::CompilationSettings;
-use crate::core::error::JodinResult;
-use crate::parsing::ast::JodinNode;
-use crate::parsing::ast::JodinNodeBuilder;
-use crate::parsing::parser::{complete_parse, JodinRule};
-use crate::passes::toolchain::JodinFallibleCollectorTool;
+//! The frontend of the compiler.
+//!
+//! Takes files as inputs. Each file is first read completely into memory. Then [complete_parse] is
+//! called on the string. If parse tree output is set to true, then the `*.pt` file is outputted
+//! after this step is successful. After that, the [JodinNodeBuilder] will be called on the resulting
+//! parse tree.
+//!
+//! [complete_parse]: crate::parsing::complete_parse
+//! [JodinNodeBuilder]: crate::ast::JodinNodeBuilder
 
 use std::fs::File;
 use std::io::Write;
 use std::io::{BufReader, Read};
-
 use std::path::PathBuf;
 
+use crate::ast::JodinNode;
+use crate::ast::JodinNodeBuilder;
+use crate::compilation_settings::CompilationSettings;
+use crate::core::error::JodinResult;
+use crate::parsing::{complete_parse, JodinRule};
+use crate::passes::toolchain::JodinFallibleCollectorTool;
+
+/// A tool to turn files into a jodin node tree
 pub struct FilesToJodinNodeTool<'a> {
     builder: JodinNodeBuilder<'a>,
     settings: &'a CompilationSettings,
 }
 
 impl<'a> FilesToJodinNodeTool<'a> {
+    /// Creates a new toolchain that uses the a reference to compilation settings
     pub fn new(settings: &'a CompilationSettings) -> Self {
         Self {
             builder: JodinNodeBuilder::new(settings),
@@ -24,6 +35,7 @@ impl<'a> FilesToJodinNodeTool<'a> {
         }
     }
 
+    /// When finish is called, no more files can be added to this JodinNode.
     pub fn finish(self) -> JodinResult<JodinNode> {
         self.builder.finish()
     }

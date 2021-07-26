@@ -1,13 +1,13 @@
 //! This module contains all of the relevant parts for how ASTs are created.
 //!
 //! The abstract syntax tree should be made up of as few different types as possible, and when
-//! instead of adding more fields to a variant of the [NodeType] enum, instead tags should be added.
+//! instead of adding more fields to a variant of the [node type] enum, instead tags should be added.
 //!
 //! Tags are a way of adding information to the AST without needing to have many different fields for
 //! every single instance of a [JodinNode]
 //!
-//! [NodeType]: node_type::NodeType
-//! [JodinNode]: jodin_node::JodinNode
+//! [node type]: self::node_type::JodinNodeInner
+//! [JodinNode]: self::jodin_node::JodinNode
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -19,6 +19,9 @@ use std::path::PathBuf;
 use pest::iterators::{Pair, Pairs};
 use pest::RuleType;
 
+use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+pub use crate::ast::jodin_node::JodinNode;
+pub use crate::ast::node_type::JodinNodeInner;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
@@ -26,10 +29,7 @@ use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 use crate::core::types::primitives::Primitive;
-use crate::parsing::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-pub use crate::parsing::ast::jodin_node::JodinNode;
-pub use crate::parsing::ast::node_type::JodinNodeInner;
-use crate::parsing::parser::JodinRule;
+use crate::parsing::JodinRule;
 use crate::passes::toolchain::{JodinFallibleCollectorTool, JodinFallibleTool};
 
 pub mod intermediate_type;
@@ -37,12 +37,14 @@ mod jodin_node;
 mod node_type;
 pub mod tags;
 
+/// Builds a JodinNode Abstract Syntax Tree.
 pub struct JodinNodeBuilder<'a> {
     built_ast: Option<JodinNode>,
     settings: &'a CompilationSettings,
 }
 
 impl<'a> JodinNodeBuilder<'a> {
+    /// Creates a new JodinNodeBuilder with a reference to the compilation settings.
     pub fn new(settings: &'a CompilationSettings) -> Self {
         JodinNodeBuilder {
             built_ast: None,
@@ -111,6 +113,7 @@ impl<'a> JodinFallibleCollectorTool for JodinNodeBuilder<'a> {
     }
 }
 
+/// Parses a parse tree to attempt to create an identifier.
 pub fn parse_identifier(pair: Pair<JodinRule>) -> JodinResult<Identifier> {
     match pair.as_rule() {
         JodinRule::single_identifier => {
@@ -135,12 +138,14 @@ pub fn parse_identifier(pair: Pair<JodinRule>) -> JodinResult<Identifier> {
     }
 }
 
-struct SingleJodinNodeTreeCreator<'a> {
+/// Creates a tree from a single string.
+pub struct SingleJodinNodeTreeCreator<'a> {
     path: String,
     _data: &'a PhantomData<()>,
 }
 
 impl SingleJodinNodeTreeCreator<'_> {
+    /// Creates a new instance from it's target string
     fn new(path: String) -> Self {
         SingleJodinNodeTreeCreator {
             path,
@@ -148,7 +153,8 @@ impl SingleJodinNodeTreeCreator<'_> {
         }
     }
 
-    fn create_node_from_pair(
+    /// The main method that creates jodin nodes from a parse tree.
+    pub fn jodin_node_generator(
         &mut self,
         pair: Pair<JodinRule>,
         _inherits: Vec<JodinNode>,
@@ -160,7 +166,7 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::top_level_declarations => {
                 let mut decs = vec![];
                 for pair in pair.into_inner() {
-                    decs.push(self.create_node_from_pair(pair, vec![])?);
+                    decs.push(self.jodin_node_generator(pair, vec![])?);
                 }
                 JodinNodeInner::TopLevelDeclarations { decs }.into()
             }
@@ -175,9 +181,9 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::in_namespace => {
                 let mut inner = pair.into_inner();
                 let id = inner.nth(0).unwrap();
-                let id_node = self.create_node_from_pair(id, vec![])?;
+                let id_node = self.jodin_node_generator(id, vec![])?;
                 let affected = inner.nth(0).unwrap();
-                let affected_node = self.create_node_from_pair(affected, vec![])?;
+                let affected_node = self.jodin_node_generator(affected, vec![])?;
                 JodinNodeInner::InNamespace {
                     namespace: id_node,
                     inner: affected_node,
@@ -222,7 +228,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                     _ => unreachable!(),
                 };
 
-                let canonical_type = self.create_node_from_pair(canonical_type, vec![])?;
+                let canonical_type = self.jodin_node_generator(canonical_type, vec![])?;
                 let pairs = declarator_list.into_inner().into_iter();
                 let mut names = Vec::new();
                 let mut values = Vec::new();
@@ -230,9 +236,9 @@ impl SingleJodinNodeTreeCreator<'_> {
                 for init_declarator in pairs {
                     println!("init declarator: {:?}", init_declarator.as_str());
                     let mut inner = init_declarator.into_inner();
-                    let name = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
+                    let name = self.jodin_node_generator(inner.nth(0).unwrap(), vec![])?;
                     let value = match inner.nth(0) {
-                        Some(initializer) => Some(self.create_node_from_pair(initializer, vec![])?),
+                        Some(initializer) => Some(self.jodin_node_generator(initializer, vec![])?),
                         None => None,
                     };
                     names.push(name);
@@ -247,17 +253,17 @@ impl SingleJodinNodeTreeCreator<'_> {
                 .into()
             }
             JodinRule::canonical_type => {
-                let intermediate_type = self.new_intermediate(pair)?;
+                let intermediate_type = self.new_intermediate_type(pair)?;
                 JodinNodeInner::Type(intermediate_type).into()
             }
             // Expressions
             JodinRule::expression => {
                 let mut dict = IndexedPair::new(pair.into_inner());
                 let expr =
-                    self.create_node_from_pair(dict.get(JodinRule::double_or_expression)?, vec![])?;
+                    self.jodin_node_generator(dict.get(JodinRule::double_or_expression)?, vec![])?;
                 if let Ok(mut exprs) = dict.get_all(JodinRule::expression) {
-                    let yes = self.create_node_from_pair(exprs.remove(0), vec![])?;
-                    let no = self.create_node_from_pair(exprs.remove(0), vec![])?;
+                    let yes = self.jodin_node_generator(exprs.remove(0), vec![])?;
+                    let no = self.jodin_node_generator(exprs.remove(0), vec![])?;
                     return JodinNodeInner::Ternary {
                         cond: expr,
                         yes,
@@ -279,18 +285,18 @@ impl SingleJodinNodeTreeCreator<'_> {
             | JodinRule::t_expression
             | JodinRule::factor => {
                 let mut inner = pair.into_inner();
-                let lhs = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
+                let lhs = self.jodin_node_generator(inner.nth(0).unwrap(), vec![])?;
                 let mut rest: Vec<_> = inner.collect();
                 if rest.is_empty() {
                     lhs
                 } else {
                     let op = rest.remove(0);
                     let rhs = rest.remove(0);
-                    let rhs = self.create_node_from_pair(rhs, vec![])?;
+                    let rhs = self.jodin_node_generator(rhs, vec![])?;
                     let op = match op.as_rule() {
                         JodinRule::t_dor => Operator::Dor,
                         JodinRule::t_or => Operator::Or,
-                        JodinRule::t_and => Operator::Dand,
+                        JodinRule::t_dand => Operator::Dand,
                         JodinRule::t_xor => Operator::Xor,
                         JodinRule::t_and => Operator::And,
                         JodinRule::equality => {
@@ -383,7 +389,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                     JodinRule::t_dec => Operator::Decrement,
                     _ => unreachable!(),
                 };
-                let factor = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
+                let factor = self.jodin_node_generator(inner.nth(0).unwrap(), vec![])?;
                 JodinNodeInner::Uniop {
                     op: operator,
                     inner: factor,
@@ -393,8 +399,8 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::cast_expression => {
                 let mut indexed = IndexedPair::new(pair.into_inner());
                 let canonical_type =
-                    self.new_intermediate(indexed.get(JodinRule::canonical_type)?)?;
-                let factor = self.create_node_from_pair(indexed.get(JodinRule::factor)?, vec![])?;
+                    self.new_intermediate_type(indexed.get(JodinRule::canonical_type)?)?;
+                let factor = self.jodin_node_generator(indexed.get(JodinRule::factor)?, vec![])?;
                 JodinNodeInner::CastExpression {
                     to_type: canonical_type,
                     factor,
@@ -404,7 +410,7 @@ impl SingleJodinNodeTreeCreator<'_> {
             // just go into inner
             JodinRule::top_level_declaration | JodinRule::jodin_file => {
                 let inner = pair.into_inner().nth(0).unwrap();
-                self.create_node_from_pair(inner, vec![])?
+                self.jodin_node_generator(inner, vec![])?
             }
             rule => {
                 JodinNodeInner::Unimplemented {
@@ -417,7 +423,11 @@ impl SingleJodinNodeTreeCreator<'_> {
         })
     }
 
-    pub fn new_intermediate(&mut self, pair: Pair<JodinRule>) -> JodinResult<IntermediateType> {
+    /// Attempts to convert a parse tree into an [IntermediateType](crate::ast::intermediate_type::IntermediateType)
+    pub fn new_intermediate_type(
+        &mut self,
+        pair: Pair<JodinRule>,
+    ) -> JodinResult<IntermediateType> {
         let mut vector: Vec<Pair<_>> = pair.into_inner().collect();
         let is_const = vector
             .iter()
@@ -470,7 +480,7 @@ impl SingleJodinNodeTreeCreator<'_> {
         if let Some(JodinRule::type_list) = vector.first().map(|p| p.as_rule()) {
             let generics_pair = vector.remove(0);
             for pair in generics_pair.into_inner() {
-                generics.push(self.new_intermediate(pair)?);
+                generics.push(self.new_intermediate_type(pair)?);
             }
         }
 
@@ -483,7 +493,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                     let mut inner_types = vec![];
                     if let Some(inner) = inner {
                         for pair in inner.into_inner() {
-                            inner_types.push(self.new_intermediate(pair)?)
+                            inner_types.push(self.new_intermediate_type(pair)?)
                         }
                     }
                     TypeTail::Function(inner_types)
@@ -495,7 +505,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                         .into_iter()
                         .find(|pair| pair.as_rule() == JodinRule::expression)
                     {
-                        let exp = self.create_node_from_pair(expression, vec![])?;
+                        let exp = self.jodin_node_generator(expression, vec![])?;
                         TypeTail::Array(Some(exp))
                     } else {
                         TypeTail::Array(None)
@@ -520,7 +530,7 @@ impl<'a> JodinFallibleTool for SingleJodinNodeTreeCreator<'a> {
     type Output = JodinNode;
 
     fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
-        let mut ret = self.create_node_from_pair(input, vec![]);
+        let mut ret = self.jodin_node_generator(input, vec![]);
         if let Err(JodinErrorType::ParserError(_, path)) =
             ret.as_mut().map_err(|e| &mut e.error_type)
         {
@@ -530,11 +540,13 @@ impl<'a> JodinFallibleTool for SingleJodinNodeTreeCreator<'a> {
     }
 }
 
-struct IndexedPair<'a> {
+/// Stores a mapping from a JodinRule to a list of parse trees that used that rule.
+pub struct IndexedPair<'a> {
     map: HashMap<JodinRule, Vec<Pair<'a, JodinRule>>>,
 }
 
 impl<'a> IndexedPair<'a> {
+    /// Creates an instance of IndexedPair using the Pairs iterator.
     pub fn new(pairs: Pairs<'a, JodinRule>) -> IndexedPair<'a> {
         let mut map: HashMap<_, Vec<Pair<'a, _>>> = HashMap::new();
         for pair in pairs {
@@ -544,6 +556,8 @@ impl<'a> IndexedPair<'a> {
         IndexedPair { map }
     }
 
+    /// Attempts to get a single instance of a Pair from a rule. This removes this parse tree
+    /// from the IndexedPair.
     pub fn get(&mut self, rule: JodinRule) -> JodinResult<Pair<'a, JodinRule>> {
         let vec = self.map.remove(&rule).ok_or(JodinError::new(
             JodinErrorType::InvalidJodinRuleForASTCreation(rule),
@@ -557,6 +571,8 @@ impl<'a> IndexedPair<'a> {
         Ok(vec.into_iter().nth(0).unwrap())
     }
 
+    /// Attempts to get all instances of a Pair from a rule. This removes this parse tree
+    /// from the IndexedPair.
     pub fn get_all(&mut self, rule: JodinRule) -> JodinResult<Vec<Pair<'a, JodinRule>>> {
         let vec = self.map.remove(&rule).ok_or(JodinError::new(
             JodinErrorType::InvalidJodinRuleForASTCreation(rule),
@@ -571,13 +587,29 @@ impl<'a> IndexedPair<'a> {
     }
 }
 
-fn as_rules<R: RuleType>(pairs: &Pairs<R>) -> Box<[R]> {
+/// Generates a vector of rules from a reference to a pairs instance. This allows for easy pattern
+/// matching to see what version of a rule was used.
+///
+/// # Arguments
+///
+/// * `pairs`: A reference to a pairs instance.
+///
+/// returns: Box<[R], Global> A slice of rules
+pub fn as_rules<R: RuleType>(pairs: &Pairs<R>) -> Box<[R]> {
     let pairs = pairs.clone();
     let vec: Vec<_> = pairs.map(|pair| pair.as_rule()).collect();
     vec.into_boxed_slice()
 }
 
-fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
+/// Generates a vector of rules from a reference to a pair instance. This allows for easy pattern
+/// matching to see what version of a rule was used.
+///
+/// # Arguments
+///
+/// * `pairs`: A reference to a pairs instance.
+///
+/// returns: Box<\[R\], Global> A slice of rules
+pub fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
     let pairs = pair.clone();
     let vec: Vec<_> = pairs.into_inner().map(|pair| pair.as_rule()).collect();
     vec.into_boxed_slice()
@@ -585,7 +617,7 @@ fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
 
 #[cfg(test)]
 mod tests {
-    use crate::parsing::parser::complete_parse;
+    use crate::parsing::complete_parse;
 
     use super::*;
 
@@ -593,7 +625,7 @@ mod tests {
     fn create_id() {
         let pairs = complete_parse(JodinRule::identifier, "hello::world").unwrap();
         let result = SingleJodinNodeTreeCreator::new("".to_string())
-            .create_node_from_pair(pairs.into_iter().next().unwrap(), vec![])
+            .jodin_node_generator(pairs.into_iter().next().unwrap(), vec![])
             .unwrap();
         let inner = result.inner();
         if let JodinNodeInner::Identifier(id) = inner {

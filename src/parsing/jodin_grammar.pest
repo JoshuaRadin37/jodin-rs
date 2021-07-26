@@ -1,8 +1,11 @@
+//! The parser grammar
+
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/"  | "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
 // tokens
 
+/// break keyword
 t_break = { "break" }
 t_case = { "case" }
 t_char = { "char" }

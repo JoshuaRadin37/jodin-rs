@@ -7,9 +7,9 @@
 //! - `namespace::{id1, id2}`
 //! - `namespace::{id1, id2::id3 as id3}`
 
+use crate::ast::parse_identifier;
 use crate::core::identifier::Identifier;
-use crate::parsing::ast::parse_identifier;
-use crate::parsing::parser::JodinRule;
+use crate::parsing::JodinRule;
 use pest::iterators::Pair;
 
 /// Represents an import "tree".
@@ -96,7 +96,7 @@ pub enum ImportType {
 mod tests {
     use super::*;
     use crate::core::error::JodinErrorType;
-    use crate::parsing::parser::complete_parse;
+    use crate::parsing::complete_parse;
 
     #[test]
     fn parse_using_path() {

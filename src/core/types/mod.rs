@@ -1,18 +1,18 @@
 //! The basis for the type system that jodin supports.
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use crate::ast::tags::Tag;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
+use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
-use crate::core::registry::{Registrable, Registry};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
-use crate::parsing::ast::tags::Tag;
-use std::any::Any;
 
 pub mod primitives;
 pub mod structure;

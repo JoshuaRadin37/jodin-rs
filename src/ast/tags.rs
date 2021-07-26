@@ -1,3 +1,6 @@
+//! The tag system allows for a much more modular AST system where more metadata can be added to
+//! individual nodes with fewer restrictions.
+
 use std::any::Any;
 
 use crate::core::error::{JodinErrorType, JodinResult};
@@ -8,21 +11,30 @@ pub trait Tag {
     /// Gets the type of the attribute based on the name
     fn tag_type(&self) -> String;
 
+    /// Gets debug information about the tag.
     fn tag_info(&self) -> String {
         format!("{:?}", self.tag_type())
     }
+    /// The maximum allowed number of tags of this type on a single node.
     fn max_of_this_tag(&self) -> u32;
 
+    /// Check if this tag is of a tag type.
     fn is_tag(&self, other: &str) -> bool {
         self.tag_type() == other
     }
 
+    /// Cast this tag to an Any reference.
     fn as_any(&self) -> &dyn Any;
+
+    /// Cast this tag to a mutable Any reference.
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
+/// A helper trait to add common methods for all tags.
 pub trait TagUtilities {
+    /// Try to get this tag as a certain type.
     fn as_tag_type<T: 'static + Tag>(&self) -> JodinResult<&T>;
+    /// Try to get this tag as a certain type, but it's a mutable reference.
     fn as_tag_type_mut<T: 'static + Tag>(&mut self) -> JodinResult<&mut T>;
 }
 
@@ -66,13 +78,13 @@ impl Tag for DummyTag {
 
 #[cfg(test)]
 mod tests {
-    use crate::parsing::ast::tags::{DummyTag, Tag, TagUtilities};
-    use crate::passes::analysis::identity_resolution_tool::BlockIdentifier;
+    use crate::ast::tags::{DummyTag, Tag, TagUtilities};
+    use crate::passes::analysis::identity_resolution_tool::BlockIdentifierTag;
 
     #[test]
     fn dynamic_tag_typing() {
         let tag: Box<dyn Tag> = Box::new(DummyTag);
         assert!(tag.as_tag_type::<DummyTag>().is_ok());
-        assert!(tag.as_tag_type::<BlockIdentifier>().is_err());
+        assert!(tag.as_tag_type::<BlockIdentifierTag>().is_err());
     }
 }

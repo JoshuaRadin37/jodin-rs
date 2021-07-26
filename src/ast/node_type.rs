@@ -6,18 +6,15 @@ use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 
-use crate::parsing::ast::intermediate_type::IntermediateType;
-use crate::parsing::ast::jodin_node::JodinNode;
-use crate::parsing::keywords::Keyword;
-use crate::parsing::parser::JodinRule;
+use crate::ast::intermediate_type::IntermediateType;
+use crate::ast::jodin_node::JodinNode;
+use crate::parsing::JodinRule;
 
 /// Contains JodinNode variant information.
 #[derive(Debug)]
 pub enum JodinNodeInner {
     /// Store an intermediate type.
     Type(IntermediateType),
-    /// Store a keyword.
-    Keyword(Keyword),
     /// Store a literal.
     Literal(Literal),
     /// Store an identifier.
@@ -166,9 +163,6 @@ impl JodinNodeInner {
             JodinNodeInner::Type(_) => {
                 vec![]
             }
-            JodinNodeInner::Keyword(_) => {
-                vec![]
-            }
             JodinNodeInner::Literal(_) => {
                 vec![]
             }
@@ -264,9 +258,6 @@ impl JodinNodeInner {
     pub fn children_mut(&mut self) -> impl IntoIterator<Item = &mut JodinNode> {
         let vector: Vec<&mut JodinNode> = match self {
             JodinNodeInner::Type(_) => {
-                vec![]
-            }
-            JodinNodeInner::Keyword(_) => {
                 vec![]
             }
             JodinNodeInner::Literal(_) => {

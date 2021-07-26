@@ -1,8 +1,8 @@
 //! The main building block for the Abstract Syntax Tree
 
+use crate::ast::node_type::JodinNodeInner;
+use crate::ast::tags::{Tag, TagUtilities};
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::parsing::ast::node_type::JodinNodeInner;
-use crate::parsing::ast::tags::{Tag, TagUtilities};
 use crate::utility::Tree;
 
 use std::fmt::{Debug, Formatter};
@@ -52,8 +52,8 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::jodin_node::JodinNode;
+    /// use jodin_rs::ast::node_type::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
@@ -91,10 +91,10 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::jodin_node::JodinNode;
+    /// use jodin_rs::ast::node_type::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_boxed_tags(
     ///     vec![Box::new(DummyTag), Box::new(DummyTag)]
@@ -152,11 +152,11 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
-    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -175,11 +175,11 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
-    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -196,11 +196,11 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
-    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -215,11 +215,11 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
-    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
-    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -270,20 +270,22 @@ impl Tree for JodinNode {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::jodin_node::JodinNode;
+    use crate::ast::node_type::JodinNodeInner;
+    use crate::ast::tags::DummyTag;
     use crate::core::identifier::Identifier;
-    use crate::parsing::ast::jodin_node::JodinNode;
-    use crate::parsing::ast::node_type::JodinNodeInner;
-    use crate::parsing::ast::tags::DummyTag;
-    use crate::passes::analysis::identity_resolution_tool::{BlockIdentifier, ResolvedIdentityTag};
+    use crate::passes::analysis::identity_resolution_tool::{
+        BlockIdentifierTag, ResolvedIdentityTag,
+    };
 
     #[test]
     fn get_tags_of_type() {
         let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("hi")));
         node.add_tag(DummyTag);
-        node.add_tag(BlockIdentifier::new(5));
+        node.add_tag(BlockIdentifierTag::new(5));
         node.add_tag(DummyTag);
         assert_eq!(node.tags().len(), 3);
-        let id_tag = node.get_tag::<BlockIdentifier>().unwrap();
+        let id_tag = node.get_tag::<BlockIdentifierTag>().unwrap();
         assert_eq!(id_tag.block_num(), 5);
         let dummy_tags = node.get_tags::<DummyTag>();
         assert_eq!(dummy_tags.len(), 2);

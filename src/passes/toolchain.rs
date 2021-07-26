@@ -1,9 +1,34 @@
+//! Several common traits that model "toolchains". These structures allow for the chaining of
+//! toolchains together to produce increasingly larger toolchains.
+//!
+//! # Examples
+//!
+//! ```
+//! use std::str::Chars;
+//! use jodin_rs::passes::toolchain::{Toolchain, Tool};
+//! fn to_chars<S : AsRef<str>>(s: S) -> Chars {
+//!     s.as_ref().chars()
+//! }
+//!
+//! fn count_chars(c: Chars<'_>) -> usize {
+//!     c.count()
+//! }
+//!
+//! let mut toolchain = Toolchain::new(to_chars, count_chars);
+//! assert_eq!(toolchain.invoke("Hello"), 5);
+//! ```
+
 use crate::core::error::{JodinError, JodinResult};
 use std::marker::PhantomData;
 
+/// The most basic component of a toolchain, representing a single tool
 pub trait Tool {
+    /// The input type for the tool
     type Input;
+    /// The output type for the tool
     type Output;
+
+    /// What action that the tool takes
     fn invoke(&mut self, input: Self::Input) -> Self::Output;
 }
 
@@ -19,12 +44,24 @@ impl<I, O> Tool for DummyTool<I, O> {
     }
 }
 
+impl<I, O> Tool for fn(I) -> O {
+    type Input = I;
+    type Output = O;
+
+    fn invoke(&mut self, input: Self::Input) -> Self::Output {
+        (self)(input)
+    }
+}
+
+/// A tool adapter that takes in two different tools, where the first tool's output and the second tool's
+/// input are the same type.
 pub struct Toolchain<S, M = S, E = M> {
     start: Box<dyn Tool<Input = S, Output = M>>,
     end: Box<dyn Tool<Input = M, Output = E>>,
 }
 
 impl<S, M, E> Toolchain<S, M, E> {
+    /// Creates a new toolchain from two tools
     pub fn new<T1, T2>(first: T1, second: T2) -> Self
     where
         T1: 'static + Tool<Input = S, Output = M>,
@@ -41,13 +78,17 @@ impl<S, M, E> Tool for Toolchain<S, M, E> {
     type Input = S;
     type Output = E;
 
+    /// Calling a toolchain's invoke will invoke the first tool, then take its output and use it
+    /// as the input of the second tool.
     fn invoke(&mut self, input: Self::Input) -> Self::Output {
         let mid = self.start.invoke(input);
         self.end.invoke(mid)
     }
 }
 
+/// Adds more functionality to tools
 pub trait ToolchainUtilities: Tool {
+    /// Append a tool to this tool, returning a toolchain adapter
     fn append_tool<O, T: 'static + Tool<Input = Self::Output, Output = O>>(
         self,
         other: T,
@@ -61,6 +102,7 @@ pub trait ToolchainUtilities: Tool {
         }
     }
 
+    /// Prepend a tool to this tool, returning a toolchain adapter
     fn prepend_tool<I, T: 'static + Tool<Input = I, Output = Self::Input>>(
         self,
         other: T,
@@ -77,17 +119,27 @@ pub trait ToolchainUtilities: Tool {
 
 impl<T> ToolchainUtilities for T where T: Tool {}
 
+/// A tool that returns a result, and thus can "fail"
 pub trait FallibleTool {
+    /// The input type.
     type Input;
+    /// The output type.
     type Output;
+    /// The error type.
     type Error;
 
+    /// The action that the tool will take.
     fn invoke(&mut self, input: Self::Input) -> Result<Self::Output, Self::Error>;
 }
 
+/// A tool that that returns a [JodinResult](crate::core::error::JodinResult).
 pub trait JodinFallibleTool {
+    /// The input type.
     type Input;
+    /// The output type.
     type Output;
+
+    /// The action that the tool will take.
     fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output>;
 }
 
@@ -110,12 +162,14 @@ impl<T: FallibleTool> Tool for T {
     }
 }
 
+/// A toolchain of two tools that can return a result
 pub struct FallibleToolchain<Error, Input, Mid = Input, Output = Mid> {
     start: Box<dyn Tool<Input = Input, Output = Result<Mid, Error>>>,
     end: Box<dyn Tool<Input = Mid, Output = Result<Output, Error>>>,
 }
 
 impl<Error, Input, Mid, Output> FallibleToolchain<Error, Input, Mid, Output> {
+    /// Creates a new toolchain from two tools.
     pub fn new<T1, T2>(first: T1, second: T2) -> Self
     where
         T1: 'static + Tool<Input = Input, Output = Result<Mid, Error>>,
@@ -133,6 +187,7 @@ impl<Error, Input, Mid, Output> FallibleTool for FallibleToolchain<Error, Input,
     type Output = Output;
     type Error = Error;
 
+    /// Invokes the first tool, and only invokes the second tool if the first didn't fail.
     fn invoke(&mut self, input: Self::Input) -> Result<Self::Output, Self::Error> {
         let mid = self.start.invoke(input)?;
         self.end.invoke(mid)

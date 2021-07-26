@@ -2,20 +2,23 @@ use crate::core::error::{JodinError, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
 
-use crate::parsing::ast::JodinNode;
-use crate::parsing::ast::JodinNodeInner;
+use crate::ast::JodinNode;
+use crate::ast::JodinNodeInner;
 
-use crate::parsing::ast::tags::Tag;
+use crate::ast::tags::Tag;
 use crate::passes::toolchain::{
     FallibleTool, FallibleToolchain, FallibleToolchainUtilities, JodinFallibleTool,
 };
 use std::any::Any;
 
+/// A toolchain that assigns identities to every node that needs to be resolved. For example, the
+/// types must all be resolved.
 pub struct IdentityResolutionTool {
     chain: FallibleToolchain<JodinError, JodinNode, (JodinNode, IdentifierResolver)>,
 }
 
 impl IdentityResolutionTool {
+    /// Creates a new id resolution tool.
     pub fn new() -> Self {
         let chain =
             FallibleToolchainUtilities::append_tool(IdentifierCreator::new(), IdentifierSetter);
@@ -31,19 +34,19 @@ impl JodinFallibleTool for IdentityResolutionTool {
         FallibleTool::invoke(&mut self.chain, input)
     }
 }
-#[derive(Debug)]
-pub struct IdentifierCreator {
-    block_num: usize,
-}
 
+/// This tag adds a resolved [Identifier](crate::core::identifier::Identifier) to a node. This resolved
+/// identifier is absolute.
 #[derive(Debug, Clone)]
 pub struct ResolvedIdentityTag(Identifier);
 
 impl ResolvedIdentityTag {
+    /// The absolute identifier of the tag.
     pub fn absolute_id(&self) -> &Identifier {
         &self.0
     }
 
+    /// Creates a new tag from an identifier-like value.
     pub fn new<I: Into<Identifier>>(id: I) -> Self {
         ResolvedIdentityTag(id.into())
     }
@@ -71,20 +74,34 @@ impl Tag for ResolvedIdentityTag {
     }
 }
 
+/// A tag that assigns an identifier to an individual block.
 #[derive(Debug)]
-pub struct BlockIdentifier(usize);
+pub struct BlockIdentifierTag(usize);
 
-impl BlockIdentifier {
+impl BlockIdentifierTag {
+    /// Creates a new block identifier
+    ///
+    /// # Arguments
+    ///
+    /// * `val`: The value to use as the base for the identifier
+    ///
+    /// returns: BlockIdentifierTag
     pub fn new(val: usize) -> Self {
         Self(val)
     }
 
+    /// Gets the block number of the tag
     pub fn block_num(&self) -> usize {
         self.0
     }
 }
 
-impl Tag for BlockIdentifier {
+#[derive(Debug)]
+pub struct IdentifierCreator {
+    block_num: usize,
+}
+
+impl Tag for BlockIdentifierTag {
     fn tag_type(&self) -> String {
         "BlockNum".to_string()
     }
@@ -135,7 +152,7 @@ impl IdentifierCreator {
             JodinNodeInner::FunctionDefinition { .. } => {}
             JodinNodeInner::Block { expressions } => {
                 let block_num = self.get_block_num();
-                let tag = BlockIdentifier::new(block_num);
+                let tag = BlockIdentifierTag::new(block_num);
 
                 id_resolver.push_namespace(Identifier::from(format!("{{block {}}}", block_num)));
                 for expression in expressions {

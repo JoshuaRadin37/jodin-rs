@@ -24,6 +24,7 @@
 //! ```
 
 #![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unused_imports)]
 #![deny(unused_mut)]
 
@@ -31,10 +32,9 @@
 extern crate clap;
 
 #[macro_use]
-extern crate pest_derive;
-#[macro_use]
 extern crate lazy_static;
 
+pub mod ast;
 pub mod cli;
 pub mod compilation_settings;
 pub mod core;

@@ -5,7 +5,7 @@
 //! important this declaration. Private means only code within this namespace can see this declaration.
 
 use crate::core::error::{JodinError, JodinErrorType};
-use crate::parsing::parser::JodinRule;
+use crate::parsing::JodinRule;
 use std::convert::TryFrom;
 
 /// The visibility of a declaration
