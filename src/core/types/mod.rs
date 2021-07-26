@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::privacy::Privacy;
+use crate::core::privacy::Visibility;
 use crate::core::registry::{Registrable, Registry};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
@@ -61,7 +61,7 @@ pub fn get_type_id() -> u32 {
 }
 
 pub trait CompoundType: Type {
-    fn all_members(&self) -> Vec<(Privacy, Identifier, JodinTypeReference)>;
+    fn all_members(&self) -> Vec<(Visibility, Identifier, JodinTypeReference)>;
 }
 
 impl From<JodinType> for JodinTypeReference {

@@ -2,6 +2,7 @@ use crate::core::identifier::Identifier;
 use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
+use crate::core::privacy::Visibility;
 use crate::core::types::{JodinType, JodinTypeReference};
 use crate::parsing::ast::intermediate_type::IntermediateType;
 use crate::parsing::ast::jodin_node::JodinNode;

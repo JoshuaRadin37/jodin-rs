@@ -199,20 +199,20 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::t_false => JodinNodeInner::Literal(Literal::Boolean(false)).into(),
             JodinRule::declaration => {
                 let mut inner = pair.into_inner();
-
-                match *inner_rules {
+                let (visibility, canonical_type, declarator_list) = match *inner_rules {
                     [JodinRule::visibility, JodinRule::canonical_type, JodinRule::init_declarator_list, ..] =>
                     {
-                        println!("Visibility present")
+                        println!("Visibility present");
+                        (inner.next(), inner.next().unwrap(), inner.next().unwrap())
                     }
                     [JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
-                        println!("Visibility not present")
+                        println!("Visibility not present");
+                        (None, inner.next().unwrap(), inner.next().unwrap())
                     }
                     _ => unreachable!(),
-                }
+                };
 
-                let canonical_type = self.create_node_from_pair(inner.nth(0).unwrap(), vec![])?;
-                let mut declarator_list = inner.nth(0).unwrap();
+                let canonical_type = self.create_node_from_pair(canonical_type, vec![])?;
                 let pairs = declarator_list.into_inner().into_iter();
                 let mut names = Vec::new();
                 let mut values = Vec::new();

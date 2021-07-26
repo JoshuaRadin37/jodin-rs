@@ -1,7 +1,6 @@
 use crate::core::identifier::Identifier;
 use crate::parsing::parser::JodinRule;
 use backtrace::Backtrace;
-use pest::error::Error as PestError;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};

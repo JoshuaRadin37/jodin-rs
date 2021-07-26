@@ -126,7 +126,9 @@ impl IdentifierCreator {
                 let tag = ResolvedIdentityTag(abs);
                 tree.add_tag(tag)?;
             }
-            JodinNodeInner::VarDeclarations { var_type: _, names, .. } => {
+            JodinNodeInner::VarDeclarations {
+                var_type: _, names, ..
+            } => {
                 for name in names {
                     self.create_identities(name, id_resolver)?;
                 }

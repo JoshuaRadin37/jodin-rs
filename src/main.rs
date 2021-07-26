@@ -1,10 +1,9 @@
-use glob::GlobError;
 use jodin_rs::cli::JodinRsApp;
 use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::toolchain::JodinFallibleCollectorTool;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::exit;
 
 fn main() -> JodinResult<()> {
@@ -23,7 +22,7 @@ fn main() -> JodinResult<()> {
         settings.output_ast = true;
     }
 
-    let (command, command_args) = match matches.subcommand() {
+    let (_command, command_args) = match matches.subcommand() {
         (command, Some(args)) => (command, args),
         _ => panic!("No subcommand used, must either use run or check"),
     };

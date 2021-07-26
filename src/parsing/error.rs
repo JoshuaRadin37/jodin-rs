@@ -1,4 +1,3 @@
 pub enum ParseError {
-    InvalidKeyWord(String)
+    InvalidKeyWord(String),
 }
-

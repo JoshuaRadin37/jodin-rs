@@ -1,6 +1,6 @@
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::privacy::Privacy;
+use crate::core::privacy::Visibility;
 use crate::core::registry::{Registrable, Registry};
 use crate::core::types::{get_type_id, CompoundType, JodinType, JodinTypeReference, Type};
 
@@ -48,10 +48,10 @@ impl Type for Structure {
 }
 
 impl CompoundType for Structure {
-    fn all_members(&self) -> Vec<(Privacy, Identifier, JodinTypeReference)> {
+    fn all_members(&self) -> Vec<(Visibility, Identifier, JodinTypeReference)> {
         self.fields
             .iter()
-            .map(|(name, type_ref)| (Privacy::Public, Identifier::from(name), type_ref.clone()))
+            .map(|(name, type_ref)| (Visibility::Public, Identifier::from(name), type_ref.clone()))
             .collect()
     }
 }

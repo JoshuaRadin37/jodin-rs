@@ -1,10 +1,7 @@
-use pest::Span;
-
 use std::array::IntoIter;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
-use std::ops::Deref;
 
 #[derive(Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
