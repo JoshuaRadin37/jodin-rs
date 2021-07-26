@@ -1,8 +1,27 @@
+//! Methods for taking literals within jodin code into their jodin literals.
+//!
+//! There are 13 types of literals
+//! 1. `string`
+//! 2. `char`
+//! 3. `boolean`
+//! 4. `float`
+//! 5. `double`
+//! 6. `byte`
+//! 7. `short`
+//! 8. `int`
+//! 9. `long`
+//! 6. `unsigned byte`
+//! 7. `unsigned short`
+//! 8. `unsigned int`
+//! 9. `unsigned long`
+
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use regex::Regex;
 use std::str::FromStr;
 
+/// A single instance of a literal
 #[derive(Debug, PartialOrd, PartialEq)]
+#[allow(missing_docs)]
 pub enum Literal {
     String(String),
     Char(char),

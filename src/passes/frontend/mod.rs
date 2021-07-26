@@ -3,13 +3,13 @@ use crate::core::error::JodinResult;
 use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::ast::JodinNodeBuilder;
 use crate::parsing::parser::{complete_parse, JodinRule};
-use crate::passes::toolchain::{JodinFallibleCollectorTool, JodinFallibleTool};
-use pest::iterators::Pairs;
+use crate::passes::toolchain::JodinFallibleCollectorTool;
+
 use std::fs::File;
 use std::io::Write;
 use std::io::{BufReader, Read};
-use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+
+use std::path::PathBuf;
 
 pub struct FilesToJodinNodeTool<'a> {
     builder: JodinNodeBuilder<'a>,

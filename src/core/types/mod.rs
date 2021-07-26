@@ -1,4 +1,6 @@
-use std::cell::{Ref, RefCell};
+//! The basis for the type system that jodin supports.
+
+use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -16,13 +18,17 @@ pub mod primitives;
 pub mod structure;
 pub mod type_tracker;
 
+/// Different types of types within Jodin
 #[derive(Debug)]
 pub enum JodinType {
+    /// A primitive type
     Primitive(Primitive),
+    /// The basic [Structure](crate::core::types::structure::Structure) type.
     Structure(Structure),
 }
 
 impl JodinType {
+    /// Gets the type dynamic object
     pub fn as_inner(&self) -> &dyn Type {
         match self {
             JodinType::Primitive(p) => p,
@@ -31,8 +37,11 @@ impl JodinType {
     }
 }
 
+/// Common methods within the different types that make up jodin
 pub trait Type {
+    /// The name of the type
     fn type_name(&self) -> Identifier;
+    /// The unique id for this type
     fn type_id(&self) -> u32;
 }
 
@@ -52,15 +61,20 @@ impl Type for JodinType {
     }
 }
 
+/// A type that allows for multiple references to the same type
 pub type JodinTypeReference = Rc<RefCell<JodinType>>;
 
+/// The next type id.
 pub static NEXT_TYPE_ID: AtomicU32 = AtomicU32::new(100);
 
+/// Get a type id
 pub fn get_type_id() -> u32 {
     NEXT_TYPE_ID.fetch_add(1, Ordering::AcqRel)
 }
 
+/// Common methods for compound types in jodin.
 pub trait CompoundType: Type {
+    /// Gets all the members of the compound type.
     fn all_members(&self) -> Vec<(Visibility, Identifier, JodinTypeReference)>;
 }
 
@@ -74,22 +88,25 @@ impl<C: CompoundType + Into<JodinType>> Registrable<JodinTypeReference> for C {
     fn register(self, register: &mut Registry<JodinTypeReference>) -> JodinResult<Identifier> {
         let this_id = self.type_name();
         for (_, field, field_type) in self.all_members() {
-            let new_id = Identifier::with_parent(&this_id, field);
+            let new_id = Identifier::new_concat(&this_id, field);
             register.insert_with_identifier(field_type.clone(), new_id);
         }
         register.insert_with_identifier(self.into().into(), this_id)
     }
 }
 
+/// A tag for assigning a type to an AST node
 pub struct TypeTag {
     jodin_type: JodinTypeReference,
 }
 
 impl TypeTag {
+    /// The type.
     pub fn jodin_type(&self) -> &JodinTypeReference {
         &self.jodin_type
     }
 
+    /// Create a new type tag.
     pub fn new(jodin_type: JodinTypeReference) -> Self {
         TypeTag { jodin_type }
     }

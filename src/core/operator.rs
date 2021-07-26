@@ -1,5 +1,8 @@
+//! The operators that exist within jodin code
+
 use std::cmp::Ordering;
 
+/// The operators
 #[derive(Debug)]
 pub enum Operator {
     /// !
@@ -57,6 +60,7 @@ pub enum Operator {
 }
 
 impl Operator {
+    /// Gets the precedence of the operator
     pub fn as_precedence(&self) -> Precedence {
         Precedence(self)
     }
@@ -67,6 +71,7 @@ impl Operator {
 pub struct Precedence<'a>(&'a Operator);
 
 impl<'a> Precedence<'a> {
+    /// The value associated with a level of precedence
     pub fn value(&self) -> Option<usize> {
         let val = match self.0 {
             Operator::Not => 2,

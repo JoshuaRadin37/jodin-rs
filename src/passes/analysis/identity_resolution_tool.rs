@@ -1,14 +1,13 @@
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::core::error::{JodinError, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
-use crate::core::registry::Registry;
-use crate::core::types::{JodinTypeReference, Type};
+
 use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::ast::node_type::JodinNodeInner;
-use crate::parsing::ast::node_type::JodinNodeInner::Block;
+
 use crate::parsing::ast::tags::Tag;
 use crate::passes::toolchain::{
-    FallibleTool, FallibleToolchain, FallibleToolchainUtilities, JodinFallibleTool, Tool, Toolchain,
+    FallibleTool, FallibleToolchain, FallibleToolchainUtilities, JodinFallibleTool,
 };
 use std::any::Any;
 
@@ -147,7 +146,7 @@ impl IdentifierCreator {
             }
             JodinNodeInner::StructureDefinition {
                 name,
-                generic_parameters,
+                generic_parameters: _,
                 members,
             } => {
                 self.create_identities(name, id_resolver)?;
@@ -156,11 +155,14 @@ impl IdentifierCreator {
                 let name = tag.absolute_id();
                 id_resolver.push_namespace(name.clone());
                 todo!("Add generic parameters identity resolution");
+                /*
                 for member in members {
                     self.create_identities(member, id_resolver)?;
                 }
                 tree.add_tag(tag.clone())?;
                 id_resolver.pop_namespace();
+
+                 */
             }
             JodinNodeInner::NamedValue { name, .. } => {
                 self.create_identities(name, id_resolver);

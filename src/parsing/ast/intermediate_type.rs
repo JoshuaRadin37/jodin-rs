@@ -1,11 +1,6 @@
-use crate::core::error::{JodinError, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use crate::parsing::ast::jodin_node::JodinNode;
-use crate::parsing::ast::{parse_identifier, JodinNodeBuilder};
-use crate::parsing::parser::JodinRule;
-use crate::passes::toolchain::FallibleTool;
-use pest::iterators::Pair;
 
 #[derive(Debug)]
 pub struct IntermediateType {

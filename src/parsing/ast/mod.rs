@@ -1,3 +1,13 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::iter::FromIterator;
+use std::marker::PhantomData;
+use std::path::PathBuf;
+
+use pest::iterators::{Pair, Pairs};
+use pest::RuleType;
+
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
@@ -9,18 +19,7 @@ use crate::parsing::ast::intermediate_type::{IntermediateType, TypeSpecifier, Ty
 use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::parser::JodinRule;
-use crate::passes::toolchain::{
-    FallibleCollectorTool, JodinFallibleCollectorTool, JodinFallibleTool,
-};
-use pest::iterators::{Pair, Pairs};
-use pest::RuleType;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::iter::FromIterator;
-use std::marker::PhantomData;
-use std::path::{Path, PathBuf};
+use crate::passes::toolchain::{JodinFallibleCollectorTool, JodinFallibleTool};
 
 pub mod intermediate_type;
 pub mod jodin_node;
@@ -44,7 +43,7 @@ impl<'a> JodinNodeBuilder<'a> {
     pub fn add_source_string(&mut self, path: String, pair: Pair<JodinRule>) -> JodinResult<()> {
         let mut builder = SingleJodinNodeTreeCreator::new(path.clone().to_string());
         let mut tree: JodinNode = builder.invoke(pair).map_err(|mut err| {
-            if let JodinErrorType::ParserError(_, path_opt) = &mut err.error_type_mut() {
+            if let JodinErrorType::ParserError(_, path_opt) = &mut err.error_type {
                 *path_opt = Some(path.clone());
             }
             err
@@ -71,7 +70,7 @@ impl<'a> JodinNodeBuilder<'a> {
                     unreachable!()
                 }
             }
-            (missing, JodinNodeInner::TopLevelDeclarations { decs }) => *missing = Some(tree),
+            (missing, JodinNodeInner::TopLevelDeclarations { decs: _ }) => *missing = Some(tree),
             _ => {
                 panic!("Non top level decs declaration created")
             }
@@ -141,7 +140,7 @@ impl SingleJodinNodeTreeCreator<'_> {
     fn create_node_from_pair(
         &mut self,
         pair: Pair<JodinRule>,
-        inherits: Vec<JodinNode>,
+        _inherits: Vec<JodinNode>,
     ) -> JodinResult<JodinNode> {
         let inner_rules: Box<[JodinRule]> = pair_as_rules(&pair);
         println!("Rule: {:?} -> {:?}", pair.as_rule(), inner_rules);
@@ -199,7 +198,7 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::t_false => JodinNodeInner::Literal(Literal::Boolean(false)).into(),
             JodinRule::declaration => {
                 let mut inner = pair.into_inner();
-                let (visibility, canonical_type, declarator_list) = match *inner_rules {
+                let (_visibility, canonical_type, declarator_list) = match *inner_rules {
                     [JodinRule::visibility, JodinRule::canonical_type, JodinRule::init_declarator_list, ..] =>
                     {
                         println!("Visibility present");
@@ -276,7 +275,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                 } else {
                     let op = rest.remove(0);
                     let rhs = rest.remove(0);
-                    let mut rhs = self.create_node_from_pair(rhs, vec![])?;
+                    let rhs = self.create_node_from_pair(rhs, vec![])?;
                     let op = match op.as_rule() {
                         JodinRule::t_dor => Operator::Dor,
                         JodinRule::t_or => Operator::Or,
@@ -480,7 +479,7 @@ impl SingleJodinNodeTreeCreator<'_> {
                 }
                 JodinRule::pointer => TypeTail::Pointer,
                 JodinRule::array_declarator => {
-                    let mut inner = tail.into_inner();
+                    let inner = tail.into_inner();
                     if let Some(expression) = inner
                         .into_iter()
                         .find(|pair| pair.as_rule() == JodinRule::expression)
@@ -512,7 +511,7 @@ impl<'a> JodinFallibleTool for SingleJodinNodeTreeCreator<'a> {
     fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
         let mut ret = self.create_node_from_pair(input, vec![]);
         if let Err(JodinErrorType::ParserError(_, path)) =
-            ret.as_mut().map_err(|mut e| e.error_type_mut())
+            ret.as_mut().map_err(|e| &mut e.error_type)
         {
             *path = Some(self.path.clone())
         }
@@ -528,7 +527,7 @@ impl<'a> IndexedPair<'a> {
     pub fn new(pairs: Pairs<'a, JodinRule>) -> IndexedPair<'a> {
         let mut map: HashMap<_, Vec<Pair<'a, _>>> = HashMap::new();
         for pair in pairs {
-            let mut vector = map.entry(pair.as_rule()).or_default();
+            let vector = map.entry(pair.as_rule()).or_default();
             vector.push(pair);
         }
         IndexedPair { map }
@@ -575,8 +574,9 @@ fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::parsing::parser::complete_parse;
+
+    use super::*;
 
     #[test]
     fn create_id() {

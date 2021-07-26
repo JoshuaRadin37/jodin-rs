@@ -8,7 +8,7 @@ use std::process::exit;
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
-    let matches = cli.get_matches();
+    let matches = cli.into_matches();
     let mut settings = CompilationSettings::default();
 
     if let Some(target) = matches.value_of("target") {

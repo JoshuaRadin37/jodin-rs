@@ -1,16 +1,20 @@
+//! A registry is used as an improvement over just using a standalone namespace tree.
+
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, Namespaced};
 use crate::core::identifier_resolution::IdentifierResolver;
-use crate::core::types::{CompoundType, JodinTypeReference};
-use std::collections::HashMap;
-use std::ops::{Deref, Index, IndexMut};
 
+use std::collections::HashMap;
+use std::ops::{Index, IndexMut};
+
+/// Contains an identifier resolver and a mapping between full identifiers and it's associated value.
 pub struct Registry<T> {
     resolver: IdentifierResolver,
     mapping: HashMap<Identifier, T>,
 }
 
 impl<T> Registry<T> {
+    /// Creates a new, empty registry
     pub fn new() -> Self {
         Self {
             resolver: IdentifierResolver::new(),
@@ -18,13 +22,15 @@ impl<T> Registry<T> {
         }
     }
 
-    pub fn with_resolver(resolver: IdentifierResolver) -> Self {
+    /// Creates a new registry that contains identifiers within the tree already.
+    pub fn new_with_resolver(resolver: IdentifierResolver) -> Self {
         Self {
             resolver,
             mapping: Default::default(),
         }
     }
 
+    /// Insert a new value into the registry. This identifier should be relative.
     pub fn insert(&mut self, val: T) -> JodinResult<Identifier>
     where
         T: Namespaced,
@@ -33,6 +39,7 @@ impl<T> Registry<T> {
         self.insert_with_identifier(val, identifier)
     }
 
+    /// Inserts a value into the registry associated to an identifier.
     pub fn insert_with_identifier(&mut self, val: T, path: Identifier) -> JodinResult<Identifier> {
         let path = self.resolver.create_absolute_path(&path);
         if self.mapping.contains_key(&path) {
@@ -42,6 +49,7 @@ impl<T> Registry<T> {
         Ok(path)
     }
 
+    /// Updates the value of an identifier, but only if it already exists within the registry.
     pub fn update_absolute_identity(&mut self, absolute: &Identifier, val: T) -> JodinResult<&T> {
         if !self.resolver.contains_absolute_identifier(absolute) {
             return Err(JodinErrorType::IdentifierDoesNotExist(absolute.clone()).into());
@@ -70,6 +78,7 @@ impl<T> Registry<T> {
         self.resolver.stop_use_namespace(namespace)
     }
 
+    /// Attempts to get a value from a given path.
     pub fn get(&self, path: &Identifier) -> JodinResult<&T> {
         let full_path = self.resolver.resolve_path(path.clone())?;
         self.mapping
@@ -77,6 +86,7 @@ impl<T> Registry<T> {
             .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
+    /// Attempts to get a mutable value from a given path.
     pub fn get_mut(&mut self, path: &Identifier) -> JodinResult<&mut T> {
         let full_path = self.resolver.resolve_path(path.clone())?;
         self.mapping

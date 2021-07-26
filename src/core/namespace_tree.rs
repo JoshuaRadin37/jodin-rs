@@ -1,14 +1,15 @@
+//! A method to keep track of identifiers by tracking them within a tree. This allows for
+//! identifier resolution.
+
 use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierIterator, Namespaced};
 use crate::utility::Tree;
-use ptree::{write_tree, Style, TreeBuilder, TreeItem};
+use ptree::{write_tree, Style, TreeItem};
 use std::borrow::Cow;
-use std::collections::hash_map::RandomState;
+
 use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
-use std::hash::Hash;
-use std::ops::Deref;
 
 struct Node<T: Namespaced> {
     id: Identifier,
@@ -64,7 +65,7 @@ impl<T: Namespaced> NamespaceTree<T> {
     }
 
     /// Creates a new namespace tree that's completely empty
-    pub fn with_initial_namespace(id: Identifier) -> Self {
+    pub fn new_with_initial_namespace(id: Identifier) -> Self {
         Self {
             head: Node::new(id),
         }
@@ -174,16 +175,19 @@ impl<T: Namespaced> NamespaceTree<T> {
         }
     }
 
+    /// Get the associated, relevant objects for an absolute path
     pub fn get_relevant_objects(&self, absolute_path: &Identifier) -> Option<&Vec<T>> {
         self.get_node(absolute_path)
             .map(|node| node.related_values())
     }
 
+    /// Gets mutable references to the associated, relevant objects for an absolute path
     pub fn get_relevant_objects_mut(&mut self, absolute_path: &Identifier) -> Option<&mut Vec<T>> {
         self.get_node_mut(absolute_path)
             .map(|node| node.related_values_mut())
     }
 
+    /// Adds a new namespace to the namespace tree.
     pub fn add_namespace(&mut self, namespace: Identifier) {
         if self.namespace_exists(&namespace) {
             return;
@@ -200,14 +204,26 @@ impl<T: Namespaced> NamespaceTree<T> {
         }
     }
 
+    /// Gets the base associated objects
     pub fn get_base_values(&self) -> &Vec<T> {
         &self.head.related_values
     }
 
+    /// Gets a mutable reference to the base associated objects.
     pub fn get_base_values_mut(&mut self) -> &mut Vec<T> {
         &mut self.head.related_values
     }
 
+    /// Attempts to get the associated value by taking in a current path and a relative path. The path
+    /// can either be relative or absolute. If more than one value is found, an error is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `current_namespace`: An optional, current namespace.
+    /// * `path`: The path to search for.
+    ///
+    /// returns: `Result<&T, JodinError>` Either a reference to the associated value, or an Error
+    #[deprecated]
     pub fn get_from_identifier(
         &self,
         current_namespace: Option<&Identifier>,
@@ -237,6 +253,13 @@ impl<T: Namespaced> NamespaceTree<T> {
         output.ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
+    /// Attempts to get the associated value from an absolute path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path`: The absolute path
+    ///
+    /// returns: Result<&T, JodinError> the associated value, or an error
     pub fn get_from_absolute_identifier(&self, path: &Identifier) -> JodinResult<&T> {
         let mut ptr = &self.head;
         let names: Vec<String> = path.into_iter().collect();
@@ -327,8 +350,8 @@ impl<T: Namespaced> Debug for NamespaceTree<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let tree = NodeInfo::from(&self.head);
         let mut vec = vec![];
-        write_tree(&tree, &mut vec).map_err(|e| std::fmt::Error::default())?;
-        let string = String::from_utf8(vec).map_err(|e| std::fmt::Error::default())?;
+        write_tree(&tree, &mut vec).map_err(|_e| std::fmt::Error::default())?;
+        let string = String::from_utf8(vec).map_err(|_e| std::fmt::Error::default())?;
         write!(f, "{}", string)
     }
 }

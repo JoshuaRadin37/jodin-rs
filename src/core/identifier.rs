@@ -1,8 +1,12 @@
+//! The standard identifier is used for every declaration within Jodin, from local declarations to
+//! class definitions to modules.
+
 use std::array::IntoIter;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
 
+/// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
     parent: Option<Box<Identifier>>,
@@ -10,21 +14,58 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    /// Creates an identifier from an array.
+    ///
+    /// # Arguments
+    ///
+    /// * `array`: An array of string-like values
+    ///
+    /// returns: Identifier
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let id = Identifier::from_array(["hello", "world"]);
+    /// ```
     pub fn from_array<S: AsRef<str>, const N: usize>(array: [S; N]) -> Self {
         Self::from_iter(IntoIter::new(array))
     }
 
+    /// The parent of the identifier.
     pub fn parent(&self) -> &Option<Box<Identifier>> {
         &self.parent
     }
+    /// Consumes the identifier to get it's maybe parent
     pub fn into_parent(self) -> Option<Identifier> {
         self.parent.map(|r| *r)
     }
 
+    /// Gets the "this" part of the identifier.
+    ///
+    /// # Example
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let id = Identifier::from_array(["hello", "world"]);
+    /// assert_eq!(id, "world");
+    /// ```
     pub fn this(&self) -> &str {
         &self.id
     }
 
+    /// Gets the ultimate parent of the identifier, or itself if it has not parent
+    ///
+    /// # Examples
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
+    /// assert_eq!(id, "lvl3");
+    /// assert_eq!(id.parent().unwrap().this(), "lvl2");
+    /// assert_eq!(id.highest_parent().this(), "lvl3");
+    ///
+    /// let id = Identifier::from("id");
+    /// assert_eq!(id.highest_parent().this(), "id");
+    /// ```
     pub fn highest_parent(&self) -> &Identifier {
         match &self.parent {
             None => self,
@@ -40,7 +81,25 @@ impl Identifier {
         }
     }
 
-    pub fn with_parent<N1: Into<Identifier>, N2: Into<Identifier>>(
+    /// Creates a new identifier that's the concatenation of two Identifier-like values.
+    ///
+    /// # Arguments
+    ///
+    /// * `parent`: The parent identifier
+    /// * `child`: The child identifier
+    ///
+    /// returns: the concatenated Identifier
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let example1 = Identifier::new_concat(Identifier::from("hello"), Identifier::from("world2"));
+    /// let example2 = Identifier::new_concat("hello", "world");
+    ///
+    /// assert_eq!(example1, example2);
+    /// ```
+    pub fn new_concat<N1: Into<Identifier>, N2: Into<Identifier>>(
         parent: N1,
         child: N2,
     ) -> Identifier {
@@ -66,7 +125,18 @@ impl Identifier {
         }
     }
 
-    pub fn strip_highest_parent(mut self) -> Option<Identifier> {
+    /// Removes the highest parent from this identifier, and returns the remaining value if
+    /// it exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
+    /// let new_id = id.strip_highest_parent();
+    /// assert_eq!(id, Identifier::from_array(["lvl2", "lvl3"]));
+    /// ```
+    pub fn strip_highest_parent(self) -> Option<Identifier> {
         let Identifier { parent, id } = self;
         match parent {
             None => return None,
@@ -131,7 +201,9 @@ impl From<Identifier> for String {
     }
 }
 
+/// Represents that this type has an associated identifier, and thus can be namespaced
 pub trait Namespaced {
+    /// Gets the identifier that this value has.
     fn get_identifier(&self) -> &Identifier;
 }
 
@@ -157,6 +229,7 @@ impl IntoIterator for &Identifier {
     }
 }
 
+/// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
 }
@@ -169,21 +242,26 @@ impl Iterator for IdentifierIterator {
     }
 }
 
+/// A wrapper type that can attach an identifier to a type that doesn't implement [Namespaced].
+///
+/// [Namespaced]: Namespaced
 pub struct Identifiable<T> {
     id: Identifier,
-    val: T,
+    /// The associated value
+    pub val: T,
 }
 
 impl<T> Identifiable<T> {
+    /// Creates a new instance of an Identifiable.
+    ///
+    /// # Arguments
+    ///
+    /// * `id`: The id to associate with the value
+    /// * `val`: The value
+    ///
+    /// returns: Identifiable<T>
     pub fn new<I: Into<Identifier>>(id: I, val: T) -> Self {
         Identifiable { id: id.into(), val }
-    }
-
-    pub fn val(&self) -> &T {
-        &self.val
-    }
-    pub fn val_mut(&mut self) -> &mut T {
-        &mut self.val
     }
 }
 

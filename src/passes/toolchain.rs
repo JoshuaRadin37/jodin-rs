@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::core::error::{JodinError, JodinResult};
 use std::marker::PhantomData;
 
 pub trait Tool {
@@ -14,7 +14,7 @@ impl<I, O> Tool for DummyTool<I, O> {
     type Input = I;
     type Output = O;
 
-    fn invoke(&mut self, input: Self::Input) -> Self::Output {
+    fn invoke(&mut self, _input: Self::Input) -> Self::Output {
         panic!("Can't call a dummy tool")
     }
 }

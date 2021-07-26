@@ -1,3 +1,5 @@
+//! The library for the jodin compiler/interpreter
+
 #![deny(missing_docs)]
 #![deny(unused_imports)]
 #![deny(unused_mut)]

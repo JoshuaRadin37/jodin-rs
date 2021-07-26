@@ -1,8 +1,7 @@
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
-use crate::parsing::ast::node_type::JodinNodeInner;
-use crate::parsing::error::ParseError;
-use pest::iterators::{Pair, Pairs};
-use pest::{ParseResult, Parser, RuleType};
+use crate::core::error::{JodinErrorType, JodinResult};
+
+use pest::iterators::Pairs;
+use pest::Parser;
 
 #[derive(Parser, Debug)]
 #[grammar = "parsing/jodin_grammar.pest"]
@@ -20,7 +19,7 @@ pub fn complete_parse(rule: Rule, input: &str) -> JodinResult<Pairs<Rule>> {
 mod tests {
     use super::*;
     use crate::parsing::parser::JodinParser;
-    use pest::iterators::{Pair, Pairs};
+
     use pest::Parser;
 
     #[test]

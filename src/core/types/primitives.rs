@@ -1,22 +1,37 @@
-use crate::core::error::JodinResult;
-use crate::core::identifier::Identifier;
-use crate::core::registry::{Registrable, Registry};
-use crate::core::types::{JodinType, JodinTypeReference, Type};
+//! The primitive types that can make up complex jodin types
 
+use crate::core::identifier::Identifier;
+
+use crate::core::types::{JodinType, Type};
+
+/// A primitive data type within Jodin
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Primitive {
+    /// An empty type, can not be used as an explicit canonical type
     Void,
+    /// `true` or `false` value
     Boolean,
+    /// A character, such as `'a'` or `'\n'`
     Char,
+    /// An i8
     Byte,
+    /// An i16
     Short,
+    /// An i32
     Int,
+    /// An i64
     Long,
+    /// A u8
     UnsignedByte,
+    /// A u16
     UnsignedShort,
+    /// A u32
     UnsignedInt,
+    /// A u64
     UnsignedLong,
+    /// An f32
     Float,
+    /// An f64
     Double,
 }
 

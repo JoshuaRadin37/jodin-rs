@@ -1,11 +1,16 @@
+//! The main method for tracking, then resolving identifiers.
+
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::identifier::{Identifier, Namespaced};
+use crate::core::identifier::Identifier;
 use crate::core::namespace_tree::NamespaceTree;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
+/// The default base namespace that all identifiers added to the project will be part of.
 pub const BASE_NAMESPACE: &str = "{base}";
 
+/// Maintains a [NamespaceTree](crate::core::namespace_tree::NamespaceTree), the current namespace,
+/// the base namespace, and all namespaces that are being "used".
 #[derive(Debug)]
 pub struct IdentifierResolver {
     tree: NamespaceTree<Identifier>,
@@ -20,6 +25,8 @@ impl IdentifierResolver {
         Self::with_base_namespace(BASE_NAMESPACE)
     }
 
+    /// Creates a new, empty identifier resolver with a custom base namespace. This is used instead of
+    /// the `BASE_NAMESPACE`
     pub fn with_base_namespace<S: AsRef<str>>(base_namespace: S) -> Self {
         let mut tree = NamespaceTree::new();
         tree.add_namespace(Identifier::from(&base_namespace));
@@ -33,7 +40,7 @@ impl IdentifierResolver {
 
     /// Pushes a namespace onto the current namespace
     pub fn push_namespace(&mut self, namespace: Identifier) {
-        let full_path = Identifier::with_parent(self.current_namespace_with_base(), namespace);
+        let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
         self.tree.add_namespace(full_path.clone());
         self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
     }
@@ -95,7 +102,7 @@ impl IdentifierResolver {
         }
 
          */
-        let full_path = Identifier::with_parent(self.current_namespace_with_base(), id);
+        let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
         println!("Created path {}", full_path);
         let parent_path = &**full_path.parent().as_ref().unwrap();
         self.tree.add_namespace(parent_path.clone());
@@ -106,19 +113,21 @@ impl IdentifierResolver {
         full_path.strip_highest_parent().unwrap()
     }
 
+    /// Add a new namespace relative to the current namespace to the resolver
     pub fn add_namespace<N: Into<Identifier>>(&mut self, namespace: N) {
-        self.tree.add_namespace(Identifier::with_parent(
+        self.tree.add_namespace(Identifier::new_concat(
             self.current_namespace_with_base(),
             namespace,
         ));
     }
 
+    /// Attempts to resolve a single, absolute identifier out of a given path.
     pub fn resolve_path(&self, path: Identifier) -> JodinResult<Identifier> {
         let mut output = HashSet::new();
 
-        let absolute_path = Identifier::with_parent(&self.base_namespace, &path);
+        let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
         //println!("Absolute path = {}", absolute_path);
-        let relative_path = Identifier::with_parent(self.current_namespace_with_base(), &path);
+        let relative_path = Identifier::new_concat(self.current_namespace_with_base(), &path);
         //println!("Relative path = {}", relative_path);
         if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
             output.insert(val);
@@ -129,10 +138,8 @@ impl IdentifierResolver {
         }
 
         for using in &self.using_namespaces {
-            let using_path = Identifier::with_parent(
-                Identifier::with_parent(&self.base_namespace, using),
-                &path,
-            );
+            let using_path =
+                Identifier::new_concat(Identifier::new_concat(&self.base_namespace, using), &path);
             //println!("Using path = {}", using_path);
             if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
                 output.insert(id);
@@ -160,19 +167,22 @@ impl IdentifierResolver {
         }
     }
 
+    /// the current namespace.
     pub fn current_namespace(&self) -> &Option<Identifier> {
         &self.current_namespace
     }
 
+    /// The current namespace with the base namespace prepended to it.
     pub fn current_namespace_with_base(&self) -> Identifier {
         let base = &self.base_namespace;
         if let Some(current) = &self.current_namespace {
-            Identifier::with_parent(base, current)
+            Identifier::new_concat(base, current)
         } else {
             base.clone()
         }
     }
 
+    /// Checks if the resolver contains the absolute identifier.
     pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
         self.tree.get_from_absolute_identifier(path).is_ok()
     }

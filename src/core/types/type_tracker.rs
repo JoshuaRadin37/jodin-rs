@@ -1,7 +1,9 @@
-use crate::core::identifier::Identifier;
-use crate::core::types::JodinTypeReference;
-use std::collections::HashMap;
+//! A way to track types within a project
 
+use crate::core::registry::Registry;
+use crate::core::types::JodinTypeReference;
+
+/// A type tracker
 pub struct TypeTracker {
-    hash_map: HashMap<Identifier, JodinTypeReference>,
+    hash_map: Registry<JodinTypeReference>,
 }

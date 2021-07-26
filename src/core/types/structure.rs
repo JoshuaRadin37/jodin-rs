@@ -1,9 +1,11 @@
-use crate::core::error::JodinResult;
+//! The most basic, complex type that is just a record
+
 use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
-use crate::core::registry::{Registrable, Registry};
+
 use crate::core::types::{get_type_id, CompoundType, JodinType, JodinTypeReference, Type};
 
+/// Contains a name and its fields
 #[derive(Debug)]
 pub struct Structure {
     name: Identifier,
@@ -32,6 +34,7 @@ impl Structure {
         }
     }
 
+    /// Gets the fields of the structure
     pub fn fields(&self) -> &Vec<(String, JodinTypeReference)> {
         &self.fields
     }

@@ -2,8 +2,7 @@ use crate::core::error::{JodinErrorType, JodinResult};
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::ast::tags::{Tag, TagUtilities};
 use crate::utility::Tree;
-use std::any::Any;
-use std::borrow::Cow;
+
 use std::fmt::{Debug, Formatter};
 
 pub struct JodinNode {
@@ -154,7 +153,7 @@ mod tests {
     use crate::core::identifier::Identifier;
     use crate::parsing::ast::jodin_node::JodinNode;
     use crate::parsing::ast::node_type::JodinNodeInner;
-    use crate::parsing::ast::tags::{DummyTag, Tag, TagUtilities};
+    use crate::parsing::ast::tags::DummyTag;
     use crate::passes::analysis::identity_resolution_tool::{BlockIdentifier, ResolvedIdentityTag};
 
     #[test]

@@ -1,7 +1,6 @@
 use std::any::Any;
 
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::types::{JodinTypeReference, Type};
 
 /// An attribute is an addition bit of information that can be attached to
 /// an ast node

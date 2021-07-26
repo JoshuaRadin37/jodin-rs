@@ -1,6 +1,9 @@
+//! Calling the compiler and interpreter
+
 use clap::{App, ArgMatches};
 use std::ops::{Deref, DerefMut};
 
+/// Contains the clap app that takes in command line arguments
 pub struct JodinRsApp<'a, 'b: 'a>(App<'a, 'b>);
 
 impl<'a, 'b: 'a> Deref for JodinRsApp<'a, 'b> {
@@ -41,7 +44,8 @@ impl<'a, 'b: 'a> JodinRsApp<'a, 'b> {
         ))
     }
 
-    pub fn get_matches(self) -> ArgMatches<'a> {
+    /// Consumes the application, getting the command line arguments passed into the program
+    pub fn into_matches(self) -> ArgMatches<'a> {
         self.0.get_matches()
     }
 }
