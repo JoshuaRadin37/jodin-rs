@@ -27,14 +27,14 @@ use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 use crate::core::types::primitives::Primitive;
 use crate::parsing::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-use crate::parsing::ast::jodin_node::JodinNode;
-use crate::parsing::ast::node_type::JodinNodeInner;
+pub use crate::parsing::ast::jodin_node::JodinNode;
+pub use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::parser::JodinRule;
 use crate::passes::toolchain::{JodinFallibleCollectorTool, JodinFallibleTool};
 
 pub mod intermediate_type;
-pub mod jodin_node;
-pub mod node_type;
+mod jodin_node;
+mod node_type;
 pub mod tags;
 
 pub struct JodinNodeBuilder<'a> {
@@ -167,7 +167,7 @@ impl SingleJodinNodeTreeCreator<'_> {
             JodinRule::using_statement => {
                 let path = pair.into_inner().nth(0).unwrap();
                 let import = Import::from_pair(path);
-                JodinNodeInner::UsingIdentifier {
+                JodinNodeInner::ImportIdentifiers {
                     import_data: import,
                 }
                 .into()

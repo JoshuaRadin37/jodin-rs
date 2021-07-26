@@ -1,4 +1,4 @@
-use crate::parsing::ast::jodin_node::JodinNode;
+use crate::parsing::ast::JodinNode;
 
 use crate::passes::toolchain::Tool;
 

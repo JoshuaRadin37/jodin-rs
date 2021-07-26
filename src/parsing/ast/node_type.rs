@@ -1,3 +1,6 @@
+//! The differentiation of jodin nodes in the AST that allow for more complex information to be
+//! stored within the AST.
+
 use crate::core::identifier::Identifier;
 use crate::core::import::Import;
 use crate::core::literal::Literal;
@@ -8,92 +11,156 @@ use crate::parsing::ast::jodin_node::JodinNode;
 use crate::parsing::keywords::Keyword;
 use crate::parsing::parser::JodinRule;
 
+/// Contains JodinNode variant information.
 #[derive(Debug)]
 pub enum JodinNodeInner {
+    /// Store an intermediate type.
     Type(IntermediateType),
+    /// Store a keyword.
     Keyword(Keyword),
+    /// Store a literal.
     Literal(Literal),
+    /// Store an identifier.
     Identifier(Identifier),
+    /// Store variable declarations, roughly translates to `<type> (<name> (= <value>)?)*`.
     VarDeclarations {
+        /// The type for the variable.
         var_type: JodinNode,
+        /// The ids being declared.
         names: Vec<JodinNode>,
+        /// The maybe values the variables are being initialized with.
         values: Vec<Option<JodinNode>>,
     },
+    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
     FunctionDefinition {
+        /// The name of the function.
         name: JodinNode,
+        /// The return type.
         return_type: IntermediateType,
-        parameters: Vec<JodinNode>,
+        /// The arguments of the function.
+        arguments: Vec<JodinNode>,
+        /// The generic parameters of the function.
         generic_parameters: Vec<JodinNode>,
+        /// The associated block of code.
         block: JodinNode,
     },
+    /// Stores a block
     Block {
+        /// The statements that make up the block.
         expressions: Vec<JodinNode>,
     },
+    /// Contains a structure definition, such as `struct s1 { int i; }`.
     StructureDefinition {
+        /// The id of the struct.
         name: JodinNode,
+        /// The struct's generic parameters
         generic_parameters: Vec<JodinNode>,
+        /// The members of the struct.
         members: Vec<JodinNode>,
     },
+    /// Represents a named value, usually used as a parameter or a member of a structure.
     NamedValue {
+        /// The id
         name: JodinNode,
+        /// The type
         var_type: IntermediateType,
     },
+    /// An operator that takes in only one argument, such as `-1`.
     Uniop {
+        /// The operator
         op: Operator,
+        /// The argument
         inner: JodinNode,
     },
+    /// An expression to cast a value to another type.
     CastExpression {
+        /// The expression to be casted
         to_type: IntermediateType,
+        /// The destination type
         factor: JodinNode,
     },
+    /// An operator that takes in only one argument that occurs after the value, such as `x++`.
     Postop {
+        /// The operator.
         op: Operator,
+        /// The argument.
         inner: JodinNode,
     },
+    /// An operator that takes in two arguments, such as `1+2`.
     Binop {
+        /// The operator.
         op: Operator,
+        /// The left had side argument.
         lhs: JodinNode,
+        /// The right had side argument.
         rhs: JodinNode,
     },
+    /// Represents a ternary expression, which is a shorthand for conditional expressions. Expressed
+    /// as `<cond> ? <if_true> : <if_false>`.
     Ternary {
+        /// The condition.
         cond: JodinNode,
+        /// The value if the condition is true.
         yes: JodinNode,
+        /// The value if the condition is false.
         no: JodinNode,
     },
+    /// The index operator, used mainly when getting a member of an array.
     Index {
+        /// The value being indexed.
         indexed: JodinNode,
+        /// The expression that is the index.
         expression: JodinNode,
     },
+    /// The call operator, used to call functions or methods.
     Call {
+        /// The expression being called.
         called: JodinNode,
+        /// The generic types to use in the call.
         generics_instance: Vec<JodinNode>,
-        parameters: Vec<JodinNode>,
+        /// The arguments to pass in the call.
+        arguments: Vec<JodinNode>,
     },
+    /// Get a member of a compound type.
     GetMember {
+        /// The instance of a compound type.
         compound: JodinNode,
+        /// The id of the member.
         id: JodinNode,
     },
+    /// A list of top level declarations
     TopLevelDeclarations {
+        /// The declarations.
         decs: Vec<JodinNode>,
     },
+    /// The `in <namespace>` expression.
     InNamespace {
+        /// The namespace.
         namespace: JodinNode,
+        /// The part of the AST that is within this namespace.
         inner: JodinNode,
     },
-    UsingIdentifier {
+    /// Contains import data.
+    ImportIdentifiers {
+        /// The import data.
         import_data: Import,
     },
+    /// Unimplemented nodes represent parts of the parse tree that can't be converted into AST (yet).
     Unimplemented {
+        /// The rule that wasn't converted.
         jodin_rule: JodinRule,
+        /// The string from the original code that wasn't converted.
         affected_string: String,
     },
 }
 
 impl JodinNodeInner {
+    /// Convert this value into an instance of Result.
     pub fn into_result<E>(self) -> Result<JodinNode, E> {
         Ok(self.into())
     }
 
+    /// The child JodinNodes of this variant.
     pub fn children(&self) -> impl IntoIterator<Item = &JodinNode> {
         let vector: Vec<&JodinNode> = match self {
             JodinNodeInner::Type(_) => {
@@ -121,7 +188,7 @@ impl JodinNodeInner {
             JodinNodeInner::FunctionDefinition {
                 name,
                 return_type: _,
-                parameters,
+                arguments: parameters,
                 generic_parameters,
                 block,
             } => {
@@ -169,7 +236,7 @@ impl JodinNodeInner {
             JodinNodeInner::Call {
                 called,
                 generics_instance,
-                parameters,
+                arguments: parameters,
             } => {
                 let mut ret = vec![called];
                 ret.extend(generics_instance);
@@ -183,7 +250,7 @@ impl JodinNodeInner {
             JodinNodeInner::InNamespace { namespace, inner } => {
                 vec![namespace, inner]
             }
-            JodinNodeInner::UsingIdentifier { .. } => {
+            JodinNodeInner::ImportIdentifiers { .. } => {
                 vec![]
             }
             JodinNodeInner::Unimplemented { .. } => {
@@ -193,6 +260,7 @@ impl JodinNodeInner {
         vector
     }
 
+    /// The mutable child JodinNodes of this variant.
     pub fn children_mut(&mut self) -> impl IntoIterator<Item = &mut JodinNode> {
         let vector: Vec<&mut JodinNode> = match self {
             JodinNodeInner::Type(_) => {
@@ -220,7 +288,7 @@ impl JodinNodeInner {
             JodinNodeInner::FunctionDefinition {
                 name,
                 return_type: _,
-                parameters,
+                arguments: parameters,
                 generic_parameters,
                 block,
             } => {
@@ -268,7 +336,7 @@ impl JodinNodeInner {
             JodinNodeInner::Call {
                 called,
                 generics_instance,
-                parameters,
+                arguments: parameters,
             } => {
                 let mut ret = vec![called];
                 ret.extend(generics_instance);
@@ -282,7 +350,7 @@ impl JodinNodeInner {
             JodinNodeInner::InNamespace { namespace, inner } => {
                 vec![namespace, inner]
             }
-            JodinNodeInner::UsingIdentifier { .. } => {
+            JodinNodeInner::ImportIdentifiers { .. } => {
                 vec![]
             }
             JodinNodeInner::Unimplemented { .. } => {

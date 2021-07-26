@@ -44,15 +44,23 @@ use crate::core::types::primitives::Primitive;
 use crate::parsing::ast::jodin_node::JodinNode;
 use std::fmt::{Display, Formatter};
 
+use itertools::Itertools;
+
+/// Contains data to represent types without storing any actual type information.
 #[derive(Debug)]
 pub struct IntermediateType {
+    /// Whether this type is constant.
     pub is_const: bool,
+    /// The type specifier.
     pub type_specifier: TypeSpecifier,
+    /// The generics elements of this type.
     pub generics: Vec<IntermediateType>,
+    /// The "tails", which are either a pointer `*`, an array declaration, or a function call
     pub tails: Vec<TypeTail>,
 }
 
 impl IntermediateType {
+    /// Creates a new intermediate type instance
     pub fn new(
         is_const: bool,
         type_specifier: TypeSpecifier,
@@ -78,16 +86,26 @@ impl Display for IntermediateType {
             write!(
                 f,
                 "<{}>",
-                self.generics.iter().map(|gen| gen.to_string()).join(",")
-            )
+                Itertools::intersperse(
+                    self.generics.iter().map(|gen| gen.to_string()),
+                    ",".to_string()
+                )
+                .collect::<String>()
+            )?;
+        }
+        for tail in &self.tails {
+            write!(f, "{}", tail)?;
         }
         Ok(())
     }
 }
 
+/// A type specifier can either be a built in primitive, or an identifier
 #[derive(Debug)]
 pub enum TypeSpecifier {
+    /// An identifier referring to a type, such as `std::object`
     Id(Identifier),
+    /// A built-in data type, such as `float` or `unsigned int`
     Primitive(Primitive),
 }
 
@@ -104,10 +122,15 @@ impl Display for TypeSpecifier {
     }
 }
 
+/// Contains a tail for the type, which are modifiers on a base type that expands the functionality of it
 #[derive(Debug)]
 pub enum TypeTail {
+    /// A pointer is one level of indirection from a data type.
     Pointer,
+    /// An array is a contiguous block of memory of a type. The size is optional. An array with no
+    /// size is equivalent to a pointer.
     Array(Option<JodinNode>),
+    /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
 }
 

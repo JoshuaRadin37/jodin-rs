@@ -1,6 +1,6 @@
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
-use crate::parsing::ast::jodin_node::JodinNode;
+use crate::parsing::ast::JodinNode;
 use crate::parsing::ast::JodinNodeBuilder;
 use crate::parsing::parser::{complete_parse, JodinRule};
 use crate::passes::toolchain::JodinFallibleCollectorTool;

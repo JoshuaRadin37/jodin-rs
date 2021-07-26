@@ -2,8 +2,8 @@ use crate::core::error::{JodinError, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
 
-use crate::parsing::ast::jodin_node::JodinNode;
-use crate::parsing::ast::node_type::JodinNodeInner;
+use crate::parsing::ast::JodinNode;
+use crate::parsing::ast::JodinNodeInner;
 
 use crate::parsing::ast::tags::Tag;
 use crate::passes::toolchain::{

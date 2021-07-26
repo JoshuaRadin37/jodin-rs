@@ -42,8 +42,8 @@ impl TagUtilities for Box<dyn Tag> {
     }
 }
 
-#[cfg(test)]
-pub(crate) struct DummyTag;
+#[doc(hidden)]
+pub struct DummyTag;
 
 #[cfg(test)]
 impl Tag for DummyTag {

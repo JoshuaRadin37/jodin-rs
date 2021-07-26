@@ -1,3 +1,5 @@
+//! The main building block for the Abstract Syntax Tree
+
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::parsing::ast::node_type::JodinNodeInner;
 use crate::parsing::ast::tags::{Tag, TagUtilities};
@@ -5,12 +7,14 @@ use crate::utility::Tree;
 
 use std::fmt::{Debug, Formatter};
 
+/// Contains the inner jodin node type and it's tags
 pub struct JodinNode {
     jodin_node_type: Box<JodinNodeInner>,
     tags: Vec<Box<dyn 'static + Tag>>,
 }
 
 impl JodinNode {
+    /// Create a new `JodinNode` from an inner type.
     pub fn new(jodin_node_type: JodinNodeInner) -> Self {
         JodinNode {
             jodin_node_type: Box::new(jodin_node_type),
@@ -18,17 +22,43 @@ impl JodinNode {
         }
     }
 
+    /// Consume the JodinNode to get it's inner type.
     pub fn into_inner(self) -> JodinNodeInner {
         *self.jodin_node_type
     }
+
+    /// The inner type of the node.
     pub fn inner(&self) -> &JodinNodeInner {
         &*self.jodin_node_type
     }
 
+    /// A mutable reference to the inner type of the node.
     pub fn inner_mut(&mut self) -> &mut JodinNodeInner {
         &mut *self.jodin_node_type
     }
 
+    /// Add a tag to the jodin node.
+    ///
+    /// # Arguments
+    ///
+    /// * `tag`: The tag to add to the node
+    ///
+    /// returns: Result<(), JodinError> Whether the tag was added successfully.
+    ///
+    /// # Error
+    ///
+    /// Will return an error if the maximum amount of tags of this type were already added to this node.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_tag(ResolvedIdentityTag::new(Identifier::from_array(["namespace", "id"]))).unwrap();
+    /// ```
     pub fn add_tag<T: 'static + Tag>(&mut self, tag: T) -> JodinResult<()> {
         if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
             return Err(JodinErrorType::MaxNumOfTagExceeded {
@@ -42,6 +72,34 @@ impl JodinNode {
         Ok(())
     }
 
+    /// Adds an iterator of tags to the jodin node.
+    ///
+    /// These tags must be boxed so that they can be of different tag types. Otherwise, only one type
+    /// of tags can be added.
+    ///
+    /// # Arguments
+    ///
+    /// * `iter`: The iterator of tags
+    ///
+    /// returns: Result<(), JodinError> Whether the tags were all added successfully.
+    ///
+    /// # Error
+    ///
+    /// Will error out if any tag fails to be added. Will not revert to before operation was completed, but will
+    /// not also add any more tags after a failure occurred.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_boxed_tags(
+    ///     vec![Box::new(DummyTag), Box::new(DummyTag)]
+    /// ).unwrap();
+    /// ```
     pub fn add_boxed_tags<I: IntoIterator<Item = Box<dyn Tag>>>(
         &mut self,
         iter: I,
@@ -67,6 +125,7 @@ impl JodinNode {
             .ok_or(JodinErrorType::TagNotPresent.into())
     }
 
+    /// Gets all tags for a certain tag type
     pub fn get_tags_by_type(&self, tag_type: &str) -> Vec<&dyn Tag> {
         self.tags
             .iter()
@@ -80,6 +139,7 @@ impl JodinNode {
         self.get_tags_mut_by_type(tag_type).into_iter().next()
     }
 
+    /// Gets all tags for a certain tag type
     pub fn get_tags_mut_by_type(&mut self, tag_type: &str) -> Vec<&mut Box<dyn Tag>> {
         self.tags
             .iter_mut()
@@ -87,6 +147,22 @@ impl JodinNode {
             .collect()
     }
 
+    /// Get a tag using the type of the tag.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_tag(DummyTag);
+    ///
+    /// node.get_tag::<DummyTag>().unwrap();
+    /// let tag: &DummyTag = node.get_tag().unwrap();
+    /// ```
     pub fn get_tag<T: 'static + Tag>(&self) -> JodinResult<&T> {
         self.get_tags::<T>()
             .into_iter()
@@ -94,6 +170,20 @@ impl JodinNode {
             .ok_or(JodinErrorType::TagNotPresent.into())
     }
 
+    /// Get all tags using the type of the tag.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_tag(DummyTag);
+    ///
+    /// let tags: Vec<&DummyTag> = node.get_tags();
     pub fn get_tags<T: 'static + Tag>(&self) -> Vec<&T> {
         self.tags
             .iter()
@@ -101,10 +191,39 @@ impl JodinNode {
             .collect()
     }
 
+    /// Get a mutable tag reference using the type of the tag.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_tag(DummyTag);
+    ///
+    /// let tag: &mut DummyTag = node.get_tag_mut().unwrap();
+    /// ```
     pub fn get_tag_mut<T: 'static + Tag>(&mut self) -> Option<&mut T> {
         self.get_tags_mut::<T>().into_iter().nth(0)
     }
 
+    /// Get all mutable tag references using the type of the tag.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use jodin_rs::parsing::ast::jodin_node::JodinNode;
+    /// use jodin_rs::parsing::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::parsing::ast::tags::DummyTag;
+    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// node.add_tag(DummyTag);
+    ///
+    /// let tags: Vec<&mut DummyTag> = node.get_tags_mut();
     pub fn get_tags_mut<T: 'static + Tag>(&mut self) -> Vec<&mut T> {
         self.tags
             .iter_mut()
@@ -112,6 +231,7 @@ impl JodinNode {
             .collect()
     }
 
+    /// Gets all of the tags within the node.
     pub fn tags(&self) -> &Vec<Box<dyn Tag>> {
         &self.tags
     }
