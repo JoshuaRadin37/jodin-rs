@@ -1,4 +1,27 @@
-//! The library for the jodin compiler/interpreter
+//! The library for the jodin compiler/interpreter.
+//!
+//! Jodin is an object-oriented programming language designed with the intent to be compiled into
+//! C code.
+//!
+//! # Example
+//!
+//! ```cpp
+//! class Notify {
+//!     virtual void notify();
+//! }
+//!
+//! class HelloWorld : Notify {
+//!     virtual void notify() {
+//!         stdout::println("Hello, World!");
+//!     }
+//! }
+//!
+//! public void main(int argc, String[] argv) {
+//!     Notify obj = new HelloWorld();
+//!     obj->notify();
+//! }
+//!
+//! ```
 
 #![deny(missing_docs)]
 #![deny(unused_imports)]

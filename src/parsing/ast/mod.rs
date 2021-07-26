@@ -1,3 +1,14 @@
+//! This module contains all of the relevant parts for how ASTs are created.
+//!
+//! The abstract syntax tree should be made up of as few different types as possible, and when
+//! instead of adding more fields to a variant of the [NodeType] enum, instead tags should be added.
+//!
+//! Tags are a way of adding information to the AST without needing to have many different fields for
+//! every single instance of a [JodinNode]
+//!
+//! [NodeType]: node_type::NodeType
+//! [JodinNode]: jodin_node::JodinNode
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;

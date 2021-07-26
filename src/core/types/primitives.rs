@@ -3,6 +3,7 @@
 use crate::core::identifier::Identifier;
 
 use crate::core::types::{JodinType, Type};
+use std::fmt::{Display, Formatter};
 
 /// A primitive data type within Jodin
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -77,5 +78,11 @@ impl Type for Primitive {
 impl From<Primitive> for JodinType {
     fn from(p: Primitive) -> Self {
         JodinType::Primitive(p)
+    }
+}
+
+impl Display for Primitive {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.type_name())
     }
 }
