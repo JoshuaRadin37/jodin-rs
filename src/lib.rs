@@ -1,3 +1,7 @@
+#![deny(missing_docs)]
+#![deny(unused_imports)]
+#![deny(unused_mut)]
+
 #[macro_use]
 extern crate clap;
 
