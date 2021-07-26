@@ -194,7 +194,9 @@ impl<Error, Input, Mid, Output> FallibleTool for FallibleToolchain<Error, Input,
     }
 }
 
+/// Provides helper methods for types that implement FallibleTool
 pub trait FallibleToolchainUtilities: FallibleTool {
+    /// Append a fallible tool to this tool.
     fn append_tool<
         O,
         T: 'static + FallibleTool<Error = Self::Error, Input = Self::Output, Output = O>,
@@ -211,6 +213,7 @@ pub trait FallibleToolchainUtilities: FallibleTool {
         }
     }
 
+    /// Prepend a fallible tool to this tool.
     fn prepend_tool<
         I,
         T: 'static + FallibleTool<Error = Self::Error, Input = I, Output = Self::Input>,
@@ -227,6 +230,7 @@ pub trait FallibleToolchainUtilities: FallibleTool {
         }
     }
 
+    /// Append an infallible tool to this tool.
     fn append_infallible<O, T: 'static + Tool<Input = Self::Output, Output = O>>(
         self,
         other: T,
@@ -240,6 +244,7 @@ pub trait FallibleToolchainUtilities: FallibleTool {
         }
     }
 
+    /// Prepend an infallible to this tool.
     fn prepend_infallible<I, T: 'static + Tool<Input = I, Output = Self::Input>>(
         self,
         other: T,
@@ -268,18 +273,27 @@ impl<T: Tool, E> FallibleTool for FallibleWrapper<T, E> {
     }
 }
 
+/// A tool that takes an iterator as an input.
 pub trait CollectorTool {
+    /// The item type for the iterator.
     type Input;
+    /// The output type.
     type Output;
 
+    /// Call the collector.
     fn invoke<I: IntoIterator<Item = Self::Input>>(&mut self, input_iter: I) -> Self::Output;
 }
 
+/// A tool that takes an iterator as an input that can returns a result.
 pub trait FallibleCollectorTool {
+    /// The item type for the iterator.
     type Input;
+    /// The output type.
     type Output;
+    /// The error type.
     type Error;
 
+    /// Call the fallible collector.
     fn invoke<I: IntoIterator<Item = Self::Input>>(
         &mut self,
         input_iter: I,
@@ -295,16 +309,21 @@ impl<F: FallibleCollectorTool> CollectorTool for F {
     }
 }
 
+/// A collector, fallible tool that that returns a [JodinResult](crate::core::error::JodinResult).
 pub trait JodinFallibleCollectorTool {
+    /// The input type.
     type Input;
+    /// The output type.
     type Output;
 
+    /// Call the fallible collector.
     fn invoke<I: IntoIterator<Item = Self::Input>>(
         &mut self,
         input_iter: I,
     ) -> JodinResult<Self::Output>;
 }
 
+/// A toolchain that takes in a tool and ends with a collector tool.
 pub struct CollectorToolchain<T, CT, Input, Mid, Output>
 where
     T: Tool<Input = Input, Output = Mid>,
@@ -336,11 +355,13 @@ where
     T: Tool<Input = Input, Output = Mid>,
     CT: CollectorTool<Input = Mid, Output = Output>,
 {
+    /// Creates a new collector toolchain from a tool and a collector tool.
     pub fn new(input: T, collector: CT) -> Self {
         CollectorToolchain { input, collector }
     }
 }
 
+/// A fallible collector that takes in a tool and ends with a collector tool.
 pub struct FallibleCollectorToolchain<T, CT, Input, Mid, Output, Error1, Error2>
 where
     T: Tool<Input = Input, Output = Result<Mid, Error1>>,
@@ -358,6 +379,8 @@ where
     CT: CollectorTool<Input = Mid, Output = Result<Output, Error2>>,
     Error1: Into<Error2>,
 {
+    /// Creates a new fallible collector toolchain using a tool and collector that both results in
+    /// an error.
     pub fn new(input: T, collector: CT) -> Self {
         FallibleCollectorToolchain { input, collector }
     }
