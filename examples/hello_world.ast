@@ -367,13 +367,20 @@ JodinNode {
                 vec: [
                     JodinNode {
                     	attributes: []
-                    	inner: NodeVector {
-                        vec: [
+                    	inner: Call {
+                        called: JodinNode {
+                        	attributes: []
+                        	inner: Identifier(
+                            println,
+                        )
+                        },
+                        generics_instance: [],
+                        arguments: [
                             JodinNode {
                             	attributes: []
                             	inner: Unimplemented {
-                                jodin_rule: atom,
-                                affected_string: "println(\"Hello world!\")",
+                                jodin_rule: string,
+                                affected_string: "\"Hello world!\"",
                             }
                             },
                         ],
@@ -381,13 +388,20 @@ JodinNode {
                     },
                     JodinNode {
                     	attributes: []
-                    	inner: NodeVector {
-                        vec: [
+                    	inner: Call {
+                        called: JodinNode {
+                        	attributes: []
+                        	inner: Identifier(
+                            stdio::println,
+                        )
+                        },
+                        generics_instance: [],
+                        arguments: [
                             JodinNode {
                             	attributes: []
                             	inner: Unimplemented {
-                                jodin_rule: atom,
-                                affected_string: "stdio::println(\"Hello world!\")",
+                                jodin_rule: string,
+                                affected_string: "\"Hello world!\"",
                             }
                             },
                         ],
@@ -395,24 +409,17 @@ JodinNode {
                     },
                     JodinNode {
                     	attributes: []
-                    	inner: NodeVector {
-                        vec: [
+                    	inner: ReturnValue {
+                        expression: Some(
                             JodinNode {
                             	attributes: []
-                            	inner: ReturnValue {
-                                expression: Some(
-                                    JodinNode {
-                                    	attributes: []
-                                    	inner: Literal(
-                                        Int(
-                                            0,
-                                        ),
-                                    )
-                                    },
+                            	inner: Literal(
+                                Int(
+                                    0,
                                 ),
-                            }
+                            )
                             },
-                        ],
+                        ),
                     }
                     },
                 ],

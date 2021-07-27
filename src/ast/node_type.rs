@@ -145,13 +145,6 @@ pub enum JodinNodeInner {
         /// Stores the nodes
         vec: Vec<JodinNode>,
     },
-    /// Unimplemented nodes represent parts of the parse tree that can't be converted into AST (yet).
-    Unimplemented {
-        /// The rule that wasn't converted.
-        jodin_rule: JodinRule,
-        /// The string from the original code that wasn't converted.
-        affected_string: String,
-    },
     /// Return a value from a function
     ReturnValue {
         /// An optional expression to return
@@ -163,6 +156,35 @@ pub enum JodinNodeInner {
     Break,
     /// An empty node
     Empty,
+    /// Super
+    Super,
+    /// Contains information about a constructor call
+    ConstructorCall {
+        /// The type being called
+        name: IntermediateType,
+        /// The generic parameters of the function.
+        generic_parameters: Vec<JodinNode>,
+        /// The arguments of the function.
+        arguments: Vec<JodinNode>,
+    },
+
+    /// Unimplemented nodes represent parts of the parse tree that can't be converted into AST (yet).
+    Unimplemented {
+        /// The rule that wasn't converted.
+        jodin_rule: JodinRule,
+        /// The string from the original code that wasn't converted.
+        affected_string: String,
+    },
+    /// Dereference a pointer
+    Dereference {
+        /// What's being dereferenced
+        node: JodinNode,
+    },
+    /// Get a pointer to a place in memory
+    GetReference {
+        /// The place in memory
+        node: JodinNode,
+    },
 }
 
 impl JodinNodeInner {
@@ -271,6 +293,25 @@ impl JodinNodeInner {
             JodinNodeInner::Empty => {
                 vec![]
             }
+            JodinNodeInner::Super => {
+                vec![]
+            }
+            JodinNodeInner::ConstructorCall {
+                name: _,
+                generic_parameters,
+                arguments,
+            } => {
+                let mut ret = vec![];
+                ret.extend(generic_parameters);
+                ret.extend(arguments);
+                ret
+            }
+            JodinNodeInner::Dereference { node } => {
+                vec![node]
+            }
+            JodinNodeInner::GetReference { node } => {
+                vec![node]
+            }
         };
         vector
     }
@@ -373,6 +414,25 @@ impl JodinNodeInner {
             }
             JodinNodeInner::Empty => {
                 vec![]
+            }
+            JodinNodeInner::Super => {
+                vec![]
+            }
+            JodinNodeInner::ConstructorCall {
+                name: _,
+                generic_parameters,
+                arguments,
+            } => {
+                let mut ret = vec![];
+                ret.extend(generic_parameters);
+                ret.extend(arguments);
+                ret
+            }
+            JodinNodeInner::Dereference { node } => {
+                vec![node]
+            }
+            JodinNodeInner::GetReference { node } => {
+                vec![node]
             }
         };
         vector

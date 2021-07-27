@@ -159,7 +159,7 @@ impl JodinNodeGenerator<'_> {
     pub fn generate_node(
         &mut self,
         pair: Pair<JodinRule>,
-        _inherits: Vec<JodinNode>,
+        mut inherits: Vec<JodinNode>,
     ) -> JodinResult<JodinNode> {
         let inner_rules: Box<[JodinRule]> = pair_as_rules(&pair);
         println!("Rule: {:?} -> {:?}", pair.as_rule(), inner_rules);
@@ -546,13 +546,174 @@ impl JodinNodeGenerator<'_> {
                 [JodinRule::t_semic] => JodinNodeInner::Empty.into(),
                 _ => panic!("Illegal jump statement form: {:?}", inner_rules),
             },
+            JodinRule::atom => {
+                let mut inner = IndexedPair::new(pair.into_inner());
+
+                let atom: JodinNode = match *inner_rules {
+                    [JodinRule::expression, ..] => {
+                        self.generate_node(inner.get(JodinRule::expression)?, vec![])?
+                    }
+                    [JodinRule::identifier, ..] => {
+                        self.generate_node(inner.get(JodinRule::identifier)?, vec![])?
+                    }
+                    [JodinRule::t_super, ..] => JodinNodeInner::Super.into(),
+                    [JodinRule::t_new, JodinRule::canonical_type, JodinRule::generic_instance, JodinRule::args_list, ..] =>
+                    {
+                        let name =
+                            self.new_intermediate_type(inner.get(JodinRule::canonical_type)?)?;
+
+                        let generic_parameters: Vec<JodinNode> =
+                            if let JodinNodeInner::NodeVector { vec } = self
+                                .generate_node(inner.get(JodinRule::generic_instance)?, vec![])?
+                                .into_inner()
+                            {
+                                vec
+                            } else {
+                                panic!("Parameters must return as a vector")
+                            };
+
+                        let arguments = if let JodinNodeInner::NodeVector { vec } = self
+                            .generate_node(inner.get(JodinRule::args_list)?, vec![])?
+                            .into_inner()
+                        {
+                            vec
+                        } else {
+                            panic!("Parameters must return as a vector")
+                        };
+
+                        JodinNodeInner::ConstructorCall {
+                            name,
+                            generic_parameters,
+                            arguments,
+                        }
+                        .into()
+                    }
+                    [JodinRule::t_new, JodinRule::canonical_type, JodinRule::args_list, ..] => {
+                        let name =
+                            self.new_intermediate_type(inner.get(JodinRule::canonical_type)?)?;
+
+                        let arguments = if let JodinNodeInner::NodeVector { vec } = self
+                            .generate_node(inner.get(JodinRule::args_list)?, vec![])?
+                            .into_inner()
+                        {
+                            vec
+                        } else {
+                            panic!("Parameters must return as a vector")
+                        };
+
+                        JodinNodeInner::ConstructorCall {
+                            name,
+                            generic_parameters: vec![],
+                            arguments,
+                        }
+                        .into()
+                    }
+                    _ => panic!("Illegal atom form: {:?}", inner_rules),
+                };
+
+                match inner.get(JodinRule::atom_tail) {
+                    Ok(tail) => self.generate_node(tail, vec![atom])?,
+                    Err(_) => atom,
+                }
+            }
+            JodinRule::atom_tail => {
+                let mut inner = pair.into_inner();
+                let last = inherits.remove(0);
+                let node: JodinNode = match *inner_rules {
+                    [JodinRule::t_dec] => {
+                        return JodinNodeInner::Postop {
+                            op: Operator::Increment,
+                            inner: last,
+                        }
+                        .into_result()
+                    }
+                    [JodinRule::t_inc] => {
+                        return JodinNodeInner::Postop {
+                            op: Operator::Decrement,
+                            inner: last,
+                        }
+                        .into_result()
+                    }
+                    [JodinRule::generic_instance, JodinRule::function_call] => {
+                        let generics_instance: Vec<JodinNode> =
+                            if let JodinNodeInner::NodeVector { vec } = self
+                                .generate_node(inner.next().unwrap(), vec![])?
+                                .into_inner()
+                            {
+                                vec
+                            } else {
+                                panic!("Parameters must return as a vector")
+                            };
+
+                        let arguments = if let JodinNodeInner::NodeVector { vec } = self
+                            .generate_node(inner.next().unwrap(), vec![])?
+                            .into_inner()
+                        {
+                            vec
+                        } else {
+                            panic!("Parameters must return as a vector")
+                        };
+
+                        JodinNodeInner::Call {
+                            called: last,
+                            generics_instance,
+                            arguments,
+                        }
+                        .into()
+                    }
+                    [JodinRule::function_call] => {
+                        let arguments = if let JodinNodeInner::NodeVector { vec } = self
+                            .generate_node(inner.next().unwrap(), vec![])?
+                            .into_inner()
+                        {
+                            vec
+                        } else {
+                            panic!("Parameters must return as a vector")
+                        };
+
+                        JodinNodeInner::Call {
+                            called: last,
+                            generics_instance: vec![],
+                            arguments,
+                        }
+                        .into()
+                    }
+                    [JodinRule::t_arrow, JodinRule::identifier] => {
+                        let id = self.generate_node(inner.nth(1).unwrap(), vec![])?;
+
+                        let dereference: JodinNode =
+                            JodinNodeInner::Dereference { node: last }.into();
+
+                        JodinNodeInner::GetMember {
+                            compound: dereference,
+                            id,
+                        }
+                        .into()
+                    }
+                    [JodinRule::t_dot, JodinRule::identifier] => {
+                        let id = self.generate_node(inner.nth(1).unwrap(), vec![])?;
+
+                        JodinNodeInner::GetMember { compound: last, id }.into()
+                    }
+                    _ => panic!("Illegal atom-tail form: {:?}", inner_rules),
+                };
+
+                let atom_tail_pair = inner.find(|pair| pair.as_rule() == JodinRule::atom_tail);
+                match atom_tail_pair {
+                    Some(atom_tail) => self.generate_node(atom_tail, vec![node])?,
+                    None => node,
+                }
+            }
             // just go into inner
-            JodinRule::top_level_declaration | JodinRule::jodin_file => {
+            JodinRule::top_level_declaration
+            | JodinRule::jodin_file
+            | JodinRule::statement
+            | JodinRule::function_call => {
                 let inner = pair.into_inner().nth(0).unwrap();
                 self.generate_node(inner, vec![])?
             }
             // as_vector
-            JodinRule::parameter_list | JodinRule::compound_statement | JodinRule::statement => {
+            JodinRule::parameter_list | JodinRule::compound_statement | JodinRule::args_list => {
                 let mut vec = vec![];
                 for item in pair.into_inner() {
                     vec.push(self.generate_node(item, vec![])?);

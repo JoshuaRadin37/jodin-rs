@@ -48,5 +48,6 @@ struct a1 {
 int main(int argc, String[] args) {
     println("Hello world!");
     stdio::println("Hello world!");
+    a1 s_a1 = a1 { .a = 3 };
     return 0;
 }

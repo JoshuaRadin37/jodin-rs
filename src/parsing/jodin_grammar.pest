@@ -427,16 +427,21 @@ typeof_expression = {
 }
 
 atom = {
-    "(" ~ expression ~ ")" ~ atom_tail? |
-    identifier ~ atom_tail? |
-    t_super ~ atom_tail? |
-    t_new ~ canonical_type ~ generic_instance? ~ "(" ~ args_list ~ ")"
+    (
+        "(" ~ expression ~ ")" |
+        identifier |
+        t_super |
+        t_new ~ canonical_type ~ generic_instance? ~ "(" ~ args_list ~ ")"
+    ) ~ atom_tail?
 }
 
 atom_tail = {
-    generic_instance? ~ function_call ~ atom_tail? |
-    (t_arrow | t_dot) ~ identifier ~ atom_tail? |
-    t_lbrac ~ expression ~ t_rbrac ~ atom_tail? |
+    (
+        generic_instance? ~ function_call |
+        (t_arrow | t_dot) ~ identifier |
+        t_lbrac ~ expression ~ t_rbrac
+    ) ~ atom_tail?
+        |
     (t_dec | t_inc)
 }
 
