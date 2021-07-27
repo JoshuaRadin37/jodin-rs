@@ -3,7 +3,9 @@ use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimize;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 
 fn main() -> JodinResult<()> {
@@ -20,6 +22,9 @@ fn main() -> JodinResult<()> {
     }
     if matches.is_present("ast") {
         settings.output_ast = true;
+    }
+    if matches.is_present("tast") {
+        settings.output_tast = true;
     }
 
     let (_command, command_args) = match matches.subcommand() {
@@ -79,6 +84,15 @@ fn main() -> JodinResult<()> {
 
     let optimized = optimize(node)?;
     println!("{:?}", optimized);
+
+    if settings.output_tast {
+        let string = format!("{:#?}", optimized);
+        let mut new_path = PathBuf::from("final_tast");
+        new_path.set_extension("tast");
+        let newer_path = settings.output_file_path(new_path);
+        let mut file = File::create(newer_path)?;
+        writeln!(file, "{}", string)?;
+    }
 
     Ok(())
 }
