@@ -4,7 +4,7 @@ JodinNode {
     decs: [
         JodinNode {
         	attributes: []
-        	inner: UsingIdentifier {
+        	inner: ImportIdentifiers {
             import_data: Import {
                 id: std,
                 import_type: Children {
@@ -257,28 +257,53 @@ JodinNode {
         	attributes: []
         	inner: Unimplemented {
             jodin_rule: class_definition,
-            affected_string: "class Hello {\r\n    Hello() {}\r\n}",
+            affected_string: "class Hello {\n    Hello() {}\n}",
         }
         },
         JodinNode {
         	attributes: []
         	inner: Unimplemented {
             jodin_rule: class_definition,
-            affected_string: "class Jello : Hi  {\r\n\r\n    Jello() {\r\n        int a = (int) 3+2*7/8;\r\n    }\r\n}",
+            affected_string: "class Jello : Hi  {\n\n    Jello() {\n        int a = (int) 3+2*7/8;\n    }\n}",
         }
         },
         JodinNode {
-        	attributes: []
-        	inner: Unimplemented {
-            jodin_rule: struct_definition,
-            affected_string: "struct a1 {\r\n    int a;\r\n}",
+        	attributes: ["VisibilityTag"]
+        	inner: StructureDefinition {
+            name: JodinNode {
+            	attributes: []
+            	inner: Identifier(
+                a1,
+            )
+            },
+            members: [
+                JodinNode {
+                	attributes: []
+                	inner: NamedValue {
+                    name: JodinNode {
+                    	attributes: []
+                    	inner: Identifier(
+                        a,
+                    )
+                    },
+                    var_type: IntermediateType {
+                        is_const: false,
+                        type_specifier: Primitive(
+                            Int,
+                        ),
+                        generics: [],
+                        tails: [],
+                    },
+                }
+                },
+            ],
         }
         },
         JodinNode {
         	attributes: []
         	inner: Unimplemented {
             jodin_rule: function_definition,
-            affected_string: "int main(int argc, String[] args) {\r\n    println(\"Hello world!\");\r\n    stdio::println(\"Hello world!\");\r\n    return 0;\r\n}",
+            affected_string: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    stdio::println(\"Hello world!\");\n    return 0;\n}",
         }
         },
     ],

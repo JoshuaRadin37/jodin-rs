@@ -161,11 +161,7 @@ impl IdentifierCreator {
                 tree.add_tag(tag)?;
                 id_resolver.pop_namespace();
             }
-            JodinNodeInner::StructureDefinition {
-                name,
-                generic_parameters: _,
-                members,
-            } => {
+            JodinNodeInner::StructureDefinition { name, members } => {
                 self.create_identities(name, id_resolver)?;
                 let tag = name.get_tag::<ResolvedIdentityTag>()?;
                 // tags_to_add.push(Box::new(tag.clone()));
@@ -181,9 +177,7 @@ impl IdentifierCreator {
 
                  */
             }
-            JodinNodeInner::NamedValue { name, .. } => {
-                self.create_identities(name, id_resolver);
-            }
+            JodinNodeInner::NamedValue { name, .. } => self.create_identities(name, id_resolver)?,
             _ => {}
         }
         Ok(())

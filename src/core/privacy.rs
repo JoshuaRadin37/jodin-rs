@@ -4,8 +4,10 @@
 //! Protected visibility means that code within this namespace and inner namespaces can see, and
 //! important this declaration. Private means only code within this namespace can see this declaration.
 
+use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType};
 use crate::parsing::JodinRule;
+use std::any::Any;
 use std::convert::TryFrom;
 
 /// The visibility of a declaration
@@ -35,3 +37,28 @@ impl TryFrom<Option<JodinRule>> for Visibility {
 /// Tag a node to marks its visibility
 #[derive(Debug)]
 pub struct VisibilityTag(Visibility);
+
+impl VisibilityTag {
+    /// Creates a new visibility tag
+    pub fn new(vis: Visibility) -> Self {
+        VisibilityTag(vis)
+    }
+}
+
+impl Tag for VisibilityTag {
+    fn tag_type(&self) -> String {
+        "VisibilityTag".to_string()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}

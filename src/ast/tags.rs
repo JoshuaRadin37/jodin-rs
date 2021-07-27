@@ -13,7 +13,7 @@ pub trait Tag {
 
     /// Gets debug information about the tag.
     fn tag_info(&self) -> String {
-        format!("{:?}", self.tag_type())
+        self.tag_type()
     }
     /// The maximum allowed number of tags of this type on a single node.
     fn max_of_this_tag(&self) -> u32;

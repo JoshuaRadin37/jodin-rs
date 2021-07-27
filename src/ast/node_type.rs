@@ -50,8 +50,6 @@ pub enum JodinNodeInner {
     StructureDefinition {
         /// The id of the struct.
         name: JodinNode,
-        /// The struct's generic parameters
-        generic_parameters: Vec<JodinNode>,
         /// The members of the struct.
         members: Vec<JodinNode>,
     },
@@ -193,13 +191,8 @@ impl JodinNodeInner {
                 ret
             }
             JodinNodeInner::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeInner::StructureDefinition {
-                name,
-                generic_parameters,
-                members,
-            } => {
+            JodinNodeInner::StructureDefinition { name, members } => {
                 let mut ret = vec![name];
-                ret.extend(generic_parameters);
                 ret.extend(members);
                 ret
             }
@@ -290,13 +283,8 @@ impl JodinNodeInner {
                 ret
             }
             JodinNodeInner::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeInner::StructureDefinition {
-                name,
-                generic_parameters,
-                members,
-            } => {
+            JodinNodeInner::StructureDefinition { name, members } => {
                 let mut ret = vec![name];
-                ret.extend(generic_parameters);
                 ret.extend(members);
                 ret
             }

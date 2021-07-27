@@ -89,7 +89,7 @@ impl<C: CompoundType + Into<JodinType>> Registrable<JodinTypeReference> for C {
         let this_id = self.type_name();
         for (_, field, field_type) in self.all_members() {
             let new_id = Identifier::new_concat(&this_id, field);
-            register.insert_with_identifier(field_type.clone(), new_id);
+            register.insert_with_identifier(field_type.clone(), new_id)?;
         }
         register.insert_with_identifier(self.into().into(), this_id)
     }

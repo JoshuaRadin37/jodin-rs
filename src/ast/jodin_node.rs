@@ -52,10 +52,11 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::ast::jodin_node::JodinNode;
-    /// use jodin_rs::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::identity_resolution::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::ResolvedIdentityTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(ResolvedIdentityTag::new(Identifier::from_array(["namespace", "id"]))).unwrap();
     /// ```
@@ -91,8 +92,8 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::ast::jodin_node::JodinNode;
-    /// use jodin_rs::ast::node_type::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNode;
+    /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
@@ -155,7 +156,7 @@ impl JodinNode {
     /// use jodin_rs::ast::JodinNode;
     /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::identity_resolution::ResolvedIdentityTag;
     /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
@@ -178,7 +179,7 @@ impl JodinNode {
     /// use jodin_rs::ast::JodinNode;
     /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::identity_resolution::ResolvedIdentityTag;
     /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
@@ -199,7 +200,7 @@ impl JodinNode {
     /// use jodin_rs::ast::JodinNode;
     /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::identity_resolution::ResolvedIdentityTag;
     /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
@@ -218,7 +219,7 @@ impl JodinNode {
     /// use jodin_rs::ast::JodinNode;
     /// use jodin_rs::ast::JodinNodeInner;
     /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::identity_resolution_tool::ResolvedIdentityTag;
+    /// use jodin_rs::passes::analysis::identity_resolution::ResolvedIdentityTag;
     /// use jodin_rs::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
@@ -274,9 +275,7 @@ mod tests {
     use crate::ast::node_type::JodinNodeInner;
     use crate::ast::tags::DummyTag;
     use crate::core::identifier::Identifier;
-    use crate::passes::analysis::identity_resolution_tool::{
-        BlockIdentifierTag, ResolvedIdentityTag,
-    };
+    use crate::passes::analysis::{BlockIdentifierTag, ResolvedIdentityTag};
 
     #[test]
     fn get_tags_of_type() {
