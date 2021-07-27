@@ -34,25 +34,9 @@ JodinNode {
                         op: Divide,
                         lhs: JodinNode {
                         	attributes: []
-                        	inner: Literal(
-                            Int(
-                                125,
-                            ),
-                        )
-                        },
-                        rhs: JodinNode {
-                        	attributes: []
                         	inner: Binop {
                             op: Divide,
                             lhs: JodinNode {
-                            	attributes: []
-                            	inner: Literal(
-                                Int(
-                                    5,
-                                ),
-                            )
-                            },
-                            rhs: JodinNode {
                             	attributes: []
                             	inner: Binop {
                                 op: Divide,
@@ -60,7 +44,7 @@ JodinNode {
                                 	attributes: []
                                 	inner: Literal(
                                     Int(
-                                        5,
+                                        125,
                                     ),
                                 )
                                 },
@@ -74,7 +58,23 @@ JodinNode {
                                 },
                             }
                             },
+                            rhs: JodinNode {
+                            	attributes: []
+                            	inner: Literal(
+                                Int(
+                                    5,
+                                ),
+                            )
+                            },
                         }
+                        },
+                        rhs: JodinNode {
+                        	attributes: []
+                        	inner: Literal(
+                            Int(
+                                5,
+                            ),
+                        )
                         },
                     }
                     },
@@ -182,25 +182,9 @@ JodinNode {
                                     op: Plus,
                                     lhs: JodinNode {
                                     	attributes: []
-                                    	inner: Literal(
-                                        Int(
-                                            9,
-                                        ),
-                                    )
-                                    },
-                                    rhs: JodinNode {
-                                    	attributes: []
                                     	inner: Binop {
                                         op: Minus,
                                         lhs: JodinNode {
-                                        	attributes: []
-                                        	inner: Literal(
-                                            Int(
-                                                2,
-                                            ),
-                                        )
-                                        },
-                                        rhs: JodinNode {
                                         	attributes: []
                                         	inner: Binop {
                                             op: Plus,
@@ -208,7 +192,7 @@ JodinNode {
                                             	attributes: []
                                             	inner: Literal(
                                                 Int(
-                                                    3,
+                                                    9,
                                                 ),
                                             )
                                             },
@@ -216,13 +200,29 @@ JodinNode {
                                             	attributes: []
                                             	inner: Literal(
                                                 Int(
-                                                    4,
+                                                    2,
                                                 ),
                                             )
                                             },
                                         }
                                         },
+                                        rhs: JodinNode {
+                                        	attributes: []
+                                        	inner: Literal(
+                                            Int(
+                                                3,
+                                            ),
+                                        )
+                                        },
                                     }
+                                    },
+                                    rhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Literal(
+                                        Int(
+                                            4,
+                                        ),
+                                    )
                                     },
                                 }
                                 },
@@ -726,21 +726,13 @@ JodinNode {
                                     op: Divide,
                                     lhs: JodinNode {
                                     	attributes: []
-                                    	inner: Literal(
-                                        Int(
-                                            125,
-                                        ),
-                                    )
-                                    },
-                                    rhs: JodinNode {
-                                    	attributes: []
                                     	inner: Binop {
                                         op: Divide,
                                         lhs: JodinNode {
                                         	attributes: []
                                         	inner: Literal(
                                             Int(
-                                                5,
+                                                125,
                                             ),
                                         )
                                         },
@@ -753,6 +745,14 @@ JodinNode {
                                         )
                                         },
                                     }
+                                    },
+                                    rhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Literal(
+                                        Int(
+                                            5,
+                                        ),
+                                    )
                                     },
                                 }
                                 },

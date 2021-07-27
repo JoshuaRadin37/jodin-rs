@@ -1,6 +1,7 @@
 use jodin_rs::cli::JodinRsApp;
 use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
+use jodin_rs::passes::analysis::analyze;
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimize;
 use std::fs::File;
@@ -82,7 +83,8 @@ fn main() -> JodinResult<()> {
     let node = builder.finish()?;
     println!("{:?}", node);
 
-    let optimized = optimize(node)?;
+    let analyzed = analyze(node)?;
+    let optimized = optimize(analyzed)?;
     println!("{:?}", optimized);
 
     if settings.output_tast {

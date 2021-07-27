@@ -280,97 +280,95 @@ impl JodinNodeGenerator<'_> {
             | JodinRule::c_expression
             | JodinRule::g_expression
             | JodinRule::t_expression
-            | JodinRule::factor => {
+            | JodinRule::m_expression => {
                 let mut inner = pair.into_inner();
                 let lhs = self.generate_node(inner.nth(0).unwrap(), vec![])?;
                 let mut rest: Vec<_> = inner.collect();
                 if rest.is_empty() {
                     lhs
                 } else {
-                    let op = rest.remove(0);
-                    let rhs = rest.remove(0);
-                    let rhs = self.generate_node(rhs, vec![])?;
-                    let op = match op.as_rule() {
-                        JodinRule::t_dor => Operator::Dor,
-                        JodinRule::t_or => Operator::Or,
-                        JodinRule::t_dand => Operator::Dand,
-                        JodinRule::t_xor => Operator::Xor,
-                        JodinRule::t_and => Operator::And,
-                        JodinRule::equality => {
-                            let inner = op.into_inner().nth(0).unwrap();
-                            let inner_rule = inner.as_rule();
-                            match inner_rule {
-                                JodinRule::t_eq => Operator::Equal,
-                                JodinRule::t_neq => Operator::Nequal,
-                                _ => unreachable!(),
+                    let mut last = lhs;
+                    while !rest.is_empty() {
+                        let op = rest.remove(0);
+                        let rhs = rest.remove(0);
+                        let rhs = self.generate_node(rhs, vec![])?;
+                        let op = match op.as_rule() {
+                            JodinRule::t_dor => Operator::Dor,
+                            JodinRule::t_or => Operator::Or,
+                            JodinRule::t_dand => Operator::Dand,
+                            JodinRule::t_xor => Operator::Xor,
+                            JodinRule::t_and => Operator::And,
+                            JodinRule::equality => {
+                                let inner = op.into_inner().nth(0).unwrap();
+                                let inner_rule = inner.as_rule();
+                                match inner_rule {
+                                    JodinRule::t_eq => Operator::Equal,
+                                    JodinRule::t_neq => Operator::Nequal,
+                                    _ => unreachable!(),
+                                }
                             }
-                        }
-                        JodinRule::comparison => {
-                            let inner = op.into_inner().nth(0).unwrap();
-                            let inner_rule = inner.as_rule();
-                            match inner_rule {
-                                JodinRule::t_lcarot => Operator::Lt,
-                                JodinRule::t_rcarot => Operator::Gt,
-                                JodinRule::t_lte => Operator::Lte,
-                                JodinRule::t_gte => Operator::Gte,
-                                _ => unreachable!(),
+                            JodinRule::comparison => {
+                                let inner = op.into_inner().nth(0).unwrap();
+                                let inner_rule = inner.as_rule();
+                                match inner_rule {
+                                    JodinRule::t_lcarot => Operator::Lt,
+                                    JodinRule::t_rcarot => Operator::Gt,
+                                    JodinRule::t_lte => Operator::Lte,
+                                    JodinRule::t_gte => Operator::Gte,
+                                    _ => unreachable!(),
+                                }
                             }
-                        }
-                        JodinRule::shift => {
-                            let inner = op.into_inner().nth(0).unwrap();
-                            let inner_rule = inner.as_rule();
-                            match inner_rule {
-                                JodinRule::t_lshift => Operator::LShift,
-                                JodinRule::t_rshift => Operator::RShift,
-                                _ => unreachable!(),
+                            JodinRule::shift => {
+                                let inner = op.into_inner().nth(0).unwrap();
+                                let inner_rule = inner.as_rule();
+                                match inner_rule {
+                                    JodinRule::t_lshift => Operator::LShift,
+                                    JodinRule::t_rshift => Operator::RShift,
+                                    _ => unreachable!(),
+                                }
                             }
-                        }
-                        JodinRule::add_op => {
-                            let inner = op.into_inner().nth(0).unwrap();
-                            let inner_rule = inner.as_rule();
-                            match inner_rule {
-                                JodinRule::t_plus => Operator::Plus,
-                                JodinRule::t_minus => Operator::Minus,
-                                _ => unreachable!(),
+                            JodinRule::add_op => {
+                                let inner = op.into_inner().nth(0).unwrap();
+                                let inner_rule = inner.as_rule();
+                                match inner_rule {
+                                    JodinRule::t_plus => Operator::Plus,
+                                    JodinRule::t_minus => Operator::Minus,
+                                    _ => unreachable!(),
+                                }
                             }
-                        }
-                        JodinRule::mul_op => {
-                            let inner = op.into_inner().nth(0).unwrap();
-                            let inner_rule = inner.as_rule();
-                            match inner_rule {
-                                JodinRule::t_star => Operator::Star,
-                                JodinRule::t_div => Operator::Divide,
-                                JodinRule::t_mod => Operator::Modulo,
-                                _ => unreachable!(),
+                            JodinRule::mul_op => {
+                                let inner = op.into_inner().nth(0).unwrap();
+                                let inner_rule = inner.as_rule();
+                                match inner_rule {
+                                    JodinRule::t_star => Operator::Star,
+                                    JodinRule::t_div => Operator::Divide,
+                                    JodinRule::t_mod => Operator::Modulo,
+                                    _ => unreachable!(),
+                                }
                             }
-                        }
-                        _ => unreachable!(),
-                    };
-                    match rhs.into_inner() {
-                        /*
-                        JodinNodeInner::Binop {
-                            op: op2,
-                            lhs: mid,
-                            rhs: rhs2,
-                        } => {
-                            let new_inner: JodinNode =
-                                JodinNodeInner::Binop { op, lhs, rhs: mid }.into();
-                            let outer = JodinNodeInner::Binop {
-                                op: op2,
-                                lhs: new_inner,
-                                rhs: rhs2,
-                            };
-                            outer.into()
-                        }
-
-                         */
-                        other => JodinNodeInner::Binop {
-                            op,
-                            lhs,
-                            rhs: other.into(),
-                        }
-                        .into(),
+                            _ => unreachable!(),
+                        };
+                        last = JodinNodeInner::Binop { op, lhs: last, rhs }.into()
                     }
+
+                    /*
+                    JodinNodeInner::Binop {
+                        op: op2,
+                        lhs: mid,
+                        rhs: rhs2,
+                    } => {
+                        let new_inner: JodinNode =
+                            JodinNodeInner::Binop { op, lhs, rhs: mid }.into();
+                        let outer = JodinNodeInner::Binop {
+                            op: op2,
+                            lhs: new_inner,
+                            rhs: rhs2,
+                        };
+                        outer.into()
+                    }
+
+                     */
+                    last
                 }
             }
             // uniop
@@ -838,7 +836,8 @@ impl JodinNodeGenerator<'_> {
             | JodinRule::jodin_file
             | JodinRule::statement
             | JodinRule::function_call
-            | JodinRule::initializer => {
+            | JodinRule::initializer
+            | JodinRule::factor => {
                 let inner = pair.into_inner().nth(0).unwrap();
                 self.generate_node(inner, vec![])?
             }

@@ -374,50 +374,54 @@ expression = {
 }
 
 double_or_expression = {
-    double_and_expression ~ (t_dor ~ double_or_expression)?
+    double_and_expression ~ (t_dor ~ double_and_expression)*
 }
 
 double_and_expression = {
-    or_expression ~( t_dand ~ double_and_expression)?
+    or_expression ~ ( t_dand ~ or_expression)*
 }
 
 or_expression = {
-    xor_expression ~ (t_or ~ or_expression)?
+    xor_expression ~ (t_or ~ xor_expression)*
 }
 
 xor_expression = {
-    and_expression ~ (t_xor ~ xor_expression)?
+    and_expression ~ (t_xor ~ and_expression)*
 }
 
 and_expression = {
-    equation ~ (t_and ~ and_expression)?
+    equation ~ (t_and ~ equation)*
 }
 
 equation = {
-    c_expression ~ (equality ~ equation)?
+    c_expression ~ (equality ~ c_expression)*
 }
 
 c_expression = {
-    g_expression ~ (comparison ~ c_expression)?
+    g_expression ~ (comparison ~ g_expression)*
 }
 
 g_expression = {
-    t_expression ~ (shift ~ g_expression )?
+    t_expression ~ (shift ~ t_expression )*
 
 }
 
 t_expression = {
-    factor ~ (add_op ~ t_expression)?
+    m_expression ~ (add_op ~ m_expression)*
+}
+
+m_expression = {
+    factor ~ (mul_op ~ factor)*
 }
 
 factor = {
-    (uni_op |
+    uni_op |
     string |
     literal |
     t_true |
     t_false |
     cast_expression |
-    atom) ~ (mul_op ~ factor)?
+    atom
 }
 
 uni_op = {

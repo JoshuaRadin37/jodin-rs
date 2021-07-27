@@ -1,5 +1,3 @@
-const int i = 125/5/5/5;
-
 using std::{String, stdio::*, stdio};
 
 
