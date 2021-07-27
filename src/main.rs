@@ -61,7 +61,8 @@ fn main() -> JodinResult<()> {
                 } else {
                     e
                 };
-                eprintln!("{}", error);
+
+                eprintln!("{:#}", error);
                 eprintln!("{:?}", bt);
                 exit(-1);
             }

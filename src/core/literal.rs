@@ -20,7 +20,7 @@ use regex::Regex;
 use std::str::FromStr;
 
 /// A single instance of a literal
-#[derive(Debug, PartialOrd, PartialEq)]
+#[derive(Debug, PartialOrd, PartialEq, Clone)]
 #[allow(missing_docs)]
 pub enum Literal {
     String(String),

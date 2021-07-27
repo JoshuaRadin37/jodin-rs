@@ -193,10 +193,11 @@ JodinNode {
                 Some(
                     JodinNode {
                     	attributes: []
-                    	inner: Unimplemented {
-                        jodin_rule: initializer,
-                        affected_string: "true",
-                    }
+                    	inner: Literal(
+                        Boolean(
+                            true,
+                        ),
+                    )
                     },
                 ),
             ],
@@ -378,10 +379,11 @@ JodinNode {
                         arguments: [
                             JodinNode {
                             	attributes: []
-                            	inner: Unimplemented {
-                                jodin_rule: string,
-                                affected_string: "\"Hello world!\"",
-                            }
+                            	inner: Literal(
+                                String(
+                                    "Hello world!",
+                                ),
+                            )
                             },
                         ],
                     }
@@ -399,12 +401,293 @@ JodinNode {
                         arguments: [
                             JodinNode {
                             	attributes: []
+                            	inner: Literal(
+                                String(
+                                    "Hello world!",
+                                ),
+                            )
+                            },
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: VarDeclarations {
+                        var_type: JodinNode {
+                        	attributes: []
+                        	inner: Type(
+                            IntermediateType {
+                                is_const: false,
+                                type_specifier: Id(
+                                    a1,
+                                ),
+                                generics: [],
+                                tails: [],
+                            },
+                        )
+                        },
+                        names: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Identifier(
+                                s_a,
+                            )
+                            },
+                        ],
+                        values: [
+                            Some(
+                                JodinNode {
+                                	attributes: []
+                                	inner: StructInitializer {
+                                    struct_id: JodinNode {
+                                    	attributes: []
+                                    	inner: Identifier(
+                                        a1,
+                                    )
+                                    },
+                                    fields_and_values: [
+                                        (
+                                            JodinNode {
+                                            	attributes: []
+                                            	inner: Identifier(
+                                                a,
+                                            )
+                                            },
+                                            JodinNode {
+                                            	attributes: []
+                                            	inner: Literal(
+                                                Int(
+                                                    3,
+                                                ),
+                                            )
+                                            },
+                                        ),
+                                    ],
+                                }
+                                },
+                            ),
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: VarDeclarations {
+                        var_type: JodinNode {
+                        	attributes: []
+                        	inner: Type(
+                            IntermediateType {
+                                is_const: false,
+                                type_specifier: Id(
+                                    a1,
+                                ),
+                                generics: [],
+                                tails: [
+                                    Pointer,
+                                ],
+                            },
+                        )
+                        },
+                        names: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Identifier(
+                                a1_ptr,
+                            )
+                            },
+                        ],
+                        values: [
+                            Some(
+                                JodinNode {
+                                	attributes: []
+                                	inner: GetReference {
+                                    node: JodinNode {
+                                    	attributes: []
+                                    	inner: Identifier(
+                                        s_a,
+                                    )
+                                    },
+                                }
+                                },
+                            ),
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: SwitchStatement {
+                        to_switch: JodinNode {
+                        	attributes: []
+                        	inner: Literal(
+                            Int(
+                                3,
+                            ),
+                        )
+                        },
+                        labeled_statements: [
+                            JodinNode {
+                            	attributes: []
                             	inner: Unimplemented {
-                                jodin_rule: string,
-                                affected_string: "\"Hello world!\"",
+                                jodin_rule: labeled_statement,
+                                affected_string: "case 1: ;",
+                            }
+                            },
+                            JodinNode {
+                            	attributes: []
+                            	inner: Unimplemented {
+                                jodin_rule: labeled_statement,
+                                affected_string: "case 2: ;",
+                            }
+                            },
+                            JodinNode {
+                            	attributes: []
+                            	inner: Unimplemented {
+                                jodin_rule: labeled_statement,
+                                affected_string: "default: ;",
                             }
                             },
                         ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: IfStatement {
+                        cond: JodinNode {
+                        	attributes: []
+                        	inner: Binop {
+                            op: Equal,
+                            lhs: JodinNode {
+                            	attributes: []
+                            	inner: GetMember {
+                                compound: JodinNode {
+                                	attributes: []
+                                	inner: Identifier(
+                                    s_a,
+                                )
+                                },
+                                id: JodinNode {
+                                	attributes: []
+                                	inner: Identifier(
+                                    a,
+                                )
+                                },
+                            }
+                            },
+                            rhs: JodinNode {
+                            	attributes: []
+                            	inner: GetMember {
+                                compound: JodinNode {
+                                	attributes: []
+                                	inner: Dereference {
+                                    node: JodinNode {
+                                    	attributes: []
+                                    	inner: Identifier(
+                                        a1_ptr,
+                                    )
+                                    },
+                                }
+                                },
+                                id: JodinNode {
+                                	attributes: []
+                                	inner: Identifier(
+                                    a,
+                                )
+                                },
+                            }
+                            },
+                        }
+                        },
+                        statement: JodinNode {
+                        	attributes: []
+                        	inner: NodeVector {
+                            vec: [
+                                JodinNode {
+                                	attributes: []
+                                	inner: Call {
+                                    called: JodinNode {
+                                    	attributes: []
+                                    	inner: Identifier(
+                                        println,
+                                    )
+                                    },
+                                    generics_instance: [],
+                                    arguments: [
+                                        JodinNode {
+                                        	attributes: []
+                                        	inner: Literal(
+                                            String(
+                                                "Correct!",
+                                            ),
+                                        )
+                                        },
+                                    ],
+                                }
+                                },
+                            ],
+                        }
+                        },
+                        else_statement: None,
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: WhileStatement {
+                        cond: JodinNode {
+                        	attributes: []
+                        	inner: Literal(
+                            Boolean(
+                                true,
+                            ),
+                        )
+                        },
+                        statement: JodinNode {
+                        	attributes: []
+                        	inner: NodeVector {
+                            vec: [],
+                        }
+                        },
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: ForStatement {
+                        init: Some(
+                            JodinNode {
+                            	attributes: []
+                            	inner: Empty
+                            },
+                        ),
+                        cond: Some(
+                            JodinNode {
+                            	attributes: []
+                            	inner: Empty
+                            },
+                        ),
+                        delta: None,
+                        statement: JodinNode {
+                        	attributes: []
+                        	inner: NodeVector {
+                            vec: [],
+                        }
+                        },
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: DoStatement {
+                        statement: JodinNode {
+                        	attributes: []
+                        	inner: NodeVector {
+                            vec: [],
+                        }
+                        },
+                        cond: JodinNode {
+                        	attributes: []
+                        	inner: Literal(
+                            Boolean(
+                                true,
+                            ),
+                        )
+                        },
                     }
                     },
                     JodinNode {

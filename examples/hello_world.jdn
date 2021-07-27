@@ -1,3 +1,5 @@
+
+
 using std::{String, stdio::*, stdio};
 
 
@@ -29,14 +31,15 @@ for<T> enum Option {
 
 // converts to
 for<T> class Option {
-    class Some : Option {
-        T val;
+    private class ome : Option {
+        public T val;
     }
 
-    class None : Option {
+    private class variant_none : Option {
 
     }
 
+    public Option Some(T val)
 }
 
 */
@@ -45,9 +48,32 @@ struct a1 {
     int a;
 }
 
+
+
+
 int main(int argc, String[] args) {
     println("Hello world!");
     stdio::println("Hello world!");
-    a1 s_a1 = a1 { .a = 3 };
+    a1 s_a= a1 { .a = 3 };
+    a1* a1_ptr = &s_a;
+
+    switch (3) {
+        case 1: ;
+        case 2: ;
+        default: ;
+    }
+
+    if (s_a.a == a1_ptr->a) {
+        println("Correct!");
+    }
+
+    while (true) {
+
+    }
+
+    for(;;) { }
+
+    do { } while (true);
+
     return 0;
 }

@@ -55,6 +55,8 @@ pub enum JodinErrorType {
     EmptyJodinTree,
     /// An illegal jodin rule was passed along to attempt to create an AST from.
     InvalidJodinRuleForASTCreation(JodinRule),
+    /// This expression can not be evaluated as a constant expression
+    NotAConstantExpression,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

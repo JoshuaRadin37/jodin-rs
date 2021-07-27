@@ -208,7 +208,7 @@ impl JodinNodeGenerator<'_> {
                 let id = Identifier::from_iter(inner);
                 JodinNodeInner::Identifier(id).into()
             }
-            JodinRule::literal => {
+            JodinRule::literal | JodinRule::string => {
                 let literal_string = pair.as_str();
                 let literal: Literal = literal_string.parse()?;
                 JodinNodeInner::Literal(literal).into()
@@ -384,8 +384,16 @@ impl JodinNodeGenerator<'_> {
                 let operator = match inner.nth(0).unwrap().into_inner().nth(0).unwrap().as_rule() {
                     JodinRule::t_minus => Operator::Minus,
                     JodinRule::t_bang => Operator::Not,
-                    JodinRule::t_star => Operator::Star,
-                    JodinRule::t_and => Operator::And,
+                    JodinRule::t_star => {
+                        // dereference
+                        let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+                        return JodinNodeInner::Dereference { node: factor }.into_result();
+                    }
+                    JodinRule::t_and => {
+                        // address of
+                        let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+                        return JodinNodeInner::GetReference { node: factor }.into_result();
+                    }
                     JodinRule::t_plus => Operator::Plus,
                     JodinRule::t_inc => Operator::Increment,
                     JodinRule::t_dec => Operator::Decrement,
@@ -546,6 +554,110 @@ impl JodinNodeGenerator<'_> {
                 [JodinRule::t_semic] => JodinNodeInner::Empty.into(),
                 _ => panic!("Illegal jump statement form: {:?}", inner_rules),
             },
+            JodinRule::selection_statement => {
+                let mut inner = pair.into_inner();
+                let first = inner.next().unwrap().as_rule();
+                let mut indexed = IndexedPair::new(inner);
+                match first {
+                    JodinRule::t_if => {
+                        // if statement
+                        let cond = indexed.get(JodinRule::expression)?.generate_node(self)?;
+                        let mut statements = indexed.get_all(JodinRule::statement)?;
+                        let statement = statements.remove(0).generate_node(self)?;
+                        let else_statement = if indexed.contains(JodinRule::t_else) {
+                            Some(statements.remove(0).generate_node(self)?)
+                        } else {
+                            None
+                        };
+
+                        JodinNodeInner::IfStatement {
+                            cond,
+                            statement,
+                            else_statement,
+                        }
+                        .into()
+                    }
+                    JodinRule::t_switch => {
+                        // switch statement
+                        let determiner = indexed.get(JodinRule::expression)?.generate_node(self)?;
+
+                        let mut statements = vec![];
+                        if indexed.contains(JodinRule::labeled_statement) {
+                            for pair in indexed.get_all(JodinRule::labeled_statement)? {
+                                statements.push(pair.generate_node(self)?);
+                            }
+                        }
+
+                        JodinNodeInner::SwitchStatement {
+                            to_switch: determiner,
+                            labeled_statements: statements,
+                        }
+                        .into()
+                    }
+                    _ => unreachable!(),
+                }
+            }
+
+            JodinRule::iteration_statement => {
+                use crate::parsing::Rule::{
+                    expression, expression_statement, statement, t_do, t_for, t_while,
+                };
+                let mut inner = pair.into_inner();
+                match *inner_rules {
+                    [t_while, expression, statement] => {
+                        // while loop
+                        let cond = inner.nth(1).unwrap().generate_node(self)?;
+                        let while_statement = inner.nth(0).unwrap().generate_node(self)?;
+
+                        JodinNodeInner::WhileStatement {
+                            cond,
+                            statement: while_statement,
+                        }
+                        .into()
+                    }
+                    [t_do, statement, t_while, expression] => {
+                        // do while
+                        let while_statement = inner.nth(1).unwrap().generate_node(self)?;
+                        let cond = inner.nth(1).unwrap().generate_node(self)?;
+
+                        JodinNodeInner::DoStatement {
+                            statement: while_statement,
+                            cond,
+                        }
+                        .into()
+                    }
+                    [t_for, expression_statement, expression_statement, expression, statement] => {
+                        // for loop
+                        let init = inner.nth(1).unwrap().generate_node(self)?;
+                        let cond = inner.nth(0).unwrap().generate_node(self)?;
+                        let delta = inner.nth(0).unwrap().generate_node(self)?;
+                        let for_statement = inner.nth(0).unwrap().generate_node(self)?;
+
+                        JodinNodeInner::ForStatement {
+                            init: Some(init),
+                            cond: Some(cond),
+                            delta: Some(delta),
+                            statement: for_statement,
+                        }
+                        .into()
+                    }
+                    [t_for, expression_statement, expression_statement, statement] => {
+                        // for loop
+                        let init = inner.nth(1).unwrap().generate_node(self)?;
+                        let cond = inner.nth(0).unwrap().generate_node(self)?;
+                        let for_statement = inner.nth(0).unwrap().generate_node(self)?;
+
+                        JodinNodeInner::ForStatement {
+                            init: Some(init),
+                            cond: Some(cond),
+                            delta: None,
+                            statement: for_statement,
+                        }
+                        .into()
+                    }
+                    _ => panic!("Illegal iteration statement form: {:?}", inner_rules),
+                }
+            }
             JodinRule::atom => {
                 let mut inner = IndexedPair::new(pair.into_inner());
 
@@ -704,11 +816,34 @@ impl JodinNodeGenerator<'_> {
                     None => node,
                 }
             }
+            JodinRule::struct_initializer => {
+                let mut indexed_pair = IndexedPair::new(pair.into_inner());
+                let id_pair = indexed_pair.get(JodinRule::identifier)?;
+                let struct_id = self.generate_node(id_pair, vec![])?;
+
+                let mut fields_and_values = vec![];
+                for struct_field_init in
+                    indexed_pair.get_all(JodinRule::struct_field_initializer)?
+                {
+                    let mut inner = struct_field_init.into_inner();
+                    let field = self.generate_node(inner.next().unwrap(), vec![])?;
+                    let initializer = self.generate_node(inner.next().unwrap(), vec![])?;
+
+                    fields_and_values.push((field, initializer));
+                }
+
+                JodinNodeInner::StructInitializer {
+                    struct_id,
+                    fields_and_values,
+                }
+                .into()
+            }
             // just go into inner
             JodinRule::top_level_declaration
             | JodinRule::jodin_file
             | JodinRule::statement
-            | JodinRule::function_call => {
+            | JodinRule::function_call
+            | JodinRule::initializer => {
                 let inner = pair.into_inner().nth(0).unwrap();
                 self.generate_node(inner, vec![])?
             }
@@ -893,6 +1028,11 @@ impl<'a> IndexedPair<'a> {
 
         Ok(vec)
     }
+
+    /// Checks whether this rule is present in the indexed pair
+    pub fn contains(&self, rule: JodinRule) -> bool {
+        self.map.contains_key(&rule)
+    }
 }
 
 /// Generates a vector of rules from a reference to a pairs instance. This allows for easy pattern
@@ -923,6 +1063,42 @@ pub fn pair_as_rules<R: RuleType>(pair: &Pair<R>) -> Box<[R]> {
     vec.into_boxed_slice()
 }
 
+trait NodeExtension {
+    fn generate_node_with_inherits(
+        self,
+        generator: &mut JodinNodeGenerator,
+        inherits: Vec<JodinNode>,
+    ) -> JodinResult<JodinNode>;
+    fn generate_node(self, generator: &mut JodinNodeGenerator) -> JodinResult<JodinNode>;
+}
+
+impl<'a> NodeExtension for Pair<'a, JodinRule> {
+    fn generate_node_with_inherits(
+        self,
+        generator: &mut JodinNodeGenerator,
+        inherits: Vec<JodinNode>,
+    ) -> JodinResult<JodinNode> {
+        generator.generate_node(self, inherits)
+    }
+
+    fn generate_node(self, generator: &mut JodinNodeGenerator) -> JodinResult<JodinNode> {
+        self.generate_node_with_inherits(generator, vec![])
+    }
+}
+
+/// Try to evaluate a jodin constant expression into a literal value
+pub fn const_evaluation(tree: &JodinNode) -> JodinResult<Literal> {
+    use JodinNodeInner as Type;
+    Ok(match tree.inner() {
+        Type::Literal(lit) => lit.clone(),
+        Type::Binop { op, lhs, rhs } => {
+            let lhs = const_evaluation(lhs)?;
+            let rhs = const_evaluation(rhs)?;
+        }
+        _ => return Err(JodinError::from(JodinErrorType::NotAConstantExpression)),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::parsing::complete_parse;
@@ -940,6 +1116,20 @@ mod tests {
             assert_eq!(id, &Identifier::from_iter(&["hello", "world"]));
         } else {
             panic!("Didn't create correct jodin node");
+        }
+    }
+
+    #[test]
+    fn constant_expression_evaluation() {
+        let pairs = complete_parse(JodinRule::expression, "3").unwrap();
+        let result = JodinNodeGenerator::new("".to_string())
+            .generate_node(pairs.into_iter().next().unwrap(), vec![])
+            .unwrap();
+
+        let result = const_evaluation(&result);
+        if let Ok(Literal::Int(3)) = result {
+        } else {
+            panic!("{:?} not correct", result);
         }
     }
 }

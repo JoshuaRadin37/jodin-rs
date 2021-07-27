@@ -233,7 +233,7 @@ type_specifier = {
 // Categories
 
 jodin_file = {
-    top_level_declarations ~ EOI
+    WHITESPACE* ~ top_level_declarations ~ EOI
 }
 
 top_level_declarations = {
@@ -308,6 +308,7 @@ init_declarator = {
 }
 
 initializer = {
+struct_initializer |
     expression |
     "{" ~ initializer_list ~ ","? ~ "}"
 }
@@ -315,6 +316,15 @@ initializer = {
 initializer_list = {
     initializer ~ ("," ~ initializer)*
 }
+
+struct_initializer = {
+    identifier ~ "{" ~ (struct_field_initializer ~ ("," ~ struct_field_initializer)*)? ~ "}"
+}
+
+struct_field_initializer = {
+    "." ~ identifier ~ "=" ~ initializer
+}
+
 
 compound_statement = {
     "{" ~ statement* ~ "}"
@@ -342,12 +352,12 @@ expression_statement = {
 
 selection_statement = {
     t_if ~ "(" ~ expression ~ ")" ~ statement ~ (t_else ~ statement)? |
-    t_switch ~ "(" ~ expression ~ ")"
+    t_switch ~ "(" ~ expression ~ ")" ~ "{" ~ (&(t_case | t_default) ~ labeled_statement)* ~ "}"
 }
 
 iteration_statement = {
     t_while ~ "(" ~ expression ~ ")" ~ statement |
-    t_do ~ statement ~ t_while ~ "(" ~ expression ~ ")" |
+    t_do ~ statement ~ t_while ~ "(" ~ expression ~ ")" ~ ";" |
     t_for ~ "(" ~ expression_statement ~ expression_statement ~ expression? ~ ")" ~ statement
 }
 

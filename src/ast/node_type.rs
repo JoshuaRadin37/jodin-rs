@@ -185,6 +185,54 @@ pub enum JodinNodeInner {
         /// The place in memory
         node: JodinNode,
     },
+    /// Create a new struct with fields initialized
+    StructInitializer {
+        /// The identifier of the struct
+        struct_id: JodinNode,
+        /// A list of fields and their values
+        fields_and_values: Vec<(JodinNode, JodinNode)>,
+    },
+    /// A branching condition
+    IfStatement {
+        /// The condition to check.
+        cond: JodinNode,
+        /// The statement to execute if the condition is true.
+        statement: JodinNode,
+        /// An optional statement to execute if the condition is false.
+        else_statement: Option<JodinNode>,
+    },
+    /// A repeating statement that only executes while the condition is true
+    WhileStatement {
+        /// The condition to check
+        cond: JodinNode,
+        /// The repeated statement
+        statement: JodinNode,
+    },
+    /// A more complex version of a while loop
+    ForStatement {
+        /// An optional initializer
+        init: Option<JodinNode>,
+        /// An optional condition to check
+        cond: Option<JodinNode>,
+        /// An optional statement to run after the conclusion of the statement
+        delta: Option<JodinNode>,
+        /// The body of the for loop
+        statement: JodinNode,
+    },
+    /// A larger branching set of instructions
+    SwitchStatement {
+        /// The value being checked for the switch
+        to_switch: JodinNode,
+        /// Labeled with case statements
+        labeled_statements: Vec<JodinNode>,
+    },
+    /// A do-while loop, executes statement at least once
+    DoStatement {
+        /// The statement
+        statement: JodinNode,
+        /// The condition to check
+        cond: JodinNode,
+    },
 }
 
 impl JodinNodeInner {
@@ -312,6 +360,58 @@ impl JodinNodeInner {
             JodinNodeInner::GetReference { node } => {
                 vec![node]
             }
+
+            JodinNodeInner::StructInitializer {
+                struct_id,
+                fields_and_values,
+            } => {
+                let mut vector = vec![struct_id];
+                vector.extend(
+                    fields_and_values
+                        .iter()
+                        .flat_map(|(first, second)| vec![first, second]),
+                );
+                vector
+            }
+            JodinNodeInner::IfStatement {
+                cond,
+                statement,
+                else_statement,
+            } => {
+                let mut ret = vec![cond, statement];
+                if let Some(else_s) = else_statement {
+                    ret.push(else_s);
+                }
+                ret
+            }
+            JodinNodeInner::WhileStatement { cond, statement } => {
+                vec![cond, statement]
+            }
+            JodinNodeInner::ForStatement {
+                init,
+                cond,
+                delta,
+                statement,
+            } => {
+                let mut ret = vec![];
+                let optionals = vec![init, cond, delta]
+                    .into_iter()
+                    .filter_map(|val| val.as_ref());
+                ret.extend(optionals);
+                ret.push(statement);
+                ret
+            }
+            JodinNodeInner::SwitchStatement {
+                to_switch,
+                labeled_statements,
+            } => {
+                let mut ret = vec![to_switch];
+                ret.extend(labeled_statements);
+                ret
+            }
+            JodinNodeInner::DoStatement { statement, cond } => {
+                vec![cond, statement]
+            }
         };
         vector
     }
@@ -433,6 +533,57 @@ impl JodinNodeInner {
             }
             JodinNodeInner::GetReference { node } => {
                 vec![node]
+            }
+            JodinNodeInner::StructInitializer {
+                struct_id,
+                fields_and_values,
+            } => {
+                let mut vector = vec![struct_id];
+                vector.extend(
+                    fields_and_values
+                        .iter_mut()
+                        .flat_map(|(first, second)| vec![first, second]),
+                );
+                vector
+            }
+            JodinNodeInner::IfStatement {
+                cond,
+                statement,
+                else_statement,
+            } => {
+                let mut ret = vec![cond, statement];
+                if let Some(else_s) = else_statement {
+                    ret.push(else_s);
+                }
+                ret
+            }
+            JodinNodeInner::WhileStatement { cond, statement } => {
+                vec![cond, statement]
+            }
+            JodinNodeInner::ForStatement {
+                init,
+                cond,
+                delta,
+                statement,
+            } => {
+                let mut ret = vec![];
+                let optionals = vec![init, cond, delta]
+                    .into_iter()
+                    .filter_map(|val| val.as_mut());
+                ret.extend(optionals);
+                ret.push(statement);
+                ret
+            }
+            JodinNodeInner::SwitchStatement {
+                to_switch,
+                labeled_statements,
+            } => {
+                let mut ret = vec![to_switch];
+                ret.extend(labeled_statements);
+                ret
+            }
+            JodinNodeInner::DoStatement { statement, cond } => {
+                vec![cond, statement]
             }
         };
         vector

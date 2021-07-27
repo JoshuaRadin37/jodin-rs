@@ -79,7 +79,7 @@ impl Tag for DummyTag {
 #[cfg(test)]
 mod tests {
     use crate::ast::tags::{DummyTag, Tag, TagUtilities};
-    use crate::passes::analysis::identity_resolution_tool::BlockIdentifierTag;
+    use crate::passes::analysis::BlockIdentifierTag;
 
     #[test]
     fn dynamic_tag_typing() {

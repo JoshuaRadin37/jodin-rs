@@ -35,7 +35,7 @@ impl TryFrom<Option<JodinRule>> for Visibility {
 }
 
 /// Tag a node to marks its visibility
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VisibilityTag(Visibility);
 
 impl VisibilityTag {
