@@ -152,6 +152,17 @@ pub enum JodinNodeInner {
         /// The string from the original code that wasn't converted.
         affected_string: String,
     },
+    /// Return a value from a function
+    ReturnValue {
+        /// An optional expression to return
+        expression: Option<JodinNode>,
+    },
+    /// A continue statement
+    Continue,
+    /// A break statement
+    Break,
+    /// An empty node
+    Empty,
 }
 
 impl JodinNodeInner {
@@ -249,6 +260,17 @@ impl JodinNodeInner {
                 vec![]
             }
             JodinNodeInner::NodeVector { vec } => vec.iter().collect(),
+
+            JodinNodeInner::ReturnValue { expression } => expression.iter().collect(),
+            JodinNodeInner::Continue => {
+                vec![]
+            }
+            JodinNodeInner::Break => {
+                vec![]
+            }
+            JodinNodeInner::Empty => {
+                vec![]
+            }
         };
         vector
     }
@@ -342,6 +364,16 @@ impl JodinNodeInner {
                 vec![]
             }
             JodinNodeInner::NodeVector { vec } => vec.iter_mut().collect(),
+            JodinNodeInner::ReturnValue { expression } => expression.iter_mut().collect(),
+            JodinNodeInner::Continue => {
+                vec![]
+            }
+            JodinNodeInner::Break => {
+                vec![]
+            }
+            JodinNodeInner::Empty => {
+                vec![]
+            }
         };
         vector
     }

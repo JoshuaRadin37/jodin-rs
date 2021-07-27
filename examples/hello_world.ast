@@ -372,8 +372,8 @@ JodinNode {
                             JodinNode {
                             	attributes: []
                             	inner: Unimplemented {
-                                jodin_rule: expression_statement,
-                                affected_string: "println(\"Hello world!\");",
+                                jodin_rule: atom,
+                                affected_string: "println(\"Hello world!\")",
                             }
                             },
                         ],
@@ -386,8 +386,8 @@ JodinNode {
                             JodinNode {
                             	attributes: []
                             	inner: Unimplemented {
-                                jodin_rule: expression_statement,
-                                affected_string: "stdio::println(\"Hello world!\");",
+                                jodin_rule: atom,
+                                affected_string: "stdio::println(\"Hello world!\")",
                             }
                             },
                         ],
@@ -399,9 +399,17 @@ JodinNode {
                         vec: [
                             JodinNode {
                             	attributes: []
-                            	inner: Unimplemented {
-                                jodin_rule: jump_statement,
-                                affected_string: "return 0;",
+                            	inner: ReturnValue {
+                                expression: Some(
+                                    JodinNode {
+                                    	attributes: []
+                                    	inner: Literal(
+                                        Int(
+                                            0,
+                                        ),
+                                    )
+                                    },
+                                ),
                             }
                             },
                         ],

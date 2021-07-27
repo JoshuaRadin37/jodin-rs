@@ -519,6 +519,33 @@ impl JodinNodeGenerator<'_> {
                 }
                 .into()
             }
+            JodinRule::jump_statement => match *inner_rules {
+                [JodinRule::t_continue, JodinRule::t_semic] => JodinNodeInner::Continue.into(),
+                [JodinRule::t_break, JodinRule::t_semic] => JodinNodeInner::Break.into(),
+                [JodinRule::t_return, JodinRule::expression, JodinRule::t_semic] => {
+                    let mut inner = pair.into_inner();
+                    let expression_node = inner.nth(1).unwrap();
+                    let expression = self.generate_node(expression_node, vec![])?;
+
+                    JodinNodeInner::ReturnValue {
+                        expression: Some(expression),
+                    }
+                    .into()
+                }
+                [JodinRule::t_return, JodinRule::t_semic] => {
+                    JodinNodeInner::ReturnValue { expression: None }.into()
+                }
+                _ => panic!("Illegal jump statement form: {:?}", inner_rules),
+            },
+            JodinRule::expression_statement => match *inner_rules {
+                [JodinRule::expression, JodinRule::t_semic] => {
+                    let mut inner = pair.into_inner();
+                    let expression_node = inner.nth(0).unwrap();
+                    self.generate_node(expression_node, vec![])?
+                }
+                [JodinRule::t_semic] => JodinNodeInner::Empty.into(),
+                _ => panic!("Illegal jump statement form: {:?}", inner_rules),
+            },
             // just go into inner
             JodinRule::top_level_declaration | JodinRule::jodin_file => {
                 let inner = pair.into_inner().nth(0).unwrap();
