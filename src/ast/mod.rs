@@ -27,7 +27,7 @@ use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::import::Import;
 use crate::core::literal::Literal;
-use crate::core::operator::Operator;
+use crate::core::operator::{Operator, TryConstEvaluation};
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::primitives::Primitive;
 use crate::parsing::JodinRule;
@@ -1094,6 +1094,22 @@ pub fn const_evaluation(tree: &JodinNode) -> JodinResult<Literal> {
         Type::Binop { op, lhs, rhs } => {
             let lhs = const_evaluation(lhs)?;
             let rhs = const_evaluation(rhs)?;
+
+            match lhs {
+                Literal::String(_) => Err(JodinErrorType::IncorrectLiteralType)?,
+                Literal::Char(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Boolean(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Float(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Double(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Byte(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Short(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Int(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::Long(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::UnsignedByte(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::UnsignedShort(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::UnsignedInt(lhs) => op.evaluate_binop(lhs, rhs)?,
+                Literal::UnsignedLong(lhs) => op.evaluate_binop(lhs, rhs)?,
+            }
         }
         _ => return Err(JodinError::from(JodinErrorType::NotAConstantExpression)),
     })
@@ -1116,20 +1132,6 @@ mod tests {
             assert_eq!(id, &Identifier::from_iter(&["hello", "world"]));
         } else {
             panic!("Didn't create correct jodin node");
-        }
-    }
-
-    #[test]
-    fn constant_expression_evaluation() {
-        let pairs = complete_parse(JodinRule::expression, "3").unwrap();
-        let result = JodinNodeGenerator::new("".to_string())
-            .generate_node(pairs.into_iter().next().unwrap(), vec![])
-            .unwrap();
-
-        let result = const_evaluation(&result);
-        if let Ok(Literal::Int(3)) = result {
-        } else {
-            panic!("{:?} not correct", result);
         }
     }
 }

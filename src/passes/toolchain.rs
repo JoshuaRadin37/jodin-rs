@@ -408,3 +408,37 @@ where
         self.collector.invoke(vec)
     }
 }
+
+/// Simple tool that maps values to other values
+pub struct MapTool<I, O, F: Fn(I) -> O> {
+    callback: F,
+    _phantom1: PhantomData<I>,
+    _phantom2: PhantomData<O>,
+}
+
+/// creates a simple tool that maps values to other values
+pub fn map_tool<I, O, F: Fn(I) -> O>(callback: F) -> MapTool<I, O, F> {
+    MapTool {
+        callback,
+        _phantom1: Default::default(),
+        _phantom2: Default::default(),
+    }
+}
+
+impl<I, O, F: Fn(I) -> O> Tool for MapTool<I, O, F> {
+    type Input = I;
+    type Output = O;
+
+    fn invoke(&mut self, input: Self::Input) -> Self::Output {
+        (self.callback)(input)
+    }
+}
+
+macro_rules! chain_tools {
+    ($first:expr $(,$tool:expr)*) => {
+        {
+            $first
+            $(.append_tool($tool))*
+        }
+    };
+}

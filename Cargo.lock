@@ -292,6 +292,7 @@ dependencies = [
  "glob",
  "itertools",
  "lazy_static 1.4.0",
+ "num-traits 0.2.14",
  "pest",
  "pest_derive",
  "ptree",

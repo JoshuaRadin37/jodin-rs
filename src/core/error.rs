@@ -57,6 +57,10 @@ pub enum JodinErrorType {
     InvalidJodinRuleForASTCreation(JodinRule),
     /// This expression can not be evaluated as a constant expression
     NotAConstantExpression,
+    /// Attempted to use invalid operator in a constant expression
+    InvalidOperatorForConstantExpression,
+    /// Attempting to convert a literal into an illegal type
+    IncorrectLiteralType,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

@@ -17,6 +17,7 @@
 
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use regex::Regex;
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 /// A single instance of a literal
@@ -144,6 +145,221 @@ impl FromStr for Literal {
         }
 
         panic!("Shouldn't have been able to find an invalid string for literal here (error string = {})", s)
+    }
+}
+
+impl From<String> for Literal {
+    fn from(s: String) -> Self {
+        Literal::String(s)
+    }
+}
+
+macro_rules! from_type {
+    ($ty:ty, $variant:ident) => {
+        /*
+        impl From<$ty> for Literal {
+            fn from(val: $ty) -> Self {
+                Literal::$variant(val)
+            }
+        }
+
+         */
+
+        impl TryFrom<$ty> for Literal {
+            type Error = JodinError;
+            fn try_from(val: $ty) -> Result<Self, Self::Error> {
+                Ok(Literal::$variant(val))
+            }
+        }
+    };
+}
+
+from_type!(char, Char);
+from_type!(bool, Boolean);
+
+from_type!(u8, UnsignedByte);
+from_type!(u16, UnsignedShort);
+from_type!(u32, UnsignedInt);
+from_type!(u64, UnsignedLong);
+
+from_type!(i8, Byte);
+from_type!(i16, Short);
+from_type!(i32, Int);
+from_type!(i64, Long);
+
+impl TryFrom<Literal> for String {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        if let Literal::String(str) = value {
+            Ok(str)
+        } else {
+            Err(JodinErrorType::IncorrectLiteralType.into())
+        }
+    }
+}
+
+impl TryFrom<Literal> for char {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Char(c) => Ok(c),
+            Literal::UnsignedByte(b) => Ok(b.into()),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for bool {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        if let Literal::Boolean(b) = value {
+            Ok(b)
+        } else {
+            Err(JodinErrorType::IncorrectLiteralType.into())
+        }
+    }
+}
+
+impl TryFrom<Literal> for f32 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Float(f) => Ok(f),
+            Literal::Byte(b) => Ok(b.into()),
+            Literal::Short(s) => Ok(s.into()),
+            Literal::UnsignedByte(b) => Ok(b.into()),
+            Literal::UnsignedShort(s) => Ok(s.into()),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for f64 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Float(f) => Ok(f.into()),
+            Literal::Double(d) => Ok(d),
+            Literal::Byte(b) => Ok(b.into()),
+            Literal::Short(s) => Ok(s.into()),
+            Literal::Int(i) => Ok(i.into()),
+            Literal::UnsignedByte(u) => Ok(u.into()),
+            Literal::UnsignedShort(s) => Ok(s.into()),
+            Literal::UnsignedInt(i) => Ok(i.into()),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for u8 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::UnsignedByte(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+impl TryFrom<Literal> for u16 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::UnsignedByte(b) => Ok(b.into()),
+            Literal::UnsignedShort(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for u32 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::UnsignedByte(b) => Ok(b.into()),
+            Literal::UnsignedShort(b) => Ok(b.into()),
+            Literal::UnsignedInt(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for u64 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::UnsignedByte(b) => Ok(b.into()),
+            Literal::UnsignedShort(b) => Ok(b.into()),
+            Literal::UnsignedInt(b) => Ok(b.into()),
+            Literal::UnsignedLong(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for i8 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::Byte(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for i16 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::Byte(b) => Ok(b.into()),
+            Literal::Short(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for i32 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::Byte(b) => Ok(b.into()),
+            Literal::Short(b) => Ok(b.into()),
+            Literal::Int(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
+    }
+}
+
+impl TryFrom<Literal> for i64 {
+    type Error = JodinError;
+
+    fn try_from(value: Literal) -> Result<Self, Self::Error> {
+        match value {
+            Literal::Boolean(b) => Ok(b.into()),
+            Literal::Byte(b) => Ok(b.into()),
+            Literal::Short(b) => Ok(b.into()),
+            Literal::Int(b) => Ok(b.into()),
+            Literal::Long(b) => Ok(b),
+            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+        }
     }
 }
 

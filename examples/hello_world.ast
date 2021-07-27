@@ -550,6 +550,72 @@ JodinNode {
                     },
                     JodinNode {
                     	attributes: []
+                    	inner: VarDeclarations {
+                        var_type: JodinNode {
+                        	attributes: []
+                        	inner: Type(
+                            IntermediateType {
+                                is_const: false,
+                                type_specifier: Primitive(
+                                    Int,
+                                ),
+                                generics: [],
+                                tails: [],
+                            },
+                        )
+                        },
+                        names: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Identifier(
+                                i,
+                            )
+                            },
+                        ],
+                        values: [
+                            Some(
+                                JodinNode {
+                                	attributes: []
+                                	inner: Binop {
+                                    op: Plus,
+                                    lhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Literal(
+                                        Int(
+                                            5,
+                                        ),
+                                    )
+                                    },
+                                    rhs: JodinNode {
+                                    	attributes: []
+                                    	inner: Binop {
+                                        op: Star,
+                                        lhs: JodinNode {
+                                        	attributes: []
+                                        	inner: Literal(
+                                            Int(
+                                                3,
+                                            ),
+                                        )
+                                        },
+                                        rhs: JodinNode {
+                                        	attributes: []
+                                        	inner: Literal(
+                                            Int(
+                                                2,
+                                            ),
+                                        )
+                                        },
+                                    }
+                                    },
+                                }
+                                },
+                            ),
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
                     	inner: IfStatement {
                         cond: JodinNode {
                         	attributes: []
