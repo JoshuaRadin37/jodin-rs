@@ -74,5 +74,8 @@ fn main() -> JodinResult<()> {
         }
     }
 
+    let node = builder.finish()?;
+    println!("{:?}", node);
+
     Ok(())
 }
