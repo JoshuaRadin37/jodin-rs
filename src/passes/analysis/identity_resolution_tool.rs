@@ -1,4 +1,4 @@
-use crate::core::error::{JodinError, JodinResult};
+use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::IdentifierResolver;
 
@@ -6,32 +6,31 @@ use crate::ast::JodinNode;
 use crate::ast::JodinNodeInner;
 
 use crate::ast::tags::Tag;
-use crate::passes::toolchain::{
-    FallibleTool, FallibleToolchain, FallibleToolchainUtilities, JodinFallibleTool,
-};
 use std::any::Any;
 
 /// A toolchain that assigns identities to every node that needs to be resolved. For example, the
 /// types must all be resolved.
 pub struct IdentityResolutionTool {
-    chain: FallibleToolchain<JodinError, JodinNode, (JodinNode, IdentifierResolver)>,
+    creator: IdentifierCreator,
+    setter: IdentifierSetter,
 }
 
 impl IdentityResolutionTool {
     /// Creates a new id resolution tool.
     pub fn new() -> Self {
-        let chain =
-            FallibleToolchainUtilities::append_tool(IdentifierCreator::new(), IdentifierSetter);
-        Self { chain }
+        Self {
+            creator: IdentifierCreator::new(),
+            setter: IdentifierSetter,
+        }
     }
-}
 
-impl JodinFallibleTool for IdentityResolutionTool {
-    type Input = JodinNode;
-    type Output = (JodinNode, IdentifierResolver);
-
-    fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
-        FallibleTool::invoke(&mut self.chain, input)
+    /// Resolve identifiers
+    pub fn resolve_identities(
+        &mut self,
+        input: JodinNode,
+    ) -> JodinResult<(JodinNode, IdentifierResolver)> {
+        let mid = self.creator.invoke(input)?;
+        self.setter.invoke(mid)
     }
 }
 
@@ -182,13 +181,8 @@ impl IdentifierCreator {
         }
         Ok(())
     }
-}
 
-impl JodinFallibleTool for IdentifierCreator {
-    type Input = JodinNode;
-    type Output = (JodinNode, IdentifierResolver);
-
-    fn invoke(&mut self, mut input: Self::Input) -> JodinResult<Self::Output> {
+    fn invoke(&mut self, mut input: JodinNode) -> JodinResult<(JodinNode, IdentifierResolver)> {
         let mut resolver = IdentifierResolver::new();
         self.create_identities(&mut input, &mut resolver)?;
         Ok((input, resolver))
@@ -197,11 +191,11 @@ impl JodinFallibleTool for IdentifierCreator {
 
 pub struct IdentifierSetter;
 
-impl JodinFallibleTool for IdentifierSetter {
-    type Input = (JodinNode, IdentifierResolver);
-    type Output = (JodinNode, IdentifierResolver);
-
-    fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
+impl IdentifierSetter {
+    fn invoke(
+        &mut self,
+        input: (JodinNode, IdentifierResolver),
+    ) -> JodinResult<(JodinNode, IdentifierResolver)> {
         Ok(input)
     }
 }

@@ -31,7 +31,6 @@ use crate::core::operator::{Operator, TryConstEvaluation};
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::primitives::Primitive;
 use crate::parsing::JodinRule;
-use crate::passes::toolchain::{JodinFallibleCollectorTool, JodinFallibleTool};
 use std::convert::TryFrom;
 
 pub mod intermediate_type;
@@ -98,16 +97,12 @@ impl<'a> JodinNodeBuilder<'a> {
     pub fn finish(self) -> JodinResult<JodinNode> {
         self.built_ast.ok_or(JodinErrorType::EmptyJodinTree.into())
     }
-}
 
-impl<'a> JodinFallibleCollectorTool for JodinNodeBuilder<'a> {
-    type Input = (String, Pair<'a, JodinRule>);
-    type Output = ();
-
-    fn invoke<I: IntoIterator<Item = Self::Input>>(
+    /// Invokes the node creator
+    pub fn invoke<I: IntoIterator<Item = (String, Pair<'a, JodinRule>)>>(
         &mut self,
         input_iter: I,
-    ) -> JodinResult<Self::Output> {
+    ) -> JodinResult<()> {
         for (path, pair) in input_iter {
             self.add_source_string(path, pair)?;
         }
@@ -966,13 +961,9 @@ impl JodinNodeGenerator<'_> {
             tails,
         ))
     }
-}
 
-impl<'a> JodinFallibleTool for JodinNodeGenerator<'a> {
-    type Input = Pair<'a, JodinRule>;
-    type Output = JodinNode;
-
-    fn invoke(&mut self, input: Self::Input) -> JodinResult<Self::Output> {
+    /// invoke the generator
+    pub fn invoke(&mut self, input: Pair<JodinRule>) -> JodinResult<JodinNode> {
         let mut ret = self.generate_node(input, vec![]);
         if let Err(JodinErrorType::ParserError(_, path)) =
             ret.as_mut().map_err(|e| &mut e.error_type)

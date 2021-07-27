@@ -236,6 +236,11 @@ impl JodinNode {
     pub fn tags(&self) -> &Vec<Box<dyn Tag>> {
         &self.tags
     }
+
+    /// Creates an empty JodinNode
+    pub fn empty() -> Self {
+        JodinNodeInner::Empty.into()
+    }
 }
 
 impl Debug for JodinNode {

@@ -18,7 +18,6 @@ use crate::ast::JodinNodeBuilder;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 use crate::parsing::{complete_parse, JodinRule};
-use crate::passes::toolchain::JodinFallibleCollectorTool;
 
 /// A tool to turn files into a jodin node tree
 pub struct FilesToJodinNodeTool<'a> {
@@ -39,16 +38,9 @@ impl<'a> FilesToJodinNodeTool<'a> {
     pub fn finish(self) -> JodinResult<JodinNode> {
         self.builder.finish()
     }
-}
 
-impl JodinFallibleCollectorTool for FilesToJodinNodeTool<'_> {
-    type Input = PathBuf;
-    type Output = ();
-
-    fn invoke<I: IntoIterator<Item = Self::Input>>(
-        &mut self,
-        input_iter: I,
-    ) -> JodinResult<Self::Output> {
+    /// invoke the front end
+    pub fn invoke<I: IntoIterator<Item = PathBuf>>(&mut self, input_iter: I) -> JodinResult<()> {
         for path in input_iter {
             let file = File::open(&path)?;
             let mut buffer = String::new();

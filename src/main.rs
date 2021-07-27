@@ -2,7 +2,7 @@ use jodin_rs::cli::JodinRsApp;
 use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
-use jodin_rs::passes::toolchain::JodinFallibleCollectorTool;
+use jodin_rs::passes::optimize;
 use std::path::PathBuf;
 use std::process::exit;
 
@@ -76,6 +76,9 @@ fn main() -> JodinResult<()> {
 
     let node = builder.finish()?;
     println!("{:?}", node);
+
+    let optimized = optimize(node)?;
+    println!("{:?}", optimized);
 
     Ok(())
 }
