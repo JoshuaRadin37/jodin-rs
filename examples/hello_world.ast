@@ -300,10 +300,116 @@ JodinNode {
         }
         },
         JodinNode {
-        	attributes: []
-        	inner: Unimplemented {
-            jodin_rule: function_definition,
-            affected_string: "int main(int argc, String[] args) {\n    println(\"Hello world!\");\n    stdio::println(\"Hello world!\");\n    return 0;\n}",
+        	attributes: ["VisibilityTag"]
+        	inner: FunctionDefinition {
+            name: JodinNode {
+            	attributes: []
+            	inner: Identifier(
+                main,
+            )
+            },
+            return_type: IntermediateType {
+                is_const: false,
+                type_specifier: Primitive(
+                    Int,
+                ),
+                generics: [],
+                tails: [],
+            },
+            arguments: [
+                JodinNode {
+                	attributes: []
+                	inner: NamedValue {
+                    name: JodinNode {
+                    	attributes: []
+                    	inner: Identifier(
+                        argc,
+                    )
+                    },
+                    var_type: IntermediateType {
+                        is_const: false,
+                        type_specifier: Primitive(
+                            Int,
+                        ),
+                        generics: [],
+                        tails: [],
+                    },
+                }
+                },
+                JodinNode {
+                	attributes: []
+                	inner: NamedValue {
+                    name: JodinNode {
+                    	attributes: []
+                    	inner: Identifier(
+                        args,
+                    )
+                    },
+                    var_type: IntermediateType {
+                        is_const: false,
+                        type_specifier: Id(
+                            String,
+                        ),
+                        generics: [],
+                        tails: [
+                            Array(
+                                None,
+                            ),
+                        ],
+                    },
+                }
+                },
+            ],
+            generic_parameters: [],
+            block: JodinNode {
+            	attributes: []
+            	inner: NodeVector {
+                vec: [
+                    JodinNode {
+                    	attributes: []
+                    	inner: NodeVector {
+                        vec: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Unimplemented {
+                                jodin_rule: expression_statement,
+                                affected_string: "println(\"Hello world!\");",
+                            }
+                            },
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: NodeVector {
+                        vec: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Unimplemented {
+                                jodin_rule: expression_statement,
+                                affected_string: "stdio::println(\"Hello world!\");",
+                            }
+                            },
+                        ],
+                    }
+                    },
+                    JodinNode {
+                    	attributes: []
+                    	inner: NodeVector {
+                        vec: [
+                            JodinNode {
+                            	attributes: []
+                            	inner: Unimplemented {
+                                jodin_rule: jump_statement,
+                                affected_string: "return 0;",
+                            }
+                            },
+                        ],
+                    }
+                    },
+                ],
+            }
+            },
         }
         },
     ],

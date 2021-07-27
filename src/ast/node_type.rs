@@ -140,6 +140,11 @@ pub enum JodinNodeInner {
         /// The import data.
         import_data: Import,
     },
+    /// A vector of nodes, not meant to be used except as a wrapper
+    NodeVector {
+        /// Stores the nodes
+        vec: Vec<JodinNode>,
+    },
     /// Unimplemented nodes represent parts of the parse tree that can't be converted into AST (yet).
     Unimplemented {
         /// The rule that wasn't converted.
@@ -243,6 +248,7 @@ impl JodinNodeInner {
             JodinNodeInner::Unimplemented { .. } => {
                 vec![]
             }
+            JodinNodeInner::NodeVector { vec } => vec.iter().collect(),
         };
         vector
     }
@@ -335,6 +341,7 @@ impl JodinNodeInner {
             JodinNodeInner::Unimplemented { .. } => {
                 vec![]
             }
+            JodinNodeInner::NodeVector { vec } => vec.iter_mut().collect(),
         };
         vector
     }
