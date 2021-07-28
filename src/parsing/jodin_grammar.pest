@@ -520,8 +520,10 @@ using_path = {
 
 in_namespace = {
     "in" ~ identifier ~ (
+        ";" ~ top_level_declarations |
         "{" ~ top_level_declarations ~ "}" |
         top_level_declaration
+
     )
 }
 
