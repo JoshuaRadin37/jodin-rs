@@ -157,7 +157,12 @@ impl JodinNodeGenerator<'_> {
         mut inherits: Vec<JodinNode>,
     ) -> JodinResult<JodinNode> {
         let inner_rules: Box<[JodinRule]> = pair_as_rules(&pair);
-        println!("Rule: {:?} -> {:?}", pair.as_rule(), inner_rules);
+        println!(
+            "Rule at {:p}: {:?} -> {:?}",
+            &pair,
+            pair.as_rule(),
+            inner_rules
+        );
 
         Ok(match pair.as_rule() {
             JodinRule::top_level_declarations => {
