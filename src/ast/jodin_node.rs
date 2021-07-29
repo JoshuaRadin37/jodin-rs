@@ -274,6 +274,19 @@ impl Tree for JodinNode {
     }
 }
 
+impl<'a> IntoIterator for &'a JodinNode {
+    type Item = &'a JodinNode;
+    type IntoIter = <Vec<&'a JodinNode> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.inner()
+            .children()
+            .into_iter()
+            .collect::<Vec<_>>()
+            .into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::ast::jodin_node::JodinNode;

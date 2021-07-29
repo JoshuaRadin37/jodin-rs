@@ -36,6 +36,7 @@ extern crate lazy_static;
 
 pub mod ast;
 pub mod cli;
+pub mod compilation;
 pub mod compilation_settings;
 pub mod core;
 pub mod parsing;

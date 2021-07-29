@@ -1,4 +1,5 @@
 use jodin_rs::cli::JodinRsApp;
+use jodin_rs::compilation::compile_c99;
 use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
 use jodin_rs::passes::analysis::analyze;
@@ -96,5 +97,5 @@ fn main() -> JodinResult<()> {
         writeln!(file, "{}", string)?;
     }
 
-    Ok(())
+    compile_c99(optimized, &settings)
 }
