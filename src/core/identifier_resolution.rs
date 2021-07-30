@@ -145,9 +145,8 @@ impl IdentifierResolver {
         }
 
         for using in &self.using_namespaces {
-            let using_path =
-                Identifier::new_concat(Identifier::new_concat(&self.base_namespace, using), &path);
-            //println!("Using path = {}", using_path);
+            let using_path = Identifier::new_concat(using, &path);
+            println!("Using path = {}", using_path);
             if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
                 output.insert(id);
             }
@@ -191,7 +190,8 @@ impl IdentifierResolver {
 
     /// Checks if the resolver contains the absolute identifier.
     pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
-        self.tree.get_from_absolute_identifier(path).is_ok()
+        let path = Identifier::new_concat(&self.base_namespace, path);
+        self.tree.get_from_absolute_identifier(&path).is_ok()
     }
 }
 
@@ -313,10 +313,17 @@ impl<T: Namespaced> NamespaceTree<T> {
         current_namespace: Option<&Identifier>,
         path: &Identifier,
     ) -> HashSet<&Identifier> {
+        //println!("Attempting to find namespace {}", path);
+        if let Some(current) = current_namespace {
+            //println!("Using {} as current namespace", current);
+        }
         let mut output = HashSet::new();
+        //println!("Searching for absolute namespace {}...", path);
         if let Some(abs) = self.get_namespace_absolute(path) {
+            //println!("Absolute found.");
             output.insert(abs.id());
         }
+        //println!("Searching for a relative path...");
         if let Some(current) = current_namespace {
             if let Some(current_node) = self.get_namespace_absolute(current) {
                 let mut iter: IdentifierIterator = path.into_iter();
@@ -333,6 +340,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                     break;
                 }
                 if found && iter.next().is_none() {
+                    //println!("Found {}.", ptr.id());
                     output.insert(ptr.id());
                 }
             }
@@ -343,11 +351,14 @@ impl<T: Namespaced> NamespaceTree<T> {
     fn get_namespace_absolute(&self, namespace: &Identifier) -> Option<&Node<T>> {
         let mut iter: IdentifierIterator = namespace.into_iter();
         let mut ptr = &self.head;
-        while let Some(lookahead) = iter.next() {
+
+        'outer: while let Some(lookahead) = iter.next() {
+            //println!("lookahead: {}", lookahead);
             for child in ptr.children() {
+                //println!("Child: {}", child.id);
                 if child.id().this() == lookahead {
                     ptr = child;
-                    continue;
+                    continue 'outer;
                 }
             }
             return None;
@@ -541,6 +552,7 @@ impl<T: Namespaced> Debug for NamespaceTree<T> {
 }
 
 /// Contains an identifier resolver and a mapping between full identifiers and it's associated value.
+
 pub struct Registry<T> {
     resolver: IdentifierResolver,
     mapping: HashMap<Identifier, T>,
@@ -584,11 +596,12 @@ impl<T> Registry<T> {
 
     /// Updates the value of an identifier, but only if it already exists within the registry.
     pub fn update_absolute_identity(&mut self, absolute: &Identifier, val: T) -> JodinResult<&T> {
-        if !self.resolver.contains_absolute_identifier(absolute) {
+        //let absolute = Identifier::new_concat(&self.resolver.base_namespace, absolute);
+        if !self.resolver.contains_absolute_identifier(&absolute) {
             return Err(JodinErrorType::IdentifierDoesNotExist(absolute.clone()).into());
         }
         self.mapping.insert(absolute.clone(), val);
-        Ok(&self.mapping[absolute])
+        Ok(&self.mapping[&absolute])
     }
 
     /// Pushes a namespace onto the current namespace
@@ -639,6 +652,15 @@ impl<I: Into<Identifier>, T> Index<I> for Registry<T> {
 impl<I: Into<Identifier>, T> IndexMut<I> for Registry<T> {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         self.get_mut(&index.into()).unwrap()
+    }
+}
+
+impl<T: Debug> Debug for Registry<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Registry")
+            .field("resolver", &self.resolver)
+            .field("mapping", &self.mapping)
+            .finish()
     }
 }
 

@@ -65,6 +65,8 @@ pub enum JodinErrorType {
     InvalidAsDirectCDeclaration(Identifier),
     /// A circular dependency has been detected
     CircularDependencyDetected,
+    /// This rule can not be used for visibility
+    InvalidVisibilityRule(JodinRule),
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

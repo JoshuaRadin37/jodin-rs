@@ -14,11 +14,11 @@ use std::convert::TryFrom;
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Visibility {
     /// The highest level of visibility, visible to all
-    Public = 0,
+    Public = 2,
     /// The default level of visibility, visible to this namespace and it's children.
     Protected = 1,
     /// The lowest level of visibility, only visible to this namespace.
-    Private = 2,
+    Private = 0,
 }
 
 impl TryFrom<Option<JodinRule>> for Visibility {
@@ -29,7 +29,11 @@ impl TryFrom<Option<JodinRule>> for Visibility {
             Some(JodinRule::t_private) => Visibility::Private,
             None => Visibility::Protected,
             Some(JodinRule::t_public) => Visibility::Public,
-            _ => return Err(JodinError::new(JodinErrorType::LiteralParseError)),
+            Some(other) => {
+                return Err(JodinError::new(JodinErrorType::InvalidVisibilityRule(
+                    other,
+                )))
+            }
         })
     }
 }
@@ -42,6 +46,11 @@ impl VisibilityTag {
     /// Creates a new visibility tag
     pub fn new(vis: Visibility) -> Self {
         VisibilityTag(vis)
+    }
+
+    /// Get the visibility of the tag
+    pub fn visibility(&self) -> &Visibility {
+        &self.0
     }
 }
 
