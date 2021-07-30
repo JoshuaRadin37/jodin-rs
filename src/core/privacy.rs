@@ -9,6 +9,7 @@ use crate::core::error::{JodinError, JodinErrorType};
 use crate::parsing::JodinRule;
 use std::any::Any;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 
 /// The visibility of a declaration
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -57,6 +58,10 @@ impl VisibilityTag {
 impl Tag for VisibilityTag {
     fn tag_type(&self) -> String {
         "VisibilityTag".to_string()
+    }
+
+    fn tag_info(&self) -> String {
+        format!("[Visibility: {:?}]", self.0)
     }
 
     fn max_of_this_tag(&self) -> u32 {

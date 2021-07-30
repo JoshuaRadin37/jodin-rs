@@ -55,6 +55,19 @@ impl Identifier {
         &self.id
     }
 
+    /// Gets the "this" part of the identifier as an identifier.
+    ///
+    /// # Example
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use std::iter::FromIterator;
+    /// let id = Identifier::from_iter(["hello", "world"]);
+    /// assert_eq!(id, "hello::world");
+    /// ```
+    pub fn this_as_id(&self) -> Identifier {
+        Identifier::from(&self.id)
+    }
+
     /// Gets the ultimate parent of the identifier, or itself if it has not parent
     ///
     /// # Examples

@@ -12,7 +12,6 @@ use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierIterator, Namespaced};
 use crate::utility::Tree;
-
 /// The default base namespace that all identifiers added to the project will be part of.
 pub const BASE_NAMESPACE: &str = "{base}";
 
@@ -193,6 +192,18 @@ impl IdentifierResolver {
         let path = Identifier::new_concat(&self.base_namespace, path);
         self.tree.get_from_absolute_identifier(&path).is_ok()
     }
+
+    /// Add an alias
+    pub fn add_alias(&mut self, alias: Identifier, absolute_path: &Identifier) {
+        let identifier = self.create_absolute_path(&alias);
+        let alias_absolute_path = Identifier::new_concat(&self.base_namespace, identifier);
+        println!("Alias absolute path: {}", alias_absolute_path);
+        let object = self
+            .tree
+            .mut_from_absolute_identifier(&alias_absolute_path)
+            .expect("This value was just made");
+        *object = absolute_path.clone();
+    }
 }
 
 struct Node<T: Namespaced> {
@@ -227,8 +238,8 @@ impl<T: Namespaced> Node<T> {
     pub fn related_values(&self) -> &Vec<T> {
         &self.related_values
     }
-    pub fn children_mut(&mut self) -> &mut Vec<Node<T>> {
-        &mut self.children
+    pub fn children_mut(&mut self) -> Vec<&mut Node<T>> {
+        self.children.iter_mut().collect()
     }
     pub fn related_values_mut(&mut self) -> &mut Vec<T> {
         &mut self.related_values
@@ -482,6 +493,31 @@ impl<T: Namespaced> NamespaceTree<T> {
             let full_id = value.get_identifier();
             if full_id == path {
                 return Ok(value);
+            }
+        }
+        Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
+    }
+
+    /// Attempts to get a mutable reference to the associated value from an absolute path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path`: The absolute path
+    ///
+    /// returns: Result<&T, JodinError> the associated value, or an error
+    pub fn mut_from_absolute_identifier(&mut self, path: &Identifier) -> JodinResult<&mut T> {
+        let objects = if let Some(parent) = path.parent() {
+            &mut self
+                .get_node_mut(parent)
+                .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()))?
+                .related_values
+        } else {
+            self.get_base_values_mut()
+        };
+
+        for object in objects {
+            if object.get_identifier() == path {
+                return Ok(object);
             }
         }
         Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())

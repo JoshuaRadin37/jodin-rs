@@ -6,6 +6,7 @@ use crate::ast::JodinNode;
 use crate::ast::JodinNodeInner;
 
 use crate::ast::tags::Tag;
+use crate::core::import::ImportType;
 use crate::core::privacy::{Visibility, VisibilityTag};
 use std::any::Any;
 
@@ -14,6 +15,7 @@ use std::any::Any;
 pub struct IdentityResolutionTool {
     creator: IdentifierCreator,
     setter: IdentifierSetter,
+    visibility: Registry<Visibility>,
 }
 
 impl IdentityResolutionTool {
@@ -22,6 +24,7 @@ impl IdentityResolutionTool {
         Self {
             creator: IdentifierCreator::new(),
             setter: IdentifierSetter,
+            visibility: Registry::new(),
         }
     }
 
@@ -30,8 +33,10 @@ impl IdentityResolutionTool {
         &mut self,
         input: JodinNode,
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
-        let mid = self.creator.invoke(input)?;
-        self.setter.invoke(mid)
+        let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
+        self.setter
+            .set_identities(&mut tree, &mut resolver, &self.visibility)
+            .map(|_| (tree, resolver))
     }
 }
 
@@ -322,10 +327,13 @@ impl IdentifierCreator {
         id_resolver.stop_use_namespace(&current).unwrap();
     }
 
-    fn invoke(&mut self, mut input: JodinNode) -> JodinResult<(JodinNode, IdentifierResolver)> {
+    fn start(
+        &mut self,
+        mut input: JodinNode,
+        registry: &mut Registry<Visibility>,
+    ) -> JodinResult<(JodinNode, IdentifierResolver)> {
         let mut resolver = IdentifierResolver::new();
-        let mut registry = Registry::new();
-        self.create_identities(&mut input, &mut resolver, &mut registry)?;
+        self.create_identities(&mut input, &mut resolver, registry)?;
         println!("{:#?}", registry);
         Ok((input, resolver))
     }
@@ -347,11 +355,39 @@ fn find_first_tag<T: 'static + Tag>(node: &JodinNode) -> Option<&T> {
 pub struct IdentifierSetter;
 
 impl IdentifierSetter {
-    fn invoke(
+    fn set_identities(
         &mut self,
-        input: (JodinNode, IdentifierResolver),
-    ) -> JodinResult<(JodinNode, IdentifierResolver)> {
-        Ok(input)
+        tree: &mut JodinNode,
+        id_resolver: &mut IdentifierResolver,
+        visibility_resolver: &Registry<Visibility>,
+    ) -> JodinResult<()> {
+        match tree.inner_mut() {
+            JodinNodeInner::InNamespace { namespace, inner } => {
+                let namespace = namespace
+                    .get_tag::<ResolvedIdentityTag>()
+                    .unwrap()
+                    .absolute_id()
+                    .this_as_id();
+                id_resolver.push_namespace(namespace);
+                self.set_identities(inner, id_resolver, visibility_resolver)?;
+                id_resolver.pop_namespace();
+            }
+            JodinNodeInner::ImportIdentifiers { import_data } => {
+                let base = import_data.id();
+                match import_data.import_type() {
+                    ImportType::Direct => id_resolver.add_alias(base.this_as_id(), base),
+                    ImportType::Aliased { .. } => {}
+                    ImportType::Wildcard => {}
+                    ImportType::Children { .. } => {}
+                }
+            }
+            other => {
+                for child in other.children_mut() {
+                    self.set_identities(child, id_resolver, visibility_resolver)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

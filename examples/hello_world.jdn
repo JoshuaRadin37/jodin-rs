@@ -9,7 +9,8 @@ in n1 {
 
 in hello;
 
-using std::{String, stdio::*, stdio};
+using n1::i;
+// using std::{String, stdio::*, stdio};
 
 
 
