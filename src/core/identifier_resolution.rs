@@ -378,7 +378,7 @@ impl<T: Namespaced> NamespaceTree<T> {
         }
         if let Some(parent) = namespace.parent() {
             if !self.namespace_exists(parent) {
-                self.add_namespace(*parent.clone())
+                self.add_namespace(parent.clone())
             }
             self.get_node_mut(parent)
                 .unwrap()

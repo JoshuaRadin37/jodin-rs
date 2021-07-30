@@ -57,7 +57,6 @@ impl TagUtilities for Box<dyn Tag> {
 #[doc(hidden)]
 pub struct DummyTag;
 
-#[cfg(test)]
 impl Tag for DummyTag {
     fn tag_type(&self) -> String {
         "dummy".to_string()

@@ -1,12 +1,16 @@
 //! The C Compiler for Jodin
 
 use crate::ast::JodinNode;
-use crate::compilation::c_compiler::top_level_declaration_compiler::TopLevelDeclarationCompiler;
-use crate::compilation::{Compiler, Context, MicroCompiler, Target};
+use crate::compilation::{Compilable, Compiler, Context, PaddedWriter, Target};
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
 mod top_level_declaration_compiler;
+
+mod components;
+pub use components::*;
+
+use std::fmt::Write;
 
 /// The C99 target
 pub struct C99;
@@ -25,17 +29,25 @@ impl C99Compiler {
 
 impl Compiler<C99> for C99Compiler {
     fn compile(&mut self, tree: &JodinNode, _settings: &CompilationSettings) -> JodinResult<()> {
-        let mut context = Context::new();
-        self.compile_part(tree, &mut context)
+        let context = Context::new();
+
+        Ok(())
     }
 }
 
-impl MicroCompiler<C99> for C99Compiler {
-    fn compile_part(&mut self, tree: &JodinNode, context: &mut Context) -> JodinResult<()> {
-        let mut compiler = TopLevelDeclarationCompiler;
-        for node in tree {
-            compiler.compile_part(node, context)?;
-        }
-        Ok(())
+/// Something has has both a defintion and a declaration
+pub trait SeparableCompilable {
+    /// Compiles the instance declaration into a target writer
+    fn declaration<W: Write>(&self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()>;
+
+    /// Compiles the instance definition into a target writer
+    fn definition<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()>;
+}
+
+impl<SC: SeparableCompilable> Compilable<C99> for SC {
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        self.declaration(context, w)?;
+        writeln!(w)?;
+        self.definition(context, w)
     }
 }

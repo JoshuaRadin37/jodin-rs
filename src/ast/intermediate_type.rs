@@ -34,7 +34,7 @@
 //! };
 //!
 //! let as_string = i_type.to_string();
-//! assert_eq!(as_string, "int(int*, int*)");
+//! assert_eq!(as_string, "int(int*,int*)");
 //! ```
 //!
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference

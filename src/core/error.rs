@@ -61,6 +61,10 @@ pub enum JodinErrorType {
     InvalidOperatorForConstantExpression,
     /// Attempting to convert a literal into an illegal type
     IncorrectLiteralType,
+    /// This identifier can not be directly converted into a C-identifier
+    InvalidAsDirectCDeclaration(Identifier),
+    /// A circular dependency has been detected
+    CircularDependencyDetected,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
@@ -124,6 +128,7 @@ macro_rules! wrap_error {
 wrap_error!(ParseIntError);
 wrap_error!(ParseCharError);
 wrap_error!(std::io::Error);
+wrap_error!(std::fmt::Error);
 wrap_error!(pest::error::Error<crate::parsing::Rule>);
 /// Convenience result
 pub type JodinResult<T> = Result<T, JodinError>;

@@ -2,12 +2,14 @@
 //!
 //! These passes do not modify the structure of the AST in any way
 
-mod identity_resolution_tool;
-use crate::ast::JodinNode;
-use crate::core::error::JodinResult;
 pub use identity_resolution_tool::{
     BlockIdentifierTag, IdentityResolutionTool, ResolvedIdentityTag,
 };
+
+use crate::ast::JodinNode;
+use crate::core::error::JodinResult;
+
+mod identity_resolution_tool;
 
 /// Performs analysis on the tree, adding tags to the tree where appropriate
 ///

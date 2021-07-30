@@ -3,14 +3,15 @@
 //!
 //! [JodinNode]: crate::ast::JodinNode
 
+use std::fmt::Write;
+
+pub use c_compiler::{C99Compiler, C99};
+
 use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
-mod c_compiler;
-pub use c_compiler::{C99Compiler, C99};
-use std::fs::File;
-use std::io::Write;
+pub mod c_compiler;
 
 /// A target for compilation.
 pub trait Target {}
@@ -22,7 +23,7 @@ pub trait Compiler<T: Target> {
 }
 
 /// Compile a part of the of program, such as a function.
-pub trait MicroCompiler<T: Target, Output = ()> {
+pub trait MicroCompiler<T: Target, Output: Compilable<T>> {
     /// Compile a part of the program.
     ///
     /// # Arguments
@@ -31,34 +32,16 @@ pub trait MicroCompiler<T: Target, Output = ()> {
     /// * `context`: the context to compile the project in
     ///
     /// returns: Result<Output, JodinError>
-    fn compile_part(&mut self, tree: &JodinNode, context: &mut Context) -> JodinResult<Output>;
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Output>;
 }
 
 /// The context that the project is being built in.
-pub struct Context {
-    /// Where to writer files, maybe
-    pub maybe_file_writer: Option<IndentedWriter<File>>,
-}
+pub struct Context {}
 
 impl Context {
     /// Create a new context instance
     pub fn new() -> Self {
-        Context {
-            maybe_file_writer: None,
-        }
-    }
-
-    /// Gets the file writer for the context.
-    ///
-    /// # Panic
-    /// Panics if no file writer is set.
-    pub fn file_writer(&mut self) -> &mut IndentedWriter<File> {
-        match &mut self.maybe_file_writer {
-            None => {
-                panic!("No file writer has been set")
-            }
-            Some(v) => v,
-        }
+        Context {}
     }
 }
 
@@ -81,24 +64,129 @@ where
     compiler.compile(&tree, compiler_settings)
 }
 
-/// A writer that can set the indent for how things are written
-pub struct IndentedWriter<W: Write> {
-    writer: W,
-    indent_level: usize,
+/// A component of a program that can be compiled
+pub trait Compilable<T: Target> {
+    /// Compile the instance into a target writer
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()>;
 }
 
-impl<W: Write> IndentedWriter<W> {
-    /// Create a new indented writer.
-    pub fn new(writer: W) -> Self {
-        IndentedWriter {
-            writer,
-            indent_level: 0,
+impl<T: Target, C: Compilable<T>> Compilable<T> for Vec<C> {
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        for node in self {
+            node.compile(context, w)?
         }
+        Ok(())
     }
 }
 
-impl<W: Write> Write for IndentedWriter<W> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        todo!()
+/// A writer that pads after every new line. The default padding string is "    ".
+///
+/// # Example
+/// ```
+/// use jodin_rs::compilation::PaddedWriter;
+/// use std::fmt::Write;
+/// let mut to_pad = PaddedWriter::new(String::new());
+/// writeln!(to_pad, "Hello");
+/// to_pad.increase_pad();
+/// writeln!(to_pad, "Hello");
+/// to_pad.increase_pad();
+/// writeln!(to_pad, "Hello");
+/// writeln!(to_pad, "Hello");
+/// to_pad.decrease_pad();
+/// writeln!(to_pad, "Goodbye");
+/// let string = to_pad.finish();
+/// let hopeful =
+/// r"Hello
+///     Hello
+///         Hello
+///         Hello
+///     Goodbye
+/// ";
+/// assert_eq!(string, hopeful)
+/// ```
+pub struct PaddedWriter<W: Write> {
+    writer: W,
+    pad_string: String,
+    count: usize,
+    pad_next: bool,
+}
+
+impl<W: Write> PaddedWriter<W> {
+    /// Create a new padded writer from some other writer
+    pub fn new(writer: W) -> Self {
+        PaddedWriter {
+            writer,
+            pad_string: "    ".to_string(),
+            count: 0,
+            pad_next: true,
+        }
+    }
+
+    /// Sets the pad string to use
+    pub fn with_pad<S: AsRef<str>>(mut self, padding: S) -> Self {
+        self.pad_string = padding.as_ref().to_string();
+        self
+    }
+
+    /// Sets the initial pad count
+    pub fn with_initial_pad(mut self, count: usize) -> Self {
+        self.count = count;
+        self
+    }
+
+    /// Increases the padding by one
+    pub fn increase_pad(&mut self) {
+        self.count += 1;
+    }
+
+    /// Decreases the padding by one
+    pub fn decrease_pad(&mut self) {
+        if self.count > 0 {
+            self.count -= 1;
+        }
+    }
+
+    /// Changes the padding
+    pub fn change_pad(&mut self, change: isize) {
+        if change > 0 {
+            self.count += change as usize;
+        } else {
+            match self.count.checked_sub(change as usize) {
+                None => {
+                    self.count = 0;
+                }
+                Some(new_val) => {
+                    self.count = new_val;
+                }
+            }
+        }
+    }
+
+    /// Finishes the padding, returning the inner writer
+    pub fn finish(self) -> W {
+        self.writer
+    }
+}
+
+impl<W: Write> Write for PaddedWriter<W> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        for c in s.chars() {
+            if self.pad_next {
+                write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
+                self.pad_next = false;
+            }
+
+            match c {
+                '\n' => {
+                    writeln!(self.writer)?;
+                    self.pad_next = true;
+                }
+                c => {
+                    write!(self.writer, "{}", c)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }

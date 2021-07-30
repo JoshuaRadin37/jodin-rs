@@ -28,13 +28,14 @@ impl Identifier {
     /// use jodin_rs::core::identifier::Identifier;
     /// let id = Identifier::from_array(["hello", "world"]);
     /// ```
+    #[deprecated = "No longer necessary, as arrays not directly implement IntoIterator"]
     pub fn from_array<S: AsRef<str>, const N: usize>(array: [S; N]) -> Self {
         Self::from_iter(IntoIter::new(array))
     }
 
     /// The parent of the identifier.
-    pub fn parent(&self) -> &Option<Box<Identifier>> {
-        &self.parent
+    pub fn parent(&self) -> Option<&Identifier> {
+        self.parent.as_deref()
     }
     /// Consumes the identifier to get it's maybe parent
     pub fn into_parent(self) -> Option<Identifier> {
@@ -46,8 +47,9 @@ impl Identifier {
     /// # Example
     /// ```
     /// use jodin_rs::core::identifier::Identifier;
-    /// let id = Identifier::from_array(["hello", "world"]);
-    /// assert_eq!(id, "world");
+    /// use std::iter::FromIterator;
+    /// let id = Identifier::from_iter(["hello", "world"]);
+    /// assert_eq!(id, "hello::world");
     /// ```
     pub fn this(&self) -> &str {
         &self.id
@@ -58,10 +60,11 @@ impl Identifier {
     /// # Examples
     /// ```
     /// use jodin_rs::core::identifier::Identifier;
-    /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
-    /// assert_eq!(id, "lvl3");
+    /// use std::iter::FromIterator;
+    /// let id = Identifier::from_iter(["lvl1", "lvl2", "lvl3"]);
+    /// assert_eq!(id, "lvl1::lvl2::lvl3");
     /// assert_eq!(id.parent().unwrap().this(), "lvl2");
-    /// assert_eq!(id.highest_parent().this(), "lvl3");
+    /// assert_eq!(id.highest_parent().this(), "lvl1");
     ///
     /// let id = Identifier::from("id");
     /// assert_eq!(id.highest_parent().this(), "id");
@@ -94,7 +97,7 @@ impl Identifier {
     ///
     /// ```
     /// use jodin_rs::core::identifier::Identifier;
-    /// let example1 = Identifier::new_concat(Identifier::from("hello"), Identifier::from("world2"));
+    /// let example1 = Identifier::new_concat(Identifier::from("hello"), Identifier::from("world"));
     /// let example2 = Identifier::new_concat("hello", "world");
     ///
     /// assert_eq!(example1, example2);
@@ -133,8 +136,8 @@ impl Identifier {
     /// ```
     /// use jodin_rs::core::identifier::Identifier;
     /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
-    /// let new_id = id.strip_highest_parent();
-    /// assert_eq!(id, Identifier::from_array(["lvl2", "lvl3"]));
+    /// let new_id = id.strip_highest_parent().unwrap();
+    /// assert_eq!(new_id, Identifier::from_array(["lvl2", "lvl3"]));
     /// ```
     pub fn strip_highest_parent(self) -> Option<Identifier> {
         let Identifier { parent, id } = self;
@@ -145,6 +148,11 @@ impl Identifier {
                 id,
             }),
         }
+    }
+
+    /// Creates an iterator through the different parts of this identifier
+    pub fn iter(&self) -> IdentifierIterator {
+        IntoIterator::into_iter(self)
     }
 }
 
