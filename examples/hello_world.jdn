@@ -1,6 +1,17 @@
+in n1 {
+    private int i;
+
+    in n2 {
+        int i;
+    }
+}
+
+
 in hello;
 
 using std::{String, stdio::*, stdio};
+
+
 
 
 
