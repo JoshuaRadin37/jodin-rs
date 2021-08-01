@@ -6,6 +6,7 @@
 
 use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType};
+use crate::core::identifier::Identifier;
 use crate::parsing::JodinRule;
 use std::any::Any;
 use std::convert::TryFrom;
@@ -20,6 +21,17 @@ pub enum Visibility {
     Protected = 1,
     /// The lowest level of visibility, only visible to this namespace.
     Private = 0,
+}
+
+impl Visibility {
+    /// Checks whether a path is visible from another, checking path
+    pub fn is_visible(&self, protected_path: &Identifier, checking_path: &Identifier) -> bool {
+        match self {
+            Visibility::Public => true,
+            Visibility::Protected => checking_path >= protected_path,
+            Visibility::Private => checking_path == protected_path,
+        }
+    }
 }
 
 impl TryFrom<Option<JodinRule>> for Visibility {

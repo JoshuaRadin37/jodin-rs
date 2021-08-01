@@ -18,6 +18,6 @@ mod identity_resolution_tool;
 pub fn analyze(tree: JodinNode) -> JodinResult<JodinNode> {
     let mut identifier_tool = IdentityResolutionTool::new();
     let (tree, id_resolver) = identifier_tool.resolve_identities(tree)?;
-    println!("{:#?}", id_resolver);
+    //println!("{:#?}", id_resolver);
     Ok(tree)
 }

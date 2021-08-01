@@ -1,60 +1,13 @@
 in n1 {
     private int i;
-
+    public int j;
     in n2 {
-        int i;
+        public int i;
+        public int j;
+        public int k;
     }
 }
-
-
-in hello;
-
-using n1::i;
-// using std::{String, stdio::*, stdio};
-
-
-
-
-
-const unsigned long[] array;
-boolean yes = true;
-
-Option<double> (double) sqrt;
-
-class Hello {
-    Hello() {}
-}
-
-class Jello : Hi  {
-
-    Jello() {
-        int a = (int) 3+2*7/8;
-    }
-}
-
-
-/*
-for<T> enum Option {
-    Some { public T val },
-    None;
-
-
-}
-
-// converts to
-for<T> class Option {
-    private class ome : Option {
-        public T val;
-    }
-
-    private class variant_none : Option {
-
-    }
-
-    public Option Some(T val)
-}
-
-*/
+using n1::{j as l, n2::*};
 
 struct a1 {
     int a;
@@ -72,38 +25,8 @@ public unsigned int fib(unsigned int n) {
 }
 
 int main(int argc, String[] args) {
-    println("Hello world!");
-    stdio::println("Hello world!");
-    a1 s_a= a1 { .a = 3 };
-    a1* a1_ptr = &s_a;
-
-    switch (3) {
-        case 1: ;
-        case 2: ;
-        default: ;
-    }
-
-    {
-        int i;
-    }
-    {
-    int i;
-    }
-
-
-    if (s_a.a == a1_ptr->a) {
-        println("Correct!");
-    }
-
-    while (true) {
-
-    }
-
-    for(;;) {
-        int i = 0;
-    }
-
-    do { } while (true);
+    int a = j;
+    int b = math::fib(l);
 
     return 0;
 }

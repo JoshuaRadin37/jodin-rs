@@ -13,7 +13,7 @@ use crate::parsing::JodinRule;
 use pest::iterators::Pair;
 
 /// Represents an import "tree".
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Import {
     id: Identifier,
     import_type: ImportType,
@@ -39,6 +39,14 @@ impl Import {
     /// The import type.
     pub fn import_type(&self) -> &ImportType {
         &self.import_type
+    }
+
+    /// Concatenate parent info to this id
+    pub fn concat_parent_to_id(&self, parent: &Identifier) -> Self {
+        Self {
+            id: parent + &self.id,
+            import_type: self.import_type.clone(),
+        }
     }
 
     /// Create an import value by evaluating part of a parse tree.
@@ -74,7 +82,7 @@ impl Import {
     }
 }
 /// The type of import
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ImportType {
     /// Import exactly this identifier.
     Direct,

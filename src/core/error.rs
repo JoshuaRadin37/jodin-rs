@@ -67,6 +67,13 @@ pub enum JodinErrorType {
     CircularDependencyDetected,
     /// This rule can not be used for visibility
     InvalidVisibilityRule(JodinRule),
+    /// The target identifier is not visible from the originating namespace
+    IdentifierProtected {
+        /// The targeted import
+        target: Identifier,
+        /// The originating namespace the import is being made in
+        origin_namespace: Identifier,
+    },
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

@@ -173,17 +173,24 @@ impl JodinNodeGenerator<'_> {
                 JodinNodeInner::TopLevelDeclarations { decs }.into()
             }
             JodinRule::using_statement => {
-                let path = pair.into_inner().nth(0).unwrap();
+                let mut inner = pair.into_inner();
+                let path = inner.nth(0).unwrap();
                 let import = Import::from_pair(path);
+                let next = inner.next().unwrap().generate_node(self)?;
                 JodinNodeInner::ImportIdentifiers {
                     import_data: import,
+                    affected: next,
                 }
                 .into()
             }
             JodinRule::in_namespace => {
                 let mut inner = pair.into_inner();
                 let id = inner.nth(0).unwrap();
-                let id_node = self.generate_node(id, vec![])?;
+                let mut id_node = self.generate_node(id, vec![])?;
+
+                let visibility_tag = VisibilityTag::new(Visibility::Public);
+                id_node.add_tag(visibility_tag)?;
+
                 let affected = inner.nth(0).unwrap();
                 let affected_node = self.generate_node(affected, vec![])?;
                 JodinNodeInner::InNamespace {

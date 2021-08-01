@@ -119,6 +119,28 @@ impl IdentifierResolver {
         full_path.strip_highest_parent().unwrap()
     }
 
+    /// Creates an absolute path based off the current namesapce without stripping the highest parent
+    pub fn create_absolute_path_no_strip(&mut self, id: &Identifier) -> Identifier {
+        /*
+        if self.current_namespace.is_none() {
+            if !self.tree.get_base_values().contains(&id) {
+                self.tree.get_base_values_mut().push(id.clone());
+            }
+            return id;
+        }
+
+         */
+        let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
+        println!("Created path {}", full_path);
+        let parent_path = &**full_path.parent().as_ref().unwrap();
+        self.tree.add_namespace(parent_path.clone());
+        let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
+        if !objects.contains(&full_path) {
+            objects.push(full_path.clone())
+        }
+        full_path
+    }
+
     /// Add a new namespace relative to the current namespace to the resolver
     pub fn add_namespace<N: Into<Identifier>>(&mut self, namespace: N) {
         self.tree.add_namespace(Identifier::new_concat(
@@ -128,7 +150,11 @@ impl IdentifierResolver {
     }
 
     /// Attempts to resolve a single, absolute identifier out of a given path.
-    pub fn resolve_path(&self, path: Identifier) -> JodinResult<Identifier> {
+    pub fn resolve_path(
+        &self,
+        path: Identifier,
+        keep_highest_parent: bool,
+    ) -> JodinResult<Identifier> {
         let mut output = HashSet::new();
 
         let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
@@ -153,13 +179,14 @@ impl IdentifierResolver {
 
         match output.len() {
             0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
-            1 => Ok(output
-                .into_iter()
-                .next()
-                .cloned()
-                .unwrap()
-                .strip_highest_parent()
-                .unwrap()),
+            1 => {
+                let identifier = output.into_iter().next().cloned().unwrap();
+                if !keep_highest_parent {
+                    Ok(identifier.strip_highest_parent().unwrap())
+                } else {
+                    Ok(identifier)
+                }
+            }
             _ => Err(JodinErrorType::AmbiguousIdentifierError {
                 given: path,
                 found: Vec::from_iter(
@@ -203,6 +230,16 @@ impl IdentifierResolver {
             .mut_from_absolute_identifier(&alias_absolute_path)
             .expect("This value was just made");
         *object = absolute_path.clone();
+    }
+
+    /// Gets a reference to the namespace tree used by this resolver
+    pub fn namespace_tree(&self) -> &NamespaceTree<Identifier> {
+        &self.tree
+    }
+
+    /// Get the base namespace
+    pub fn base_namespace(&self) -> &Identifier {
+        &self.base_namespace
     }
 }
 
@@ -534,7 +571,7 @@ impl<T: Namespaced> Tree for Node<T> {
 struct NodeInfo {
     id: Identifier,
     children: Vec<NodeInfo>,
-    relevant: Vec<Identifier>,
+    relevant: Vec<(Identifier, Option<Identifier>)>,
     is_namespace: bool,
 }
 
@@ -546,7 +583,15 @@ impl<T: Namespaced> From<&Node<T>> for NodeInfo {
             relevant: n
                 .related_values
                 .iter()
-                .map(|r| r.get_identifier().clone())
+                .map(|r| {
+                    let id = r.get_identifier();
+                    let alias = if id.parent().unwrap() != &n.id {
+                        Some(id.clone())
+                    } else {
+                        None
+                    };
+                    (id.this().into(), alias)
+                })
                 .collect(),
             is_namespace: true,
         }
@@ -560,14 +605,17 @@ impl TreeItem for NodeInfo {
         if self.is_namespace {
             write!(f, "{}", style.paint(&self.id.this()),)
         } else {
-            write!(f, "<{}>", style.paint(&self.id.this()),)
+            write!(f, "<{}>", style.paint(&self.id),)
         }
     }
 
     fn children(&self) -> Cow<[Self::Child]> {
         let mut objects = vec![];
         objects.extend(self.relevant.iter().map(|id| NodeInfo {
-            id: id.clone(),
+            id: match &id.1 {
+                None => id.0.clone(),
+                Some(alias) => alias.clone(),
+            },
             children: vec![],
             relevant: vec![],
             is_namespace: false,
@@ -640,6 +688,15 @@ impl<T> Registry<T> {
         Ok(&self.mapping[&absolute])
     }
 
+    /// Remove an identity from the registry
+    pub fn remove_absolute_identity(&mut self, absolute: &Identifier) -> JodinResult<()> {
+        if !self.resolver.contains_absolute_identifier(&absolute) {
+            return Err(JodinErrorType::IdentifierDoesNotExist(absolute.clone()).into());
+        }
+        self.mapping.remove(absolute);
+        Ok(())
+    }
+
     /// Pushes a namespace onto the current namespace
     pub fn push_namespace(&mut self, namespace: Identifier) {
         self.resolver.push_namespace(namespace);
@@ -662,7 +719,7 @@ impl<T> Registry<T> {
 
     /// Attempts to get a value from a given path.
     pub fn get(&self, path: &Identifier) -> JodinResult<&T> {
-        let full_path = self.resolver.resolve_path(path.clone())?;
+        let full_path = self.resolver.resolve_path(path.clone(), false)?;
         self.mapping
             .get(&full_path)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
@@ -670,7 +727,7 @@ impl<T> Registry<T> {
 
     /// Attempts to get a mutable value from a given path.
     pub fn get_mut(&mut self, path: &Identifier) -> JodinResult<&mut T> {
-        let full_path = self.resolver.resolve_path(path.clone())?;
+        let full_path = self.resolver.resolve_path(path.clone(), false)?;
         self.mapping
             .get_mut(&full_path)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
@@ -746,13 +803,13 @@ mod tests {
         assert_eq!(path, "n2::object");
         println!("{:#?}", resolver);
         let result = resolver
-            .resolve_path(Identifier::from_iter(&["n2", "object"]))
+            .resolve_path(Identifier::from_iter(&["n2", "object"]), false)
             .unwrap();
         assert_eq!(result, "n2::object");
         resolver.pop_namespace();
         resolver.push_namespace(Identifier::from("n1"));
         println!("{:#?}", resolver);
-        let result = resolver.resolve_path(Identifier::from_iter(&["n2", "object"]));
+        let result = resolver.resolve_path(Identifier::from_iter(&["n2", "object"]), false);
         if let Err(JodinErrorType::AmbiguousIdentifierError { given: _, found }) =
             result.map_err(|err| err.into_err_and_bt().0)
         {

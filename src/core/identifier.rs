@@ -2,9 +2,11 @@
 //! class definitions to modules.
 
 use std::array::IntoIter;
+use std::cmp::{min, Ordering};
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
+use std::ops::Add;
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -250,6 +252,68 @@ impl IntoIterator for &Identifier {
     }
 }
 
+impl PartialOrd for Identifier {
+    /// The comparison is based off of if the namespaces are subsets of each other.
+    ///
+    /// # Examples
+    /// None => Neither this or the other identifier represents subsets of each other
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// let id1 = Identifier::from("Hello");
+    /// let id2 = Identifier::from("Goodbye");
+    /// assert_eq!(id1.partial_cmp(&id2), None);
+    /// ```
+    /// Some(Greater) => The `self` identifier is a super set of `other`
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use std::cmp::Ordering::Greater;
+    /// let id1 = Identifier::from("Hello");
+    /// let id2 = Identifier::new_concat("Hello", "World");
+    /// assert_eq!(id1.partial_cmp(&id2), Some(Greater));
+    /// ```
+    /// Some(Equal) => The `self` identifier and the `other` identifier represent the same set
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use std::cmp::Ordering::Equal;
+    /// let id1 = Identifier::from("Hello");
+    /// let id2 = id1.clone();
+    /// assert_eq!(id1.partial_cmp(&id2), Some(Equal));
+    /// ```
+    /// Some(Less) => The `self` identifier is a sub set of `other`
+    /// ```
+    /// use jodin_rs::core::identifier::Identifier;
+    /// use std::cmp::Ordering::Less;
+    /// let id1 = Identifier::new_concat("Hello", "World");
+    /// let id2 = Identifier::from("Hello");
+    /// assert_eq!(id1.partial_cmp(&id2), Some(Less));
+    /// ```
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let me: Vec<String> = self.iter().collect();
+        let other: Vec<String> = other.iter().collect();
+        let shorter = min(me.len(), other.len());
+        if &me[..shorter] != &other[..shorter] {
+            return None;
+        }
+        me.partial_cmp(&other).map(|o| o.reverse())
+    }
+}
+
+impl Add for Identifier {
+    type Output = Identifier;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Identifier::new_concat(self, rhs)
+    }
+}
+
+impl Add for &Identifier {
+    type Output = Identifier;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Identifier::new_concat(self, rhs)
+    }
+}
+
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
@@ -295,11 +359,42 @@ impl<T> Namespaced for Identifiable<T> {
 #[cfg(test)]
 mod test {
     use crate::core::identifier::Identifier;
+    use std::cmp::Ordering;
     use std::iter::FromIterator;
 
     #[test]
     fn id_from_iter() {
         let id = Identifier::from_iter(&["std", "iter", "FromIterator"]);
         assert_eq!(id.to_string(), "std::iter::FromIterator");
+    }
+
+    #[test]
+    fn id_comparisons() {
+        let id1 = Identifier::from("hello");
+        let id2 = id1.clone();
+        assert_eq!(id1.partial_cmp(&id2), Some(Ordering::Equal));
+
+        let id2 = Identifier::from("goodbye");
+        assert_eq!(id1.partial_cmp(&id2), None);
+
+        let id2 = id1.clone();
+        let id1 = Identifier::from_iter(["hello", "world"]);
+        assert_eq!(
+            id1.partial_cmp(&id2),
+            Some(Ordering::Less),
+            "Id1 should be less because it's more specific than id2"
+        );
+
+        let id2 = Identifier::from_iter(["hello", "world", "earth"]);
+        assert_eq!(
+            id1.partial_cmp(&id2),
+            Some(Ordering::Greater),
+            "Id1 should be greater because its less specific than id2"
+        );
+
+        let id1 = Identifier::from_iter(["hello", "world", "mars"]);
+        assert_eq!(id1.partial_cmp(&id2),
+        None,
+        "Although they are both the same length, because neither is a subset of the other they can't be compared")
     }
 }

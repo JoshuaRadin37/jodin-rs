@@ -506,7 +506,7 @@ child_generic = {
 }
 
 using_statement = {
-    "using" ~ using_path ~ ";"
+    "using" ~ using_path ~ ";" ~ top_level_declarations
 }
 
 using_path = {
