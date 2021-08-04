@@ -18,6 +18,11 @@ in string
 public struct String { }
 
 
+
+extern int(char*, ...) printf;
+extern int(int) square;
+extern int(...) printfa;
+
 using std::string::String;
 
 in math

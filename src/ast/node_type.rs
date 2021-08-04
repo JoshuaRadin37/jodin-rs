@@ -41,6 +41,11 @@ pub enum JodinNodeInner {
         /// The associated block of code.
         block: JodinNode,
     },
+    /// An external function declaration
+    ExternDeclaration {
+        /// Declaration
+        declaration: JodinNode,
+    },
     /// Stores a block
     Block {
         /// The statements that make up the block.
@@ -414,6 +419,11 @@ impl JodinNodeInner {
             JodinNodeInner::DoStatement { statement, cond } => {
                 vec![cond, statement]
             }
+            JodinNodeInner::ExternDeclaration {
+                declaration: declaration,
+            } => {
+                vec![declaration]
+            }
         };
         vector
     }
@@ -586,6 +596,11 @@ impl JodinNodeInner {
             }
             JodinNodeInner::DoStatement { statement, cond } => {
                 vec![cond, statement]
+            }
+            JodinNodeInner::ExternDeclaration {
+                declaration: declaration,
+            } => {
+                vec![declaration]
             }
         };
         vector

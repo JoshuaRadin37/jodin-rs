@@ -318,9 +318,12 @@ impl IdentifierCreator {
 
                 self.end_block(id_resolver);
             }
-            other => {
-                println!("Unsupported: {:?}", other);
+            JodinNodeInner::ExternDeclaration {
+                declaration: delcaration,
+            } => {
+                self.create_identities(delcaration, id_resolver, visibility_registry)?;
             }
+            _other => {}
         }
         Ok(())
     }

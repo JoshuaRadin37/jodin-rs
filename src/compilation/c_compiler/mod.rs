@@ -5,6 +5,7 @@ use crate::compilation::{Compilable, Compiler, Context, PaddedWriter, Target};
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
+mod c_type_compiler;
 mod top_level_declaration_compiler;
 
 mod components;

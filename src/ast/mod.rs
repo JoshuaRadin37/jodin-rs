@@ -861,6 +861,14 @@ impl JodinNodeGenerator<'_> {
                 }
                 .into()
             }
+            JodinRule::extern_declaration => {
+                let inner = pair.into_inner().nth(0).unwrap();
+                let inner_as_dec = self.generate_node(inner, vec![])?;
+                JodinNodeInner::ExternDeclaration {
+                    declaration: inner_as_dec,
+                }
+                .into()
+            }
             // just go into inner
             JodinRule::top_level_declaration
             | JodinRule::jodin_file

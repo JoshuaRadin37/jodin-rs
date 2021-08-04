@@ -5,6 +5,7 @@ use std::ops::Deref;
 
 use regex::Regex;
 
+use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::compilation::c_compiler::SeparableCompilable;
 use crate::compilation::{Compilable, Context, PaddedWriter, C99};
 use crate::core::error::{JodinErrorType, JodinResult};
@@ -15,7 +16,12 @@ use std::fmt::Write;
 /// Represents a C translation Unit
 pub enum TranslationUnit {
     /// Represents a C declaration
-    Declaration {},
+    Declaration {
+        /// The C type of this declaration
+        c_type: CType,
+        /// It's identifier
+        identifier: CValidIdentifier,
+    },
     /// Represents a function definition
     FunctionDefinition {
         /// The function info for this definition
@@ -26,8 +32,10 @@ pub enum TranslationUnit {
 impl SeparableCompilable for TranslationUnit {
     fn declaration<W: Write>(&self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         match self {
-            TranslationUnit::Declaration { .. } => {
-                unimplemented!()
+            TranslationUnit::Declaration { c_type, identifier } => {
+                let declaration = c_type.declarator(identifier.as_str());
+                writeln!(w, "{};", declaration)?;
+                Ok(())
             }
             TranslationUnit::FunctionDefinition { function_info } => {
                 function_info.declaration(context, w)
@@ -38,7 +46,7 @@ impl SeparableCompilable for TranslationUnit {
     fn definition<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         match self {
             TranslationUnit::Declaration { .. } => {
-                unimplemented!()
+                panic!("Declarations can't be defined")
             }
             TranslationUnit::FunctionDefinition { function_info } => {
                 function_info.definition(context, w)
@@ -110,12 +118,12 @@ pub enum CTypeSpecifier {
     /// A named structure (such as struct obj)
     NamedStruct {
         /// The name of the structure
-        name: String,
+        name: CValidIdentifier,
     },
     /// An alias for a type
     TypeDefed {
         /// The name of the type accoring to a type definition
-        name: String,
+        name: CValidIdentifier,
     },
     ///
     Primitive(Primitive),
@@ -129,19 +137,21 @@ pub enum CTypeSpecifier {
 /// use jodin_rs::core::types::primitives::Primitive::*;
 ///
 /// // A primitive type
-/// let primtive = CType::new(CTypeSpecifier::Primitive(Int), CTypeDeclarator::Identifier);
+/// let primtive = CType::new(false, CTypeSpecifier::Primitive(Int), CTypeDeclarator::Identifier);
 ///
 /// assert_eq!(primtive.declarator("hello"), "int hello");
 /// ```
 pub struct CType {
+    is_const: bool,
     specifier: CTypeSpecifier,
     declarator: CTypeDeclarator,
 }
 
 impl CType {
     /// Create a new CType
-    pub fn new(specifier: CTypeSpecifier, declarator: CTypeDeclarator) -> Self {
+    pub fn new(is_const: bool, specifier: CTypeSpecifier, declarator: CTypeDeclarator) -> Self {
         CType {
+            is_const,
             specifier,
             declarator,
         }
@@ -159,18 +169,82 @@ impl CType {
         let specifier = match &self.specifier {
             CTypeSpecifier::NamedStruct { name } => name.clone(),
             CTypeSpecifier::TypeDefed { name } => name.clone(),
-            CTypeSpecifier::Primitive(p) => p.to_string(),
+            CTypeSpecifier::Primitive(p) => CValidIdentifier::new(Identifier::from(p.to_string())),
         };
 
         let inner_declaration = self.declarator.declarator(id);
 
-        format!("{} {}", specifier, inner_declaration)
+        format!(
+            "{}{} {}",
+            if self.is_const { "const " } else { "" },
+            specifier,
+            inner_declaration
+        )
     }
 }
 
 impl From<Primitive> for CType {
     fn from(p: Primitive) -> Self {
-        CType::new(CTypeSpecifier::Primitive(p), CTypeDeclarator::Identifier)
+        CType::new(
+            false,
+            CTypeSpecifier::Primitive(p),
+            CTypeDeclarator::Identifier,
+        )
+    }
+}
+
+impl From<IntermediateType> for CType {
+    fn from(im: IntermediateType) -> Self {
+        let is_const = im.is_const;
+        let c_specifier = match im.type_specifier {
+            TypeSpecifier::Id(id) => CTypeSpecifier::TypeDefed {
+                name: CValidIdentifier::new(id),
+            },
+            TypeSpecifier::Primitive(p) => CTypeSpecifier::Primitive(p),
+        };
+        let mut ret = CType::new(is_const, c_specifier, CTypeDeclarator::Identifier);
+
+        for tail in im.tails {
+            let CType {
+                is_const,
+                specifier,
+                declarator,
+            } = ret;
+            match tail {
+                TypeTail::Pointer => {
+                    ret = CType::new(
+                        is_const,
+                        specifier,
+                        CTypeDeclarator::Pointer(Box::new(declarator)),
+                    );
+                }
+                TypeTail::Array(Some(size)) => {
+                    todo!("Need to have expression compiler created first")
+                }
+                TypeTail::Array(None) => {
+                    ret = CType::new(
+                        is_const,
+                        specifier,
+                        CTypeDeclarator::Array {
+                            inner: Box::new(declarator),
+                            maybe_size: None,
+                        },
+                    );
+                }
+                TypeTail::Function(func) => {
+                    ret = CType::new(
+                        is_const,
+                        specifier,
+                        CTypeDeclarator::Arguments {
+                            inner: Box::new(declarator),
+                            argument_types: func.into_iter().map(|im| CType::from(im)).collect(),
+                        },
+                    );
+                }
+            }
+        }
+
+        ret
     }
 }
 

@@ -50,6 +50,7 @@ t_trait = { "trait" }
 t_enum = { "enum" }
 t_switch = { "switch" }
 t_as = { "as" }
+t_varargs = { "..." }
 
 special_keyword = @{ "__" ~ identifier }
 
@@ -98,6 +99,7 @@ keywords = {
     t_enum |
     t_switch |
     t_as |
+    "extern" |
     special_keyword
 }
 
@@ -248,6 +250,7 @@ top_level_declaration = {
     declaration|
     class_definition |
     enum_definition |
+    extern_declaration |
     ";"
 }
 
@@ -261,7 +264,7 @@ array_declarator = {
 }
 
 function_declarator = {
-    "(" ~ type_list? ~ ")"
+    "(" ~ (t_varargs | type_list? ~ ("," ~ t_varargs)?) ~ ")"
 }
 
 parameter_list = {
@@ -560,6 +563,10 @@ generic_declarator = {
 
 enum_definition = {
     visibility? ~ generics_declaration? ~ t_enum ~ identifier ~ "{" ~ id_list ~ "}"
+}
+
+extern_declaration = {
+    visibility? ~ "extern" ~ !visibility ~ declaration
 }
 
 

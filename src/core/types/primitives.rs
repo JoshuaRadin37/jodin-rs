@@ -34,6 +34,8 @@ pub enum Primitive {
     Float,
     /// An f64
     Double,
+    /// Varargs
+    VA_LIST,
 }
 
 impl Type for Primitive {
@@ -52,6 +54,7 @@ impl Type for Primitive {
             Primitive::UnsignedLong => "unsigned long",
             Primitive::Float => "float",
             Primitive::Double => "double",
+            Primitive::VA_LIST => "...",
         };
         Identifier::from(str)
     }
@@ -71,6 +74,9 @@ impl Type for Primitive {
             Primitive::UnsignedLong => 10,
             Primitive::Float => 11,
             Primitive::Double => 12,
+            Primitive::VA_LIST => {
+                panic!("VA LIST doesn't have a type id")
+            }
         }
     }
 }

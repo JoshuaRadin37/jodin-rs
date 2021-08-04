@@ -74,6 +74,8 @@ pub enum JodinErrorType {
         /// The originating namespace the import is being made in
         origin_namespace: Identifier,
     },
+    /// Extern functions can only be declared in the Base namespace
+    ExternFunctionNotDeclaredInBase,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
