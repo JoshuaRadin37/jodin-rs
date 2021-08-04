@@ -13,6 +13,13 @@ struct a1 {
     int a;
 }
 
+in std
+in string
+public struct String { }
+
+
+using std::string::String;
+
 in math
 public unsigned int fib(unsigned int n) {
     switch (n) {

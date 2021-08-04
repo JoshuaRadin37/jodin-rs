@@ -429,7 +429,15 @@ impl JodinNodeGenerator<'_> {
                 let mut indexed_pair = IndexedPair::new(pair.into_inner());
                 let (visibility, id) = match *inner_rules {
                     [JodinRule::visibility, JodinRule::t_struct, JodinRule::identifier, ..] => (
-                        Some(indexed_pair.get(JodinRule::visibility).unwrap().as_rule()),
+                        Some(
+                            indexed_pair
+                                .get(JodinRule::visibility)
+                                .unwrap()
+                                .into_inner()
+                                .next()
+                                .unwrap()
+                                .as_rule(),
+                        ),
                         indexed_pair.get(JodinRule::identifier).unwrap(),
                     ),
                     [JodinRule::t_struct, JodinRule::identifier, ..] => {
@@ -438,12 +446,14 @@ impl JodinNodeGenerator<'_> {
                     _ => unreachable!(),
                 };
 
-                let field_pairs = indexed_pair
-                    .get_all(JodinRule::struct_field_declaration)
-                    .unwrap();
                 let mut fields: Vec<_> = vec![];
-                for pair in field_pairs {
-                    fields.push(self.generate_node(pair, vec![])?);
+                if indexed_pair.contains(JodinRule::struct_field_declaration) {
+                    let field_pairs = indexed_pair
+                        .get_all(JodinRule::struct_field_declaration)
+                        .unwrap();
+                    for pair in field_pairs {
+                        fields.push(self.generate_node(pair, vec![])?);
+                    }
                 }
 
                 let visibility = Visibility::try_from(visibility)?;

@@ -5,6 +5,7 @@ use crate::core::identifier_resolution::{IdentifierResolver, Registry};
 use crate::ast::JodinNode;
 use crate::ast::JodinNodeInner;
 
+use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::ast::tags::Tag;
 use crate::core::import::{Import, ImportType};
 use crate::core::privacy::{Visibility, VisibilityTag};
@@ -251,9 +252,15 @@ impl IdentifierCreator {
                 self.create_identities(namespace, id_resolver, visibility_registry)?;
                 let tag = namespace.get_tag::<ResolvedIdentityTag>()?.clone();
                 let name = Identifier::from(tag.absolute_id().this());
-                id_resolver.push_namespace(name);
+                let parts: Vec<_> = name.iter().map(|s| Identifier::from(s)).collect();
+                let count = parts.len();
+                for name in parts {
+                    id_resolver.push_namespace(name);
+                }
                 self.create_identities(inner, id_resolver, visibility_registry)?;
-                id_resolver.pop_namespace();
+                for _ in 0..count {
+                    id_resolver.pop_namespace();
+                }
             }
             JodinNodeInner::ImportIdentifiers {
                 import_data: _,
@@ -364,12 +371,14 @@ fn find_first_tag<T: 'static + Tag>(node: &JodinNode) -> Option<&T> {
 
 pub struct IdentifierSetter {
     aliases: Registry<Identifier>,
+    block_num: Vec<usize>,
 }
 
 impl IdentifierSetter {
     fn new() -> Self {
         Self {
             aliases: Registry::new(),
+            block_num: vec![0],
         }
     }
 
@@ -388,11 +397,15 @@ impl IdentifierSetter {
                     .unwrap()
                     .absolute_id()
                     .this_as_id();
-                id_resolver.push_namespace(namespace.clone());
-                self.aliases.push_namespace(namespace);
+                let parts: Vec<_> = namespace.iter().map(|s| Identifier::from(s)).collect();
+                let count = parts.len();
+                for name in parts {
+                    id_resolver.push_namespace(name);
+                }
                 self.set_identities(inner, id_resolver, visibility_resolver)?;
-                id_resolver.pop_namespace();
-                self.aliases.pop_namespace();
+                for _ in 0..count {
+                    id_resolver.pop_namespace();
+                }
             }
             JodinNodeInner::ImportIdentifiers {
                 import_data,
@@ -423,25 +436,26 @@ impl IdentifierSetter {
             }
             JodinNodeInner::FunctionDefinition {
                 name,
-                return_type: _,
+                return_type,
                 arguments,
                 generic_parameters,
                 block,
             } => {
-                self.create_identities(name, id_resolver, visibility_registry)?;
+                self.resolve_type(return_type, id_resolver, visibility_resolver)?;
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 let name = Identifier::from(tag.absolute_id().this());
                 id_resolver.push_namespace(name);
 
                 for argument in arguments {
-                    self.create_identities(argument, id_resolver, visibility_registry)?;
+                    self.set_identities(argument, id_resolver, visibility_resolver)?;
                 }
 
                 for generic in generic_parameters {
-                    self.create_identities(generic, id_resolver, visibility_registry)?;
+                    // self.create_identities(generic, id_resolver, visibility_resolver)?;
+                    self.set_identities(generic, id_resolver, visibility_resolver)?;
                 }
 
-                self.create_identities(block, id_resolver, visibility_registry)?;
+                self.set_identities(block, id_resolver, visibility_resolver)?;
 
                 id_resolver.pop_namespace();
             }
@@ -452,7 +466,7 @@ impl IdentifierSetter {
 
                 for expression in expressions {
                     if let JodinNodeInner::VarDeclarations { .. } = expression.inner() {
-                        self.create_identities(expression, id_resolver, visibility_registry)?;
+                        self.set_identities(expression, id_resolver, visibility_resolver)?;
                     } else {
                         blocks.push(expression);
                     }
@@ -460,13 +474,13 @@ impl IdentifierSetter {
 
                 // Allows for forwards and backwards scope in blocks
                 for block in blocks {
-                    self.create_identities(block, id_resolver, visibility_registry)?;
+                    self.set_identities(block, id_resolver, visibility_resolver)?;
                 }
 
                 self.end_block(id_resolver);
             }
             JodinNodeInner::StructureDefinition { name, members } => {
-                self.create_identities(name, id_resolver, visibility_registry)?;
+                self.set_identities(name, id_resolver, visibility_resolver)?;
 
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 // tags_to_add.push(Box::new(tag.clone()));
@@ -474,14 +488,14 @@ impl IdentifierSetter {
                 id_resolver.push_namespace(name);
 
                 for member in members {
-                    self.create_identities(member, id_resolver, visibility_registry)?;
+                    self.set_identities(member, id_resolver, visibility_resolver)?;
                 }
 
                 id_resolver.pop_namespace();
             }
-            nNodeInner::WhileStatement { cond: _, statement } => {
+            JodinNodeInner::WhileStatement { cond: _, statement } => {
                 self.start_block(id_resolver);
-                self.create_identities(statement, id_resolver, visibility_registry)?;
+                self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
             }
             JodinNodeInner::IfStatement {
@@ -490,12 +504,12 @@ impl IdentifierSetter {
                 else_statement,
             } => {
                 self.start_block(id_resolver);
-                self.create_identities(statement, id_resolver, visibility_registry)?;
+                self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
 
                 if let Some(statement) = else_statement {
                     self.start_block(id_resolver);
-                    self.create_identities(statement, id_resolver, visibility_registry)?;
+                    self.set_identities(statement, id_resolver, visibility_resolver)?;
                     self.end_block(id_resolver);
                 }
             }
@@ -505,7 +519,7 @@ impl IdentifierSetter {
             } => {
                 self.start_block(id_resolver);
                 for statement in labeled_statements {
-                    self.create_identities(statement, id_resolver, visibility_registry)?;
+                    self.set_identities(statement, id_resolver, visibility_resolver)?;
                 }
                 self.end_block(id_resolver);
             }
@@ -518,11 +532,14 @@ impl IdentifierSetter {
                 self.start_block(id_resolver);
 
                 if let Some(init) = init {
-                    self.create_identities(init, id_resolver, visibility_registry)?;
+                    self.set_identities(init, id_resolver, visibility_resolver)?;
                 }
-                self.create_identities(statement, id_resolver, visibility_registry)?;
+                self.set_identities(statement, id_resolver, visibility_resolver)?;
 
                 self.end_block(id_resolver);
+            }
+            JodinNodeInner::NamedValue { name: _, var_type } => {
+                self.resolve_type(var_type, id_resolver, visibility_resolver)?;
             }
             other => {
                 for child in other.children_mut() {
@@ -539,10 +556,12 @@ impl IdentifierSetter {
         id_resolver: &IdentifierResolver,
         visibility: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
+        let ref id_with_base = id_resolver.base_namespace() + id;
+        println!("Attempting to find {}", id);
         // first get alias if it exist
         let alias =
             self.aliases
-                .get(id)
+                .get(id_with_base)
                 .ok()
                 .filter(|&alias_id| {
                     let visibility = visibility.get(alias_id).ok();
@@ -565,7 +584,11 @@ impl IdentifierSetter {
                     }
                 }
             });
-
+        println!(
+            "Found {:?} while trying to find identifier {:?}",
+            (&alias, &as_normal),
+            id
+        );
         match (alias, as_normal) {
             (Some(alias), None) => Ok(alias),
             (None, Some(as_normal)) => Ok(as_normal),
@@ -652,6 +675,63 @@ impl IdentifierSetter {
         }
         println!("Imported {:?}", aliases);
         Ok(aliases)
+    }
+
+    fn start_block(&mut self, id_resolver: &mut IdentifierResolver) {
+        let block_num = self.get_block_num();
+        let string = Identifier::from(format!("{{block {}}}", block_num));
+        let last = id_resolver.current_namespace_with_base();
+        self.block_num.push(0);
+
+        id_resolver.push_namespace(string.clone());
+        //id_resolver.create_absolute_path(&Identifier::from(""));
+        id_resolver.use_namespace(last).unwrap();
+        println!("{:#?}", id_resolver);
+    }
+
+    fn end_block(&mut self, id_resolver: &mut IdentifierResolver) {
+        id_resolver.pop_namespace();
+        self.block_num.pop();
+        let current = id_resolver.current_namespace_with_base();
+        id_resolver.stop_use_namespace(&current).unwrap();
+    }
+
+    fn get_block_num(&mut self) -> usize {
+        let block_num = self.block_num.last_mut().unwrap();
+        let ret = *block_num;
+        *block_num += 1;
+        ret
+    }
+
+    /// Attempt to resolve identifiers within an intermediate type
+    pub fn resolve_type(
+        &mut self,
+        my_type: &mut IntermediateType,
+        id_resolver: &IdentifierResolver,
+        visibility: &Registry<Visibility>,
+    ) -> JodinResult<()> {
+        if let TypeSpecifier::Id(ref mut identifier) = my_type.type_specifier {
+            let resolved = self.try_get_absolute_identifier(identifier, id_resolver, visibility)?;
+            *identifier = resolved;
+        }
+
+        for generic in &mut my_type.generics {
+            self.resolve_type(generic, id_resolver, visibility)?;
+        }
+
+        for tail in &mut my_type.tails {
+            match tail {
+                TypeTail::Pointer => {}
+                TypeTail::Array(_) => {}
+                TypeTail::Function(args) => {
+                    for arg in args {
+                        self.resolve_type(arg, id_resolver, visibility)?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 

@@ -158,9 +158,9 @@ impl IdentifierResolver {
         let mut output = HashSet::new();
 
         let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
-        //println!("Absolute path = {}", absolute_path);
+        println!("Absolute path = {}", absolute_path);
         let relative_path = Identifier::new_concat(self.current_namespace_with_base(), &path);
-        //println!("Relative path = {}", relative_path);
+        println!("Relative path = {}", relative_path);
         if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
             output.insert(val);
         }
