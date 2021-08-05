@@ -234,7 +234,7 @@ impl JodinNodeGenerator<'_> {
                     _ => unreachable!(),
                 };
 
-                let canonical_type = self.generate_node(canonical_type, vec![])?;
+                let canonical_type = self.new_intermediate_type(canonical_type)?;
                 let pairs = declarator_list.into_inner().into_iter();
                 let mut names = Vec::new();
                 let mut values = Vec::new();

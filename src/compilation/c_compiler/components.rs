@@ -27,6 +27,20 @@ pub enum TranslationUnit {
         /// The function info for this definition
         function_info: FunctionInfo,
     },
+    /// A C typedef
+    Typedef {
+        /// The original c type
+        c_type: CType,
+        /// identifier
+        identifier: CValidIdentifier,
+    },
+    /// A structure declaration
+    StructureDeclaration {
+        /// the name of the structure
+        name: CValidIdentifier,
+        /// the fields of the structure
+        fields: Vec<(CType, CValidIdentifier)>,
+    },
 }
 
 impl SeparableCompilable for TranslationUnit {
@@ -40,22 +54,41 @@ impl SeparableCompilable for TranslationUnit {
             TranslationUnit::FunctionDefinition { function_info } => {
                 function_info.declaration(context, w)
             }
+            TranslationUnit::Typedef { c_type, identifier } => {
+                let declaration = c_type.declarator(identifier.as_str());
+                writeln!(w, "typedef {};", declaration)?;
+                Ok(())
+            }
+            TranslationUnit::StructureDeclaration { name, .. } => {
+                writeln!(w, "struct {};", name)?;
+                Ok(())
+            }
         }
     }
 
     fn definition<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         match self {
-            TranslationUnit::Declaration { .. } => {
-                panic!("Declarations can't be defined")
-            }
             TranslationUnit::FunctionDefinition { function_info } => {
                 function_info.definition(context, w)
             }
+            TranslationUnit::StructureDeclaration { name, fields } => {
+                writeln!(w, "struct {} {{", name)?;
+                w.increase_pad();
+                for (c_type, id) in fields {
+                    let declaration = c_type.declarator(id.as_str());
+                    writeln!(w, "{};", declaration)?;
+                }
+                w.decrease_pad();
+                writeln!(w, "}};")?;
+                Ok(())
+            }
+            _ => Ok(()),
         }
     }
 }
 
 /// The abstract type represented in C at its use
+#[derive(Clone)]
 pub enum CTypeDeclarator {
     /// A pointer type
     Pointer(Box<CTypeDeclarator>),
@@ -114,6 +147,7 @@ impl CTypeDeclarator {
 }
 
 /// A type specifier
+#[derive(Clone)]
 pub enum CTypeSpecifier {
     /// A named structure (such as struct obj)
     NamedStruct {
@@ -121,7 +155,7 @@ pub enum CTypeSpecifier {
         name: CValidIdentifier,
     },
     /// An alias for a type
-    TypeDefed {
+    TypeDefinition {
         /// The name of the type accoring to a type definition
         name: CValidIdentifier,
     },
@@ -141,6 +175,7 @@ pub enum CTypeSpecifier {
 ///
 /// assert_eq!(primtive.declarator("hello"), "int hello");
 /// ```
+#[derive(Clone)]
 pub struct CType {
     is_const: bool,
     specifier: CTypeSpecifier,
@@ -167,9 +202,9 @@ impl CType {
     /// Create a declarator with an id
     pub fn declarator(&self, id: &str) -> String {
         let specifier = match &self.specifier {
-            CTypeSpecifier::NamedStruct { name } => name.clone(),
-            CTypeSpecifier::TypeDefed { name } => name.clone(),
-            CTypeSpecifier::Primitive(p) => CValidIdentifier::new(Identifier::from(p.to_string())),
+            CTypeSpecifier::NamedStruct { name } => format!("struct {}", name),
+            CTypeSpecifier::TypeDefinition { name } => name.as_str().to_string(),
+            CTypeSpecifier::Primitive(p) => p.to_string(),
         };
 
         let inner_declaration = self.declarator.declarator(id);
@@ -193,18 +228,18 @@ impl From<Primitive> for CType {
     }
 }
 
-impl From<IntermediateType> for CType {
-    fn from(im: IntermediateType) -> Self {
+impl From<&IntermediateType> for CType {
+    fn from(im: &IntermediateType) -> Self {
         let is_const = im.is_const;
-        let c_specifier = match im.type_specifier {
-            TypeSpecifier::Id(id) => CTypeSpecifier::TypeDefed {
-                name: CValidIdentifier::new(id),
+        let c_specifier = match &im.type_specifier {
+            TypeSpecifier::Id(id) => CTypeSpecifier::TypeDefinition {
+                name: CValidIdentifier::new(id.clone()),
             },
-            TypeSpecifier::Primitive(p) => CTypeSpecifier::Primitive(p),
+            TypeSpecifier::Primitive(p) => CTypeSpecifier::Primitive(p.clone()),
         };
         let mut ret = CType::new(is_const, c_specifier, CTypeDeclarator::Identifier);
 
-        for tail in im.tails {
+        for tail in &im.tails {
             let CType {
                 is_const,
                 specifier,
@@ -219,7 +254,12 @@ impl From<IntermediateType> for CType {
                     );
                 }
                 TypeTail::Array(Some(size)) => {
-                    todo!("Need to have expression compiler created first")
+                    todo!("Need to have expression compiler created first");
+                    ret = CType {
+                        is_const,
+                        specifier,
+                        declarator,
+                    };
                 }
                 TypeTail::Array(None) => {
                     ret = CType::new(
@@ -248,6 +288,12 @@ impl From<IntermediateType> for CType {
     }
 }
 
+impl From<IntermediateType> for CType {
+    fn from(it: IntermediateType) -> Self {
+        Self::from(&it)
+    }
+}
+
 impl Compilable<C99> for CType {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         write!(w, "{}", self.abstract_declarator())?;
@@ -267,6 +313,14 @@ impl CValidIdentifier {
     /// Construct a c-valid identifier from a JodinIdentifier
     pub fn new(id: Identifier) -> Self {
         let mut hash: u64 = 0;
+
+        let id = if id.highest_parent() == "{base}" {
+            id.strip_highest_parent().unwrap()
+        } else {
+            id
+        };
+
+        //let id = id.strip_highest_parent().unwrap();
         for (index, char) in id.to_string().char_indices() {
             let value = char as u8 as u64;
             hash += value << index;
@@ -282,6 +336,7 @@ impl CValidIdentifier {
     /// # Error
     /// Errors if the original id isn't valid in C.
     pub fn no_mangle(id: Identifier) -> JodinResult<Self> {
+        let id = id.strip_highest_parent().unwrap();
         let to_string = id.to_string();
         if let Some(mat) = C_ID_REGEX.find(to_string.as_str()) {
             if mat.as_str() == to_string {
@@ -413,6 +468,7 @@ mod tests {
     #[test]
     fn function_ptrs() {
         let func_type = CType::new(
+            false,
             CTypeSpecifier::Primitive(Primitive::Int),
             CTypeDeclarator::Arguments {
                 inner: Box::new(CTypeDeclarator::Pointer(Box::new(
@@ -420,10 +476,12 @@ mod tests {
                 ))),
                 argument_types: vec![
                     CType::new(
+                        false,
                         CTypeSpecifier::Primitive(Primitive::Int),
                         CTypeDeclarator::Pointer(Box::new(CTypeDeclarator::Identifier)),
                     ),
                     CType::new(
+                        false,
                         CTypeSpecifier::Primitive(Primitive::Int),
                         CTypeDeclarator::Pointer(Box::new(CTypeDeclarator::Identifier)),
                     ),

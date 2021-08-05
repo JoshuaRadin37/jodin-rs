@@ -22,7 +22,7 @@ pub enum JodinNodeInner {
     /// Store variable declarations, roughly translates to `<type> (<name> (= <value>)?)*`.
     VarDeclarations {
         /// The type for the variable.
-        var_type: JodinNode,
+        var_type: IntermediateType,
         /// The ids being declared.
         names: Vec<JodinNode>,
         /// The maybe values the variables are being initialized with.
@@ -265,7 +265,7 @@ impl JodinNodeInner {
                 names,
                 values,
             } => {
-                let mut ret = vec![var_type];
+                let mut ret = vec![];
                 ret.extend(names);
                 ret.extend(values.iter().filter_map(|node| node.as_ref()));
                 ret
@@ -445,7 +445,7 @@ impl JodinNodeInner {
                 names,
                 values,
             } => {
-                let mut ret = vec![var_type];
+                let mut ret = vec![];
                 ret.extend(names);
                 ret.extend(values.iter_mut().filter_map(|node| node.as_mut()));
                 ret

@@ -46,8 +46,12 @@ impl Context {
 }
 
 /// Compile a tree into C99 code.
-pub fn compile_c99(tree: JodinNode, compiler_settings: &CompilationSettings) -> JodinResult<()> {
-    let compiler = C99Compiler::new();
+pub fn compile_c99<W: std::fmt::Write>(
+    tree: JodinNode,
+    compiler_settings: &CompilationSettings,
+    writer: W,
+) -> JodinResult<()> {
+    let compiler = C99Compiler::new(writer);
     execute_compiler(tree, compiler, compiler_settings)
 }
 

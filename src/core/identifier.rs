@@ -218,6 +218,12 @@ impl<S: AsRef<str>> PartialEq<S> for Identifier {
     }
 }
 
+impl PartialEq<&str> for &Identifier {
+    fn eq(&self, other: &&str) -> bool {
+        self.to_string() == *other
+    }
+}
+
 impl From<Identifier> for String {
     fn from(i: Identifier) -> Self {
         format!("{}", i)

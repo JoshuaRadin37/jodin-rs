@@ -97,5 +97,8 @@ fn main() -> JodinResult<()> {
         writeln!(file, "{}", string)?;
     }
 
-    compile_c99(optimized, &settings)
+    let mut buffer = String::new();
+    compile_c99(optimized, &settings, &mut buffer)?;
+    println!("{}", buffer);
+    Ok(())
 }

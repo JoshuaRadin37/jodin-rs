@@ -76,6 +76,8 @@ pub enum JodinErrorType {
     },
     /// Extern functions can only be declared in the Base namespace
     ExternFunctionNotDeclaredInBase,
+    /// Illegal node type for compiler
+    IllegalTreeType,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

@@ -25,6 +25,12 @@ extern int(...) printfa;
 
 using std::string::String;
 
+
+struct recursive {
+    recursive r;
+}
+
+
 in math
 public unsigned int fib(unsigned int n) {
     switch (n) {

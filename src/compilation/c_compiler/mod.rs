@@ -1,12 +1,15 @@
 //! The C Compiler for Jodin
 
 use crate::ast::JodinNode;
-use crate::compilation::{Compilable, Compiler, Context, PaddedWriter, Target};
+use crate::compilation::{Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target};
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
 mod c_type_compiler;
 mod top_level_declaration_compiler;
+
+pub use c_type_compiler::*;
+pub use top_level_declaration_compiler::TopLevelDeclarationCompiler;
 
 mod components;
 pub use components::*;
@@ -19,18 +22,41 @@ pub struct C99;
 impl Target for C99 {}
 
 /// Compiles Jodin into C99 code.
-pub struct C99Compiler {}
+pub struct C99Compiler<W: Write> {
+    writer: PaddedWriter<W>,
+}
 
-impl C99Compiler {
+impl<W: Write> C99Compiler<W> {
     /// Creates a new instance of the C99 compiler
-    pub fn new() -> Self {
-        C99Compiler {}
+    pub fn new(writer: W) -> Self {
+        C99Compiler {
+            writer: PaddedWriter::new(writer),
+        }
     }
 }
 
-impl Compiler<C99> for C99Compiler {
+impl<W: Write> Compiler<C99> for C99Compiler<W> {
     fn compile(&mut self, tree: &JodinNode, _settings: &CompilationSettings) -> JodinResult<()> {
         let context = Context::new();
+
+        let mut micro_compiler = TopLevelDeclarationCompiler;
+
+        println!("Compiling {:?}", tree);
+        let mut units = vec![];
+
+        for top_level in tree {
+            println!("Compiling Top Level: {:?}", top_level);
+            let new_units = micro_compiler.create_compilable(top_level)?;
+            units.extend(new_units);
+        }
+
+        for unit in &units {
+            unit.declaration(&context, &mut self.writer)?;
+        }
+
+        for unit in units {
+            unit.definition(&context, &mut self.writer)?;
+        }
 
         Ok(())
     }
