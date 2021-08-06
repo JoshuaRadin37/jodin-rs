@@ -421,10 +421,13 @@ impl FunctionInfo {
 
 impl SeparableCompilable for FunctionInfo {
     fn declaration<W: Write>(&self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        let return_type_name = format!("{}_return_type", self.name);
+        writeln!(w, "typedef {};", self.return_type.declarator(&return_type_name))?;
         writeln!(
             w,
-            "{}({});",
-            self.return_type.declarator(self.name.as_str()),
+            "{} {}({});",
+            return_type_name,
+            self.name,
             self.arguments
                 .iter()
                 .map(|(_, ty)| ty.abstract_declarator())
@@ -435,10 +438,12 @@ impl SeparableCompilable for FunctionInfo {
     }
 
     fn definition<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        writeln!(
+        let return_type_name = format!("{}_return_type", self.name);
+        write!(
             w,
-            "{}({})",
-            self.return_type.declarator(self.name.as_str()),
+            "{} {}({}) ",
+            return_type_name,
+            self.name,
             self.arguments
                 .iter()
                 .map(|(_, ty)| ty.abstract_declarator())
@@ -452,8 +457,17 @@ impl SeparableCompilable for FunctionInfo {
 /// Represents a C compound statement.
 pub struct CompoundStatement();
 
+impl CompoundStatement {
+    /// Create an empty compound statement
+    pub fn empty() -> Self {
+        CompoundStatement()
+    }
+}
+
 impl Compilable<C99> for CompoundStatement {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        write!(w, "{{ ")?;
+        writeln!(w, "}}")?;
         Ok(())
     }
 }

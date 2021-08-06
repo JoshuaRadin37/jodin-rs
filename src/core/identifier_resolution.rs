@@ -1,12 +1,11 @@
 //! The main method for tracking, then resolving identifiers.
 
-use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
 
-use ptree::{write_tree, Style, TreeItem};
+// use ptree::{write_tree, Style, TreeItem};
 
 use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::core::error::{JodinErrorType, JodinResult};
@@ -567,7 +566,7 @@ impl<T: Namespaced> Tree for Node<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct NodeInfo {
     id: Identifier,
     children: Vec<NodeInfo>,
@@ -597,7 +596,7 @@ impl<T: Namespaced> From<&Node<T>> for NodeInfo {
         }
     }
 }
-
+/*
 impl TreeItem for NodeInfo {
     type Child = Self;
 
@@ -625,6 +624,7 @@ impl TreeItem for NodeInfo {
     }
 }
 
+
 impl<T: Namespaced> Debug for NamespaceTree<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let tree = NodeInfo::from(&self.head);
@@ -634,9 +634,14 @@ impl<T: Namespaced> Debug for NamespaceTree<T> {
         write!(f, "{}", string)
     }
 }
-
+*/
+impl<T: Namespaced> Debug for NamespaceTree<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let tree = NodeInfo::from(&self.head);
+        write!(f, "{:#?}", tree)
+    }
+}
 /// Contains an identifier resolver and a mapping between full identifiers and it's associated value.
-
 pub struct Registry<T> {
     resolver: IdentifierResolver,
     mapping: HashMap<Identifier, T>,

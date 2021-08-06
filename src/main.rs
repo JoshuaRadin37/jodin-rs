@@ -36,6 +36,7 @@ fn main() -> JodinResult<()> {
 
     let inputs = command_args.values_of("INPUT").unwrap();
     let mut full_paths = vec![];
+
     for input in inputs {
         let paths = glob::glob(input)
             .expect(format!("Given input was an invalid path: {}", input).as_str())
@@ -99,7 +100,7 @@ fn main() -> JodinResult<()> {
 
     let mut buffer = String::new();
     compile_c99(optimized, &settings, &mut buffer)?;
-    println!("#### START C OUTPUT ####");
+    println!("####START C OUTPUT####");
     println!("{}", buffer);
     Ok(())
 }

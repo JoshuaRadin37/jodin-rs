@@ -1,6 +1,6 @@
 use crate::ast::{JodinNode, JodinNodeInner};
 use crate::compilation::c_compiler::components::TranslationUnit;
-use crate::compilation::c_compiler::{CType, CTypeCompiler, CValidIdentifier};
+use crate::compilation::c_compiler::{CType, CTypeCompiler, CValidIdentifier, FunctionCompiler};
 use crate::compilation::{MicroCompiler, C99};
 use crate::core::error::JodinResult;
 use crate::passes::analysis::ResolvedIdentityTag;
@@ -53,12 +53,11 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
                 }
             }
             FunctionDefinition {
-                name,
-                return_type,
-                arguments,
-                generic_parameters,
-                block,
-            } => {}
+               ..
+            } => {
+                let info = FunctionCompiler.create_compilable(tree)?;
+                ret.push(TranslationUnit::FunctionDefinition { function_info: info });
+            }
             StructureDefinition { .. } => {
                 let mut type_compiler = CTypeCompiler;
                 ret.extend(type_compiler.create_compilable(tree)?);

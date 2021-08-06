@@ -34,7 +34,7 @@ void* nullptr = 0;
 
 
 in math
-public unsigned int fib(unsigned int n) {
+public unsigned int* fib(unsigned int n) {
     switch (n) {
         case 0:
         case 1:
