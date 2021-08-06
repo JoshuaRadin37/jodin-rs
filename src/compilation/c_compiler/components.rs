@@ -306,7 +306,7 @@ impl Compilable<C99> for CType {
 pub struct CValidIdentifier(String);
 
 lazy_static! {
-    static ref C_ID_REGEX: Regex = Regex::new(r"[_a-zA-Z]\w").unwrap();
+    static ref C_ID_REGEX: Regex = Regex::new(r"[_a-zA-Z]\w*").unwrap();
 }
 
 impl CValidIdentifier {
@@ -336,16 +336,15 @@ impl CValidIdentifier {
     /// # Error
     /// Errors if the original id isn't valid in C.
     pub fn no_mangle(id: Identifier) -> JodinResult<Self> {
-        let id = id.strip_highest_parent().unwrap();
-        let to_string = id.to_string();
-        if let Some(mat) = C_ID_REGEX.find(to_string.as_str()) {
-            if mat.as_str() == to_string {
-                Ok(CValidIdentifier(to_string))
+        let id_this = id.this();
+        if let Some(mat) = C_ID_REGEX.find(id_this) {
+            if mat.as_str() == id_this {
+                Ok(CValidIdentifier(id_this.to_string()))
             } else {
-                Err(JodinErrorType::InvalidAsDirectCDeclaration(id).into())
+                Err(JodinErrorType::InvalidAsDirectCDeclaration(Identifier::from(id_this)).into())
             }
         } else {
-            Err(JodinErrorType::InvalidAsDirectCDeclaration(id).into())
+            Err(JodinErrorType::InvalidAsDirectCDeclaration(Identifier::from(id_this)).into())
         }
     }
 }

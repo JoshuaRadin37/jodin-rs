@@ -106,6 +106,28 @@ impl BlockIdentifierTag {
     }
 }
 
+/// Attach to a tag to disable identifier mangling
+#[derive(Debug)]
+pub struct NoMangle;
+
+impl Tag for NoMangle {
+    fn tag_type(&self) -> String {
+        "No Mangle".to_string()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
 #[derive(Debug)]
 pub struct IdentifierCreator {
     block_num: Vec<usize>,

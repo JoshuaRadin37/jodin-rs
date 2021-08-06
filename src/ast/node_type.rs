@@ -240,6 +240,16 @@ pub enum JodinNodeInner {
         /// The condition to check
         cond: JodinNode,
     },
+    /// Assign an expression to a value
+    AssignmentExpression {
+        /// `None` means that it's a default assignment
+        /// `Some(<op>)` is an operation assignment
+        maybe_assignment_operator: Option<Operator>,
+        /// The left hand side of the expression, an atom
+        lhs: JodinNode,
+        /// The right hand side of the expression
+        rhs: JodinNode,
+    },
 }
 
 impl JodinNodeInner {
@@ -424,6 +434,13 @@ impl JodinNodeInner {
             } => {
                 vec![declaration]
             }
+            JodinNodeInner::AssignmentExpression {
+                maybe_assignment_operator: _,
+                lhs,
+                rhs,
+            } => {
+                vec![lhs, rhs]
+            }
         };
         vector
     }
@@ -601,6 +618,13 @@ impl JodinNodeInner {
                 declaration: declaration,
             } => {
                 vec![declaration]
+            }
+            JodinNodeInner::AssignmentExpression {
+                maybe_assignment_operator: _,
+                lhs,
+                rhs,
+            } => {
+                vec![lhs, rhs]
             }
         };
         vector

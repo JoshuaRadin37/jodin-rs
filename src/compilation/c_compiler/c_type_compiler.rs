@@ -36,7 +36,7 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for StructCompiler {
             for member in members {
                 if let JodinNodeInner::NamedValue { name, var_type } = member.inner() {
                     let name_id = name.get_tag::<ResolvedIdentityTag>()?.absolute_id();
-                    let c_name = CValidIdentifier::new(name_id.clone());
+                    let c_name = CValidIdentifier::no_mangle(name_id.clone())?;
 
                     let field_type = CType::from(var_type);
 

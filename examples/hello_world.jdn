@@ -27,8 +27,10 @@ using std::string::String;
 
 
 struct recursive {
-    recursive r;
+    recursive* r;
 }
+
+void* nullptr = 0;
 
 
 in math
@@ -45,6 +47,12 @@ public unsigned int fib(unsigned int n) {
 int main(int argc, String[] args) {
     int a = j;
     int b = math::fib(l);
+
+    int value = 3;
+    value += 1;
+
+    recursive r = recursive { .r = nullptr };
+    r.r = nullptr;
 
     return 0;
 }

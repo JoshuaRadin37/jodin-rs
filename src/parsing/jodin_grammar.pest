@@ -334,6 +334,7 @@ compound_statement = {
 }
 
 statement = {
+    assignment_statement |
     labeled_statement |
     compound_statement |
     expression_statement |
@@ -433,6 +434,10 @@ uni_op = {
 
 cast_expression = {
     "(" ~ canonical_type ~ ")" ~ factor
+}
+
+assignment_statement = {
+    atom ~ assignment_operator ~ expression ~ ";"
 }
 
 sizeof_expression = {

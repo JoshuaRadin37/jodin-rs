@@ -869,6 +869,34 @@ impl JodinNodeGenerator<'_> {
                 }
                 .into()
             }
+            JodinRule::assignment_statement => {
+                let mut inner = pair.into_inner();
+                let lhs = self.generate_node(inner.next().unwrap(), vec![])?;
+
+                let operator_rule: JodinRule =
+                    inner.next().unwrap().into_inner().next().unwrap().as_rule();
+                let maybe_assignment_operator = match operator_rule {
+                    JodinRule::t_assign => None,
+                    JodinRule::t_assign_plus => Some(Operator::Plus),
+                    JodinRule::t_assign_minus => Some(Operator::Minus),
+                    JodinRule::t_assign_star => Some(Operator::Star),
+                    JodinRule::t_assign_div => Some(Operator::Divide),
+                    JodinRule::t_assign_mod => Some(Operator::Modulo),
+                    JodinRule::t_assign_or => Some(Operator::Or),
+                    JodinRule::t_assign_and => Some(Operator::And),
+                    JodinRule::t_assign_xor => Some(Operator::Xor),
+                    _ => unreachable!(),
+                };
+
+                let rhs = self.generate_node(inner.next().unwrap(), vec![])?;
+
+                JodinNodeInner::AssignmentExpression {
+                    maybe_assignment_operator,
+                    lhs,
+                    rhs,
+                }
+                .into()
+            }
             // just go into inner
             JodinRule::top_level_declaration
             | JodinRule::jodin_file

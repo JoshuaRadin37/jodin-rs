@@ -99,6 +99,7 @@ fn main() -> JodinResult<()> {
 
     let mut buffer = String::new();
     compile_c99(optimized, &settings, &mut buffer)?;
+    println!("#### START C OUTPUT ####");
     println!("{}", buffer);
     Ok(())
 }
