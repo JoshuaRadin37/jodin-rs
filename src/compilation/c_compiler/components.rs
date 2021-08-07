@@ -12,6 +12,8 @@ use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use std::fmt::Write;
+use crate::core::literal::Literal;
+use crate::core::operator::Operator;
 
 /// Represents a C translation Unit
 pub enum TranslationUnit {
@@ -455,7 +457,9 @@ impl SeparableCompilable for FunctionInfo {
 }
 
 /// Represents a C compound statement.
-pub struct CompoundStatement();
+pub struct CompoundStatement {
+    block_statement: Statement
+}
 
 impl CompoundStatement {
     /// Create an empty compound statement
@@ -468,6 +472,127 @@ impl Compilable<C99> for CompoundStatement {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         write!(w, "{{ ")?;
         writeln!(w, "}}")?;
+        Ok(())
+    }
+}
+
+/// A statement type within C
+pub enum Statement {
+    /// A block statement
+    Block(Vec<Statement>),
+    VariableDeclaration {
+        /// The declaration type
+        c_type: CType,
+        /// The identifier
+        identifier: CValidIdentifier,
+        /// An optional initialization statement
+        maybe_init: Option<()>
+    },
+    /// Switch statement
+    SwitchStatement,
+    /// If statement
+    IfStatement,
+    /// While statement
+    WhileStatement,
+    /// For statement
+    ForStatement,
+    /// Do while statement
+    DoWhileStatement,
+    /// Just an expression statement
+    ExpressionStatement,
+    /// An assignment statement
+    AssignmentStatement
+}
+
+/// A c expression
+pub enum Expression {
+    /// A literal
+    Literal(Literal),
+    /// A variable
+    Variable(CValidIdentifier),
+    /// A bi operation
+    Binop {
+        /// Left hand side of the expression
+        lhs: Box<Expression>,
+        /// The operator
+        op: Operator,
+        /// Right hand side of the expression
+        rhs: Box<Expression>
+    },
+    /// A uni op
+    Uniop {
+        /// The relevant expression
+        inner: Box<Expression>,
+        /// The operator
+        op: Operator,
+        /// Whether its a pre-op (++i) or post-op (i++)
+        is_post_op: bool,
+    },
+    /// Call a function
+    Call {
+        /// Calling expression
+        to_call: Box<Expression>,
+        /// Arguments to call
+        arguments: Vec<Expression>
+    }
+}
+
+impl Compilable<C99> for Expression {
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+
+        match self {
+            Expression::Literal(l) => {
+                let as_string = match l {
+                    Literal::String(s) => { format!("{:?}", s)}
+                    Literal::Char(c) => { format!("'{}'", c)}
+                    Literal::Boolean(b) => {
+                        match b {
+                            true => { "1".to_string() }
+                            false => { "0".to_string() }
+                        }
+                    }
+                    Literal::Float(f) => {
+                        format!("{}F", f)
+                    }
+                    Literal::Double(d) => {
+                        format!("{}L", d)
+                    }
+                    Literal::Byte(b) => {
+                        format!("((char) {})", b)
+                    }
+                    Literal::Short(s) => {
+                        format!("((short) {})", s)
+                    }
+                    Literal::Int(i) => {
+                        i.to_string()
+                    }
+                    Literal::Long(l) => {
+                        format!("{}L", l)
+                    }
+                    Literal::UnsignedByte(b) => {
+                        format!("((unsigned char) {})", b)
+                    }
+                    Literal::UnsignedShort(s) => {
+                        format!("((unsigned short) {})", s)
+                    }
+                    Literal::UnsignedInt(i) => {
+                        format!("{}U", i)
+                    }
+                    Literal::UnsignedLong(l) => {
+                        format!("{}UL", l)
+                    }
+                };
+                write!(w, "{}", as_string);
+            }
+            Expression::Variable(v) => {
+                write!(w, "{}", v);
+            }
+            Expression::Binop { lhs, op, rhs } => {
+
+            }
+            Expression::Uniop { .. } => {}
+            Expression::Call { .. } => {}
+        }
         Ok(())
     }
 }

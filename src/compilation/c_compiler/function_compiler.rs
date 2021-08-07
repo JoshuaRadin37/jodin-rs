@@ -1,11 +1,10 @@
-use std::iter::FromIterator;
 
-use crate::{ast::{JodinNode, JodinNodeInner}, compilation::{MicroCompiler, c_compiler::{CType, CValidIdentifier}}, core::{error::{JodinErrorType, JodinResult}, generic_context::GenericContext}, passes::analysis::ResolvedIdentityTag};
+use crate::{ast::{JodinNode, JodinNodeInner}, compilation::{MicroCompiler, c_compiler::{CType, CValidIdentifier}}, core::{error::{JodinErrorType, JodinResult}}, passes::analysis::ResolvedIdentityTag};
 
 use super::{C99, CompoundStatement, FunctionInfo};
 
 /// Compiles functions
-pub struct FunctionCompiler(GenericContext);
+pub struct FunctionCompiler;
 
 impl MicroCompiler<C99, FunctionInfo> for FunctionCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<FunctionInfo> {
@@ -19,9 +18,20 @@ impl MicroCompiler<C99, FunctionInfo> for FunctionCompiler {
         {
             let c_valid_id: CValidIdentifier = CValidIdentifier::new(name.get_tag::<ResolvedIdentityTag>()?.absolute_id().clone());
             let return_type = CType::from(return_type);
-            let arguments = vec![];
+            let mut c_arguments = vec![];
+
+            for arg in arguments {
+                if let JodinNodeInner::NamedValue { name, var_type } = arg.inner() {
+                    let c_type = CType::from(var_type);
+                    let name = CValidIdentifier::new(name.get_tag::<ResolvedIdentityTag>()?.absolute_id().clone());
+
+                    c_arguments.push((name, c_type));
+                } else {
+                    return Err(JodinErrorType::IllegalTreeType.into());
+                }
+            }
             
-            Ok(FunctionInfo::new(c_valid_id, return_type, arguments, CompoundStatement::empty()))
+            Ok(FunctionInfo::new(c_valid_id, return_type, c_arguments, CompoundStatement::empty()))
         } else {
             Err(JodinErrorType::IllegalTreeType.into())
         }
@@ -31,13 +41,12 @@ impl MicroCompiler<C99, FunctionInfo> for FunctionCompiler {
 /// Compile methods
 pub struct MethodCompiler<'a> {
     this: &'a CValidIdentifier,
-    generics: GenericContext
 }
 
 impl<'a> MethodCompiler<'a> {
     /// Create a new method compiler, using a c valid identifier to represent the
     /// this type
     pub fn new(this: &'a CValidIdentifier) -> Self {
-        MethodCompiler { this, generics: GenericContext::from_iter(vec![]) }
+        MethodCompiler { this }
     }
 }
