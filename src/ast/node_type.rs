@@ -12,7 +12,7 @@ use crate::parsing::JodinRule;
 
 /// Contains JodinNode variant information.
 #[derive(Debug)]
-pub enum JodinNodeInner {
+pub enum JodinNodeType {
     /// Store an intermediate type.
     Type(IntermediateType),
     /// Store a literal.
@@ -252,7 +252,7 @@ pub enum JodinNodeInner {
     },
 }
 
-impl JodinNodeInner {
+impl JodinNodeType {
     /// Convert this value into an instance of Result.
     pub fn into_result<E>(self) -> Result<JodinNode, E> {
         Ok(self.into())
@@ -261,16 +261,16 @@ impl JodinNodeInner {
     /// The child JodinNodes of this variant.
     pub fn children(&self) -> impl IntoIterator<Item = &JodinNode> {
         let vector: Vec<&JodinNode> = match self {
-            JodinNodeInner::Type(_) => {
+            JodinNodeType::Type(_) => {
                 vec![]
             }
-            JodinNodeInner::Literal(_) => {
+            JodinNodeType::Literal(_) => {
                 vec![]
             }
-            JodinNodeInner::Identifier(_) => {
+            JodinNodeType::Identifier(_) => {
                 vec![]
             }
-            JodinNodeInner::VarDeclarations {
+            JodinNodeType::VarDeclarations {
                 var_type,
                 names,
                 values,
@@ -280,7 +280,7 @@ impl JodinNodeInner {
                 ret.extend(values.iter().filter_map(|node| node.as_ref()));
                 ret
             }
-            JodinNodeInner::FunctionDefinition {
+            JodinNodeType::FunctionDefinition {
                 name,
                 return_type: _,
                 arguments: parameters,
@@ -293,37 +293,37 @@ impl JodinNodeInner {
                 ret.push(block);
                 ret
             }
-            JodinNodeInner::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeInner::StructureDefinition { name, members } => {
+            JodinNodeType::Block { expressions } => expressions.into_iter().collect(),
+            JodinNodeType::StructureDefinition { name, members } => {
                 let mut ret = vec![name];
                 ret.extend(members);
                 ret
             }
-            JodinNodeInner::NamedValue { name, var_type: _ } => {
+            JodinNodeType::NamedValue { name, var_type: _ } => {
                 vec![name]
             }
-            JodinNodeInner::Uniop { op: _, inner } => {
+            JodinNodeType::Uniop { op: _, inner } => {
                 vec![inner]
             }
-            JodinNodeInner::CastExpression { to_type: _, factor } => {
+            JodinNodeType::CastExpression { to_type: _, factor } => {
                 vec![factor]
             }
-            JodinNodeInner::Postop { op: _, inner } => {
+            JodinNodeType::Postop { op: _, inner } => {
                 vec![inner]
             }
-            JodinNodeInner::Binop { op: _, lhs, rhs } => {
+            JodinNodeType::Binop { op: _, lhs, rhs } => {
                 vec![lhs, rhs]
             }
-            JodinNodeInner::Ternary { cond, yes, no } => {
+            JodinNodeType::Ternary { cond, yes, no } => {
                 vec![cond, yes, no]
             }
-            JodinNodeInner::Index {
+            JodinNodeType::Index {
                 indexed,
                 expression,
             } => {
                 vec![indexed, expression]
             }
-            JodinNodeInner::Call {
+            JodinNodeType::Call {
                 called,
                 generics_instance,
                 arguments: parameters,
@@ -333,35 +333,35 @@ impl JodinNodeInner {
                 ret.extend(parameters);
                 ret
             }
-            JodinNodeInner::GetMember { compound, id } => {
+            JodinNodeType::GetMember { compound, id } => {
                 vec![compound, id]
             }
-            JodinNodeInner::TopLevelDeclarations { decs } => decs.iter().collect(),
-            JodinNodeInner::InNamespace { namespace, inner } => {
+            JodinNodeType::TopLevelDeclarations { decs } => decs.iter().collect(),
+            JodinNodeType::InNamespace { namespace, inner } => {
                 vec![namespace, inner]
             }
-            JodinNodeInner::ImportIdentifiers { .. } => {
+            JodinNodeType::ImportIdentifiers { .. } => {
                 vec![]
             }
-            JodinNodeInner::Unimplemented { .. } => {
+            JodinNodeType::Unimplemented { .. } => {
                 vec![]
             }
-            JodinNodeInner::NodeVector { vec } => vec.iter().collect(),
+            JodinNodeType::NodeVector { vec } => vec.iter().collect(),
 
-            JodinNodeInner::ReturnValue { expression } => expression.iter().collect(),
-            JodinNodeInner::Continue => {
+            JodinNodeType::ReturnValue { expression } => expression.iter().collect(),
+            JodinNodeType::Continue => {
                 vec![]
             }
-            JodinNodeInner::Break => {
+            JodinNodeType::Break => {
                 vec![]
             }
-            JodinNodeInner::Empty => {
+            JodinNodeType::Empty => {
                 vec![]
             }
-            JodinNodeInner::Super => {
+            JodinNodeType::Super => {
                 vec![]
             }
-            JodinNodeInner::ConstructorCall {
+            JodinNodeType::ConstructorCall {
                 name: _,
                 generic_parameters,
                 arguments,
@@ -371,14 +371,14 @@ impl JodinNodeInner {
                 ret.extend(arguments);
                 ret
             }
-            JodinNodeInner::Dereference { node } => {
+            JodinNodeType::Dereference { node } => {
                 vec![node]
             }
-            JodinNodeInner::GetReference { node } => {
+            JodinNodeType::GetReference { node } => {
                 vec![node]
             }
 
-            JodinNodeInner::StructInitializer {
+            JodinNodeType::StructInitializer {
                 struct_id,
                 fields_and_values,
             } => {
@@ -390,7 +390,7 @@ impl JodinNodeInner {
                 );
                 vector
             }
-            JodinNodeInner::IfStatement {
+            JodinNodeType::IfStatement {
                 cond,
                 statement,
                 else_statement,
@@ -401,10 +401,10 @@ impl JodinNodeInner {
                 }
                 ret
             }
-            JodinNodeInner::WhileStatement { cond, statement } => {
+            JodinNodeType::WhileStatement { cond, statement } => {
                 vec![cond, statement]
             }
-            JodinNodeInner::ForStatement {
+            JodinNodeType::ForStatement {
                 init,
                 cond,
                 delta,
@@ -418,7 +418,7 @@ impl JodinNodeInner {
                 ret.push(statement);
                 ret
             }
-            JodinNodeInner::SwitchStatement {
+            JodinNodeType::SwitchStatement {
                 to_switch,
                 labeled_statements,
             } => {
@@ -426,15 +426,15 @@ impl JodinNodeInner {
                 ret.extend(labeled_statements);
                 ret
             }
-            JodinNodeInner::DoStatement { statement, cond } => {
+            JodinNodeType::DoStatement { statement, cond } => {
                 vec![cond, statement]
             }
-            JodinNodeInner::ExternDeclaration {
+            JodinNodeType::ExternDeclaration {
                 declaration: declaration,
             } => {
                 vec![declaration]
             }
-            JodinNodeInner::AssignmentExpression {
+            JodinNodeType::AssignmentExpression {
                 maybe_assignment_operator: _,
                 lhs,
                 rhs,
@@ -448,16 +448,16 @@ impl JodinNodeInner {
     /// The mutable child JodinNodes of this variant.
     pub fn children_mut(&mut self) -> impl IntoIterator<Item = &mut JodinNode> {
         let vector: Vec<&mut JodinNode> = match self {
-            JodinNodeInner::Type(_) => {
+            JodinNodeType::Type(_) => {
                 vec![]
             }
-            JodinNodeInner::Literal(_) => {
+            JodinNodeType::Literal(_) => {
                 vec![]
             }
-            JodinNodeInner::Identifier(_) => {
+            JodinNodeType::Identifier(_) => {
                 vec![]
             }
-            JodinNodeInner::VarDeclarations {
+            JodinNodeType::VarDeclarations {
                 var_type,
                 names,
                 values,
@@ -467,7 +467,7 @@ impl JodinNodeInner {
                 ret.extend(values.iter_mut().filter_map(|node| node.as_mut()));
                 ret
             }
-            JodinNodeInner::FunctionDefinition {
+            JodinNodeType::FunctionDefinition {
                 name,
                 return_type: _,
                 arguments: parameters,
@@ -480,37 +480,37 @@ impl JodinNodeInner {
                 ret.push(block);
                 ret
             }
-            JodinNodeInner::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeInner::StructureDefinition { name, members } => {
+            JodinNodeType::Block { expressions } => expressions.into_iter().collect(),
+            JodinNodeType::StructureDefinition { name, members } => {
                 let mut ret = vec![name];
                 ret.extend(members);
                 ret
             }
-            JodinNodeInner::NamedValue { name, var_type: _ } => {
+            JodinNodeType::NamedValue { name, var_type: _ } => {
                 vec![name]
             }
-            JodinNodeInner::Uniop { op: _, inner } => {
+            JodinNodeType::Uniop { op: _, inner } => {
                 vec![inner]
             }
-            JodinNodeInner::CastExpression { to_type: _, factor } => {
+            JodinNodeType::CastExpression { to_type: _, factor } => {
                 vec![factor]
             }
-            JodinNodeInner::Postop { op: _, inner } => {
+            JodinNodeType::Postop { op: _, inner } => {
                 vec![inner]
             }
-            JodinNodeInner::Binop { op: _, lhs, rhs } => {
+            JodinNodeType::Binop { op: _, lhs, rhs } => {
                 vec![lhs, rhs]
             }
-            JodinNodeInner::Ternary { cond, yes, no } => {
+            JodinNodeType::Ternary { cond, yes, no } => {
                 vec![cond, yes, no]
             }
-            JodinNodeInner::Index {
+            JodinNodeType::Index {
                 indexed,
                 expression,
             } => {
                 vec![indexed, expression]
             }
-            JodinNodeInner::Call {
+            JodinNodeType::Call {
                 called,
                 generics_instance,
                 arguments: parameters,
@@ -520,34 +520,34 @@ impl JodinNodeInner {
                 ret.extend(parameters);
                 ret
             }
-            JodinNodeInner::GetMember { compound, id } => {
+            JodinNodeType::GetMember { compound, id } => {
                 vec![compound, id]
             }
-            JodinNodeInner::TopLevelDeclarations { decs } => decs.iter_mut().collect(),
-            JodinNodeInner::InNamespace { namespace, inner } => {
+            JodinNodeType::TopLevelDeclarations { decs } => decs.iter_mut().collect(),
+            JodinNodeType::InNamespace { namespace, inner } => {
                 vec![namespace, inner]
             }
-            JodinNodeInner::ImportIdentifiers { .. } => {
+            JodinNodeType::ImportIdentifiers { .. } => {
                 vec![]
             }
-            JodinNodeInner::Unimplemented { .. } => {
+            JodinNodeType::Unimplemented { .. } => {
                 vec![]
             }
-            JodinNodeInner::NodeVector { vec } => vec.iter_mut().collect(),
-            JodinNodeInner::ReturnValue { expression } => expression.iter_mut().collect(),
-            JodinNodeInner::Continue => {
+            JodinNodeType::NodeVector { vec } => vec.iter_mut().collect(),
+            JodinNodeType::ReturnValue { expression } => expression.iter_mut().collect(),
+            JodinNodeType::Continue => {
                 vec![]
             }
-            JodinNodeInner::Break => {
+            JodinNodeType::Break => {
                 vec![]
             }
-            JodinNodeInner::Empty => {
+            JodinNodeType::Empty => {
                 vec![]
             }
-            JodinNodeInner::Super => {
+            JodinNodeType::Super => {
                 vec![]
             }
-            JodinNodeInner::ConstructorCall {
+            JodinNodeType::ConstructorCall {
                 name: _,
                 generic_parameters,
                 arguments,
@@ -557,13 +557,13 @@ impl JodinNodeInner {
                 ret.extend(arguments);
                 ret
             }
-            JodinNodeInner::Dereference { node } => {
+            JodinNodeType::Dereference { node } => {
                 vec![node]
             }
-            JodinNodeInner::GetReference { node } => {
+            JodinNodeType::GetReference { node } => {
                 vec![node]
             }
-            JodinNodeInner::StructInitializer {
+            JodinNodeType::StructInitializer {
                 struct_id,
                 fields_and_values,
             } => {
@@ -575,7 +575,7 @@ impl JodinNodeInner {
                 );
                 vector
             }
-            JodinNodeInner::IfStatement {
+            JodinNodeType::IfStatement {
                 cond,
                 statement,
                 else_statement,
@@ -586,10 +586,10 @@ impl JodinNodeInner {
                 }
                 ret
             }
-            JodinNodeInner::WhileStatement { cond, statement } => {
+            JodinNodeType::WhileStatement { cond, statement } => {
                 vec![cond, statement]
             }
-            JodinNodeInner::ForStatement {
+            JodinNodeType::ForStatement {
                 init,
                 cond,
                 delta,
@@ -603,7 +603,7 @@ impl JodinNodeInner {
                 ret.push(statement);
                 ret
             }
-            JodinNodeInner::SwitchStatement {
+            JodinNodeType::SwitchStatement {
                 to_switch,
                 labeled_statements,
             } => {
@@ -611,15 +611,15 @@ impl JodinNodeInner {
                 ret.extend(labeled_statements);
                 ret
             }
-            JodinNodeInner::DoStatement { statement, cond } => {
+            JodinNodeType::DoStatement { statement, cond } => {
                 vec![cond, statement]
             }
-            JodinNodeInner::ExternDeclaration {
+            JodinNodeType::ExternDeclaration {
                 declaration: declaration,
             } => {
                 vec![declaration]
             }
-            JodinNodeInner::AssignmentExpression {
+            JodinNodeType::AssignmentExpression {
                 maybe_assignment_operator: _,
                 lhs,
                 rhs,
@@ -631,8 +631,8 @@ impl JodinNodeInner {
     }
 }
 
-impl From<JodinNodeInner> for JodinNode {
-    fn from(i: JodinNodeInner) -> Self {
+impl From<JodinNodeType> for JodinNode {
+    fn from(i: JodinNodeType) -> Self {
         JodinNode::new(i)
     }
 }

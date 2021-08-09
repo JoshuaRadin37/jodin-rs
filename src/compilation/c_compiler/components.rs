@@ -10,10 +10,11 @@ use crate::compilation::c_compiler::SeparableCompilable;
 use crate::compilation::{Compilable, Context, PaddedWriter, C99};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
-use crate::core::types::primitives::Primitive;
-use std::fmt::Write;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
+use crate::core::types::primitives::Primitive;
+use itertools::Itertools;
+use std::fmt::Write;
 
 /// Represents a C translation Unit
 pub enum TranslationUnit {
@@ -90,7 +91,7 @@ impl SeparableCompilable for TranslationUnit {
 }
 
 /// The abstract type represented in C at its use
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CTypeDeclarator {
     /// A pointer type
     Pointer(Box<CTypeDeclarator>),
@@ -149,7 +150,7 @@ impl CTypeDeclarator {
 }
 
 /// A type specifier
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum CTypeSpecifier {
     /// A named structure (such as struct obj)
     NamedStruct {
@@ -177,7 +178,7 @@ pub enum CTypeSpecifier {
 ///
 /// assert_eq!(primtive.declarator("hello"), "int hello");
 /// ```
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CType {
     is_const: bool,
     specifier: CTypeSpecifier,
@@ -324,11 +325,19 @@ impl CValidIdentifier {
 
         //let id = id.strip_highest_parent().unwrap();
         for (index, char) in id.to_string().char_indices() {
-            let value = char as u8 as u64;
-            hash += value << index;
+            if char.is_ascii_alphanumeric() || char == '_' {
+                let value = char as u8 as u64;
+                hash += value << index;
+            }
         }
 
-        let id_string: String = id.iter().collect::<Vec<_>>().join("_");
+        let id_string: String = id
+            .iter()
+            .map(|s| s.chars().collect::<Vec<_>>())
+            .intersperse(vec!['_'])
+            .flatten()
+            .filter(|char| char.is_ascii_alphanumeric() || *char == '_')
+            .collect::<String>();
         let c_id = format!("{}{}", id_string, hash);
         CValidIdentifier(c_id)
     }
@@ -348,6 +357,12 @@ impl CValidIdentifier {
         } else {
             Err(JodinErrorType::InvalidAsDirectCDeclaration(Identifier::from(id_this)).into())
         }
+    }
+}
+
+impl From<&Identifier> for CValidIdentifier {
+    fn from(id: &Identifier) -> Self {
+        CValidIdentifier::new(id.clone())
     }
 }
 
@@ -424,7 +439,11 @@ impl FunctionInfo {
 impl SeparableCompilable for FunctionInfo {
     fn declaration<W: Write>(&self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         let return_type_name = format!("{}_return_type", self.name);
-        writeln!(w, "typedef {};", self.return_type.declarator(&return_type_name))?;
+        writeln!(
+            w,
+            "typedef {};",
+            self.return_type.declarator(&return_type_name)
+        )?;
         writeln!(
             w,
             "{} {}({});",
@@ -448,7 +467,7 @@ impl SeparableCompilable for FunctionInfo {
             self.name,
             self.arguments
                 .iter()
-                .map(|(_, ty)| ty.abstract_declarator())
+                .map(|(id, ty)| ty.declarator(&id))
                 .collect::<Vec<_>>()
                 .join(","),
         )?;
@@ -458,35 +477,52 @@ impl SeparableCompilable for FunctionInfo {
 
 /// Represents a C compound statement.
 pub struct CompoundStatement {
-    block_statement: Statement
+    block_statement: Vec<Statement>,
 }
 
 impl CompoundStatement {
     /// Create an empty compound statement
     pub fn empty() -> Self {
-        CompoundStatement()
+        Self {
+            block_statement: vec![],
+        }
+    }
+
+    /// Create a compound statement using these statements
+    pub fn new(block_statement: Vec<Statement>) -> Self {
+        CompoundStatement { block_statement }
     }
 }
 
 impl Compilable<C99> for CompoundStatement {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         write!(w, "{{ ")?;
+        if !self.block_statement.is_empty() {
+            writeln!(w)?;
+            w.increase_pad();
+            for statement in self.block_statement {
+                statement.compile(context, w)?;
+            }
+            w.decrease_pad();
+        }
         writeln!(w, "}}")?;
         Ok(())
     }
 }
 
 /// A statement type within C
+#[derive(Debug)]
 pub enum Statement {
     /// A block statement
     Block(Vec<Statement>),
+    /// Declares a variable
     VariableDeclaration {
         /// The declaration type
         c_type: CType,
         /// The identifier
         identifier: CValidIdentifier,
         /// An optional initialization statement
-        maybe_init: Option<()>
+        maybe_init: Option<Expression>,
     },
     /// Switch statement
     SwitchStatement,
@@ -501,10 +537,48 @@ pub enum Statement {
     /// Just an expression statement
     ExpressionStatement,
     /// An assignment statement
-    AssignmentStatement
+    AssignmentStatement,
+}
+
+impl Compilable<C99> for Statement {
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        match self {
+            Statement::Block(b) => {
+                write!(w, "{{")?;
+                if !b.is_empty() {
+                    writeln!(w)?;
+                    for statement in b {
+                        statement.compile(context, w)?;
+                    }
+                }
+                writeln!(w, "}}")?;
+            }
+            Statement::VariableDeclaration {
+                c_type,
+                identifier,
+                maybe_init,
+            } => {
+                writeln!(w, "{};", c_type.declarator(&identifier))?;
+                if let Some(expr) = maybe_init {
+                    write!(w, "{} = ", identifier)?;
+                    expr.compile(context, w)?;
+                    writeln!(w, ";")?;
+                }
+            }
+            Statement::SwitchStatement => {}
+            Statement::IfStatement => {}
+            Statement::WhileStatement => {}
+            Statement::ForStatement => {}
+            Statement::DoWhileStatement => {}
+            Statement::ExpressionStatement => {}
+            Statement::AssignmentStatement => {}
+        }
+        Ok(())
+    }
 }
 
 /// A c expression
+#[derive(Debug)]
 pub enum Expression {
     /// A literal
     Literal(Literal),
@@ -517,7 +591,7 @@ pub enum Expression {
         /// The operator
         op: Operator,
         /// Right hand side of the expression
-        rhs: Box<Expression>
+        rhs: Box<Expression>,
     },
     /// A uni op
     Uniop {
@@ -533,24 +607,39 @@ pub enum Expression {
         /// Calling expression
         to_call: Box<Expression>,
         /// Arguments to call
-        arguments: Vec<Expression>
-    }
+        arguments: Vec<Expression>,
+    },
+    /// Get a member from a struct
+    GetMember {
+        /// The parent object
+        parent: Box<Expression>,
+        /// The field name
+        field: CValidIdentifier,
+    },
+    /// Apply the index function
+    Index {
+        /// The array
+        parent: Box<Expression>,
+        /// The index of the array
+        index: Box<Expression>,
+    },
 }
 
 impl Compilable<C99> for Expression {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-
         match self {
             Expression::Literal(l) => {
                 let as_string = match l {
-                    Literal::String(s) => { format!("{:?}", s)}
-                    Literal::Char(c) => { format!("'{}'", c)}
-                    Literal::Boolean(b) => {
-                        match b {
-                            true => { "1".to_string() }
-                            false => { "0".to_string() }
-                        }
+                    Literal::String(s) => {
+                        format!("{:?}", s)
                     }
+                    Literal::Char(c) => {
+                        format!("'{}'", c)
+                    }
+                    Literal::Boolean(b) => match b {
+                        true => "1".to_string(),
+                        false => "0".to_string(),
+                    },
                     Literal::Float(f) => {
                         format!("{}F", f)
                     }
@@ -563,9 +652,7 @@ impl Compilable<C99> for Expression {
                     Literal::Short(s) => {
                         format!("((short) {})", s)
                     }
-                    Literal::Int(i) => {
-                        i.to_string()
-                    }
+                    Literal::Int(i) => i.to_string(),
                     Literal::Long(l) => {
                         format!("{}L", l)
                     }
@@ -582,16 +669,22 @@ impl Compilable<C99> for Expression {
                         format!("{}UL", l)
                     }
                 };
-                write!(w, "{}", as_string);
+                write!(w, "{}", as_string)?;
             }
             Expression::Variable(v) => {
-                write!(w, "{}", v);
+                write!(w, "{}", v)?;
             }
             Expression::Binop { lhs, op, rhs } => {
-
+                write!(w, "(")?;
+                lhs.compile(context, w)?;
+                write!(w, ") {} (", op)?;
+                rhs.compile(context, w)?;
+                write!(w, ")")?;
             }
             Expression::Uniop { .. } => {}
             Expression::Call { .. } => {}
+            Expression::GetMember { .. } => {}
+            Expression::Index { .. } => {}
         }
         Ok(())
     }

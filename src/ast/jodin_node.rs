@@ -1,6 +1,6 @@
 //! The main building block for the Abstract Syntax Tree
 
-use crate::ast::node_type::JodinNodeInner;
+use crate::ast::node_type::JodinNodeType;
 use crate::ast::tags::{Tag, TagUtilities};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::utility::Tree;
@@ -9,13 +9,13 @@ use std::fmt::{Debug, Formatter};
 
 /// Contains the inner jodin node type and it's tags
 pub struct JodinNode {
-    jodin_node_type: Box<JodinNodeInner>,
+    jodin_node_type: Box<JodinNodeType>,
     tags: Vec<Box<dyn 'static + Tag>>,
 }
 
 impl JodinNode {
     /// Create a new `JodinNode` from an inner type.
-    pub fn new(jodin_node_type: JodinNodeInner) -> Self {
+    pub fn new(jodin_node_type: JodinNodeType) -> Self {
         JodinNode {
             jodin_node_type: Box::new(jodin_node_type),
             tags: vec![],
@@ -23,17 +23,17 @@ impl JodinNode {
     }
 
     /// Consume the JodinNode to get it's inner type.
-    pub fn into_inner(self) -> JodinNodeInner {
+    pub fn into_inner(self) -> JodinNodeType {
         *self.jodin_node_type
     }
 
     /// The inner type of the node.
-    pub fn inner(&self) -> &JodinNodeInner {
+    pub fn inner(&self) -> &JodinNodeType {
         &*self.jodin_node_type
     }
 
     /// A mutable reference to the inner type of the node.
-    pub fn inner_mut(&mut self) -> &mut JodinNodeInner {
+    pub fn inner_mut(&mut self) -> &mut JodinNodeType {
         &mut *self.jodin_node_type
     }
 
@@ -53,10 +53,10 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::passes::analysis::ResolvedIdentityTag;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(ResolvedIdentityTag::new(Identifier::from_array(["namespace", "id"]))).unwrap();
     /// ```
     pub fn add_tag<T: 'static + Tag>(&mut self, tag: T) -> JodinResult<()> {
@@ -92,11 +92,11 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
     /// use std::iter::FromIterator;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_boxed_tags(
     ///     vec![Box::new(DummyTag), Box::new(DummyTag)]
     /// ).unwrap();
@@ -154,10 +154,10 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
     /// node.get_tag::<DummyTag>().unwrap();
@@ -176,10 +176,10 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
     /// let tags: Vec<&DummyTag> = node.get_tags();
@@ -196,10 +196,10 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
     /// let tag: &mut DummyTag = node.get_tag_mut().unwrap();
@@ -214,10 +214,10 @@ impl JodinNode {
     ///
     /// ```
     /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeInner;
+    /// use jodin_rs::ast::JodinNodeType;
     /// use jodin_rs::core::identifier::Identifier;
     /// use jodin_rs::ast::tags::DummyTag;
-    /// let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("id")));
+    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
     /// let tags: Vec<&mut DummyTag> = node.get_tags_mut();
@@ -235,7 +235,7 @@ impl JodinNode {
 
     /// Creates an empty JodinNode
     pub fn empty() -> Self {
-        JodinNodeInner::Empty.into()
+        JodinNodeType::Empty.into()
     }
 }
 
@@ -286,14 +286,14 @@ impl<'a> IntoIterator for &'a JodinNode {
 #[cfg(test)]
 mod tests {
     use crate::ast::jodin_node::JodinNode;
-    use crate::ast::node_type::JodinNodeInner;
+    use crate::ast::node_type::JodinNodeType;
     use crate::ast::tags::DummyTag;
     use crate::core::identifier::Identifier;
     use crate::passes::analysis::{BlockIdentifierTag, ResolvedIdentityTag};
 
     #[test]
     fn get_tags_of_type() {
-        let mut node = JodinNode::new(JodinNodeInner::Identifier(Identifier::from("hi")));
+        let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("hi")));
         node.add_tag(DummyTag);
         node.add_tag(BlockIdentifierTag::new(5));
         node.add_tag(DummyTag);

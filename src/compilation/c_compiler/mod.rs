@@ -7,10 +7,12 @@ use crate::core::error::JodinResult;
 
 mod c_type_compiler;
 mod function_compiler;
+mod statement_compiler;
 mod top_level_declaration_compiler;
 
 pub use c_type_compiler::*;
 pub use function_compiler::{FunctionCompiler, MethodCompiler};
+pub use statement_compiler::StatementCompiler;
 pub use top_level_declaration_compiler::TopLevelDeclarationCompiler;
 
 mod components;

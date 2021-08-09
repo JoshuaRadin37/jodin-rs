@@ -6,7 +6,7 @@ use crate::core::types::{JodinType, Type};
 use std::fmt::{Display, Formatter};
 
 /// A primitive data type within Jodin
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Primitive {
     /// An empty type, can not be used as an explicit canonical type
     Void,

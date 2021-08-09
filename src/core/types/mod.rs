@@ -6,6 +6,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use crate::ast::intermediate_type::IntermediateType;
 use crate::ast::tags::Tag;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
@@ -16,7 +17,7 @@ use crate::core::types::structure::Structure;
 
 pub mod primitives;
 pub mod structure;
-pub mod type_tracker;
+pub mod type_environment;
 
 /// Different types of types within Jodin
 #[derive(Debug)]
@@ -97,17 +98,17 @@ impl<C: CompoundType + Into<JodinType>> Registrable<JodinTypeReference> for C {
 
 /// A tag for assigning a type to an AST node
 pub struct TypeTag {
-    jodin_type: JodinTypeReference,
+    jodin_type: IntermediateType,
 }
 
 impl TypeTag {
     /// The type.
-    pub fn jodin_type(&self) -> &JodinTypeReference {
+    pub fn jodin_type(&self) -> &IntermediateType {
         &self.jodin_type
     }
 
     /// Create a new type tag.
-    pub fn new(jodin_type: JodinTypeReference) -> Self {
+    pub fn new(jodin_type: IntermediateType) -> Self {
         TypeTag { jodin_type }
     }
 }
@@ -118,7 +119,7 @@ impl Tag for TypeTag {
     }
 
     fn tag_info(&self) -> String {
-        format!("[{}]", self.jodin_type.borrow().type_name())
+        format!("[{}]", self.jodin_type)
     }
 
     fn max_of_this_tag(&self) -> u32 {

@@ -45,9 +45,10 @@ use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
 
 use itertools::Itertools;
+use crate::core::error::{JodinResult, JodinErrorType};
 
 /// Contains data to represent types without storing any actual type information.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct IntermediateType {
     /// Whether this type is constant.
     pub is_const: bool,
@@ -74,6 +75,96 @@ impl IntermediateType {
             tails,
         }
     }
+
+    fn lose_info(&self) -> Self {
+        let IntermediateType {
+            is_const,
+            type_specifier,
+            generics,
+            tails,
+        } = self;
+
+        IntermediateType {
+            is_const: *is_const,
+            type_specifier: type_specifier.clone(),
+            generics: generics.iter().map(|int| int.lose_info()).collect(),
+            tails: tails
+                .iter()
+                .map(|tail| match tail {
+                    TypeTail::Pointer => TypeTail::Pointer,
+                    TypeTail::Array(_) => TypeTail::Array(None),
+                    TypeTail::Function(f) => {
+                        TypeTail::Function(f.iter().map(|im| im.lose_info()).collect())
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    /// Get a pointer to this type
+    pub fn get_pointer(&self) -> IntermediateType {
+        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        tails.push(TypeTail::Pointer);
+        Self {
+            is_const,
+            type_specifier,
+            generics,
+            tails
+        }
+    }
+
+    /// Dereference this type
+    pub fn get_deref(&self) -> JodinResult<IntermediateType> {
+        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        match tails.pop() {
+            Some(TypeTail::Pointer) => { },
+            Some(_) | None => {
+                return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
+            }
+        }
+        Ok(Self {
+            is_const,
+            type_specifier,
+            generics,
+            tails
+        })
+    }
+
+    /// Get this type indexed (only works on array types)
+    pub fn get_indexed(&self) -> JodinResult<IntermediateType> {
+        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        match tails.pop() {
+            Some(TypeTail::Array(_)) => { },
+            Some(_) | None => {
+                return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
+            }
+        }
+        Ok(Self {
+            is_const,
+            type_specifier,
+            generics,
+            tails
+        })
+    }
+
+    /// Get this type indexed (only works on array types)
+    pub fn get_called(&self) -> JodinResult<IntermediateType> {
+        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        match tails.pop() {
+            Some(TypeTail::Function(_)) => { },
+            Some(_) | None => {
+                return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
+            }
+        }
+
+        Ok(Self {
+            is_const,
+            type_specifier,
+            generics,
+            tails
+        })
+    }
+
 }
 
 impl Display for IntermediateType {
@@ -101,7 +192,7 @@ impl Display for IntermediateType {
 }
 
 /// A type specifier can either be a built in primitive, or an identifier
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TypeSpecifier {
     /// An identifier referring to a type, such as `std::object`
     Id(Identifier),
@@ -133,6 +224,21 @@ pub enum TypeTail {
     /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
 }
+
+impl PartialEq for TypeTail {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TypeTail::Pointer, TypeTail::Pointer) => true,
+            (TypeTail::Array(_), TypeTail::Array(_)) => true,
+            (TypeTail::Pointer, TypeTail::Array(_)) => true,
+            (TypeTail::Array(_), TypeTail::Pointer) => true,
+            (TypeTail::Function(v1), TypeTail::Function(v2)) => v1.eq(v2),
+            _ => false,
+        }
+    }
+}
+
+impl Eq for TypeTail {}
 
 impl Display for TypeTail {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

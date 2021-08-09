@@ -199,6 +199,7 @@ version = "0.1.0"
 dependencies = [
  "backtrace",
  "clap",
+ "either",
  "glob",
  "itertools",
  "lazy_static",

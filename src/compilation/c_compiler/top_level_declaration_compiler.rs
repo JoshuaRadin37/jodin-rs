@@ -1,4 +1,4 @@
-use crate::ast::{JodinNode, JodinNodeInner};
+use crate::ast::{JodinNode, JodinNodeType};
 use crate::compilation::c_compiler::components::TranslationUnit;
 use crate::compilation::c_compiler::{CType, CTypeCompiler, CValidIdentifier, FunctionCompiler};
 use crate::compilation::{MicroCompiler, C99};
@@ -10,7 +10,7 @@ pub struct TopLevelDeclarationCompiler;
 
 impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
-        use JodinNodeInner::*;
+        use JodinNodeType::*;
         let mut ret = vec![];
         let node = tree.inner();
         match node {
@@ -52,11 +52,11 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
                     ret.push(translation_unit);
                 }
             }
-            FunctionDefinition {
-               ..
-            } => {
+            FunctionDefinition { .. } => {
                 let info = FunctionCompiler.create_compilable(tree)?;
-                ret.push(TranslationUnit::FunctionDefinition { function_info: info });
+                ret.push(TranslationUnit::FunctionDefinition {
+                    function_info: info,
+                });
             }
             StructureDefinition { .. } => {
                 let mut type_compiler = CTypeCompiler;

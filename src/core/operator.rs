@@ -5,9 +5,10 @@ use crate::core::literal::Literal;
 use num_traits::PrimInt;
 use std::cmp::Ordering;
 use std::convert::TryInto;
+use std::fmt::{Display, Formatter};
 
 /// The operators
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Operator {
     /// !
     Not,
@@ -67,6 +68,91 @@ impl Operator {
     /// Gets the precedence of the operator
     pub fn as_precedence(&self) -> Precedence {
         Precedence(self)
+    }
+}
+
+impl Display for Operator {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operator::Not => {
+                write!(f, "!")
+            }
+            Operator::Increment => {
+                write!(f, "++")
+            }
+            Operator::Decrement => {
+                write!(f, "--")
+            }
+            Operator::Plus => {
+                write!(f, "+")
+            }
+            Operator::Minus => {
+                write!(f, "-")
+            }
+            Operator::Star => {
+                write!(f, "*")
+            }
+            Operator::Modulo => {
+                write!(f, "%")
+            }
+            Operator::Divide => {
+                write!(f, "/")
+            }
+            Operator::Xor => {
+                write!(f, "^")
+            }
+            Operator::And => {
+                write!(f, "&")
+            }
+            Operator::Or => {
+                write!(f, "|")
+            }
+            Operator::Dand => {
+                write!(f, "&&")
+            }
+            Operator::Dor => {
+                write!(f, "||")
+            }
+            Operator::New => {
+                write!(f, "new")
+            }
+            Operator::Index => {
+                write!(f, "[]")
+            }
+            Operator::Comma => {
+                write!(f, ",")
+            }
+            Operator::Call => {
+                write!(f, "()")
+            }
+            Operator::Ellipsis => {
+                write!(f, "...")
+            }
+            Operator::Equal => {
+                write!(f, "==")
+            }
+            Operator::Nequal => {
+                write!(f, "!=")
+            }
+            Operator::Lt => {
+                write!(f, "<")
+            }
+            Operator::Lte => {
+                write!(f, "<=")
+            }
+            Operator::Gt => {
+                write!(f, ">")
+            }
+            Operator::Gte => {
+                write!(f, ">=")
+            }
+            Operator::LShift => {
+                write!(f, "<<")
+            }
+            Operator::RShift => {
+                write!(f, ">>")
+            }
+        }
     }
 }
 

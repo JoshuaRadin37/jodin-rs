@@ -1,4 +1,4 @@
-use crate::ast::{JodinNode, JodinNodeInner};
+use crate::ast::{JodinNode, JodinNodeType};
 use crate::compilation::c_compiler::{
     CType, CTypeDeclarator, CTypeSpecifier, CValidIdentifier, TranslationUnit,
 };
@@ -12,7 +12,7 @@ pub struct CTypeCompiler;
 impl MicroCompiler<C99, Vec<TranslationUnit>> for CTypeCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
         match tree.inner() {
-            JodinNodeInner::StructureDefinition { .. } => {
+            JodinNodeType::StructureDefinition { .. } => {
                 let mut struct_compiler = StructCompiler;
                 struct_compiler.create_compilable(tree)
             }
@@ -28,13 +28,13 @@ pub struct StructCompiler;
 
 impl MicroCompiler<C99, Vec<TranslationUnit>> for StructCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
-        if let JodinNodeInner::StructureDefinition { name, members } = tree.inner() {
+        if let JodinNodeType::StructureDefinition { name, members } = tree.inner() {
             let name_id = name.get_tag::<ResolvedIdentityTag>()?.absolute_id();
             let c_name = CValidIdentifier::new(name_id.clone());
 
             let mut fields = vec![];
             for member in members {
-                if let JodinNodeInner::NamedValue { name, var_type } = member.inner() {
+                if let JodinNodeType::NamedValue { name, var_type } = member.inner() {
                     let name_id = name.get_tag::<ResolvedIdentityTag>()?.absolute_id();
                     let c_name = CValidIdentifier::no_mangle(name_id.clone())?;
 

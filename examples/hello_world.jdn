@@ -48,6 +48,8 @@ int main(int argc, String[] args) {
     int a = j;
     int b = math::fib(l);
 
+    int c = 1 + 2 + 3;
+
     int value = 3;
     value += 1;
 
