@@ -1,9 +1,14 @@
 //! Allows the tracking of dependencies and produce an in order representation
 
-use crate::core::error::{JodinErrorType, JodinResult};
+use crate::core::error::{JodinErrorType, JodinResult, JodinError};
 use crate::core::identifier::{Identifier, Namespaced};
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
+use crate::ast::tags::Tag;
+use std::any::Any;
+use std::convert::TryFrom;
+use crate::ast::JodinNode;
+use crate::passes::analysis::ResolvedIdentityTag;
 
 /// Create a graph of dependencies between identifiers. An edge
 /// represents that this id has a dependency
@@ -123,6 +128,65 @@ pub trait HasDependencies: Namespaced {
     /// The identifiers to which this identifier is dependent on.
     fn dependencies(&self) -> Vec<&Identifier>;
 }
+
+/// A tag that contains the identifiers that this node is dependent on
+pub struct DependencyTag {
+    /// What this node is dependent on
+    pub dependencies: Vec<Identifier>
+}
+
+impl Tag for DependencyTag {
+    fn tag_type(&self) -> String {
+        "Dependencies".to_string()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+/// Stores dependency information about a node
+pub struct DependencyInfo<'a> {
+    /// This identifier for this node
+    pub this: &'a Identifier,
+    /// The identifiers that this is dependent on
+    pub dependencies: Vec<&'a Identifier>
+}
+
+impl<'a> TryFrom<&'a JodinNode> for DependencyInfo<'a> {
+    type Error = JodinError;
+
+    fn try_from(value: &'a JodinNode) -> Result<Self, Self::Error> {
+        let this = value.get_tag::<ResolvedIdentityTag>()?.absolute_id();
+        let dependencies: Vec<_> = value.get_tag::<DependencyTag>().map_or(vec![], |tag| tag.dependencies.iter().collect());
+
+        Ok(Self {
+            this,
+            dependencies
+        })
+    }
+}
+
+impl Namespaced for DependencyInfo<'_> {
+    fn get_identifier(&self) -> &Identifier {
+        self.this
+    }
+}
+
+impl HasDependencies for DependencyInfo<'_> {
+    fn dependencies(&self) -> Vec<&Identifier> {
+        self.dependencies.clone()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

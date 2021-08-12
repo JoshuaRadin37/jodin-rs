@@ -11,6 +11,7 @@ use crate::core::error::JodinResult;
 
 mod identity_resolution_tool;
 mod type_resolution_tool;
+mod dependency_tool;
 
 /// Performs analysis on the tree, adding tags to the tree where appropriate
 ///

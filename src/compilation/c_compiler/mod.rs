@@ -19,6 +19,9 @@ mod components;
 pub use components::*;
 
 use std::fmt::Write;
+use std::convert::TryFrom;
+use crate::core::dependency_graph::{DependencyGraph, DependencyInfo};
+use std::collections::HashMap;
 
 /// The C99 target
 pub struct C99;
@@ -46,13 +49,24 @@ impl<W: Write> Compiler<C99> for C99Compiler<W> {
         let mut micro_compiler = TopLevelDeclarationCompiler;
 
         println!("Compiling {:?}", tree);
-        let mut units = vec![];
+        let mut dependency_graph = DependencyGraph::new();
+        let mut id_to_node = HashMap::new();
+
 
         for top_level in tree {
             println!("Compiling Top Level: {:?}", top_level);
-            let new_units = micro_compiler.create_compilable(top_level)?;
-            units.extend(new_units);
+            if let Ok(dependency_info) = DependencyInfo::try_from(top_level) {
+                let new_units = micro_compiler.create_compilable(top_level)?;
+                dependency_graph.add(&dependency_info);
+                id_to_node.insert(dependency_info.this.clone(), new_units);
+            }
         }
+
+
+        let units: Vec<_> = dependency_graph.dependence_order()?
+            .into_iter()
+            .flat_map(|id| id_to_node.remove(id).unwrap_or(vec![]))
+            .collect();
 
         for unit in &units {
             unit.declaration(&context, &mut self.writer)?;
