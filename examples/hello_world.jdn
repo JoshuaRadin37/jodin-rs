@@ -15,9 +15,37 @@ struct a1 {
 
 in std
 in string
-public struct String { }
+public struct String {
+    unsigned int length;
+    char* char_ptr;
+}
 
 
+for <T> trait Iterator {
+    T() next;
+    boolean() has_next;
+}
+
+for <T> trait IntoIterator {
+    Iterator<T>() into_iterator;
+}
+
+struct CharSequence {
+    unsigned int index;
+    std::string::String *ptr;
+}
+
+implement trait Iterator<char> for CharSequence {
+
+}
+
+implement trait IntoIterator<char> for String {
+
+}
+
+implement char get_at(int index) for String {
+    return (char) index;
+}
 
 extern int(char*, ...) printf;
 extern int(int) square;
@@ -47,6 +75,8 @@ public unsigned int* fib(unsigned int n) {
 int main(int argc, String[] args) {
     int a = j;
     int b = math::fib(l);
+
+    int forfor = 3;
 
     int c = 1 + 2 + 3;
 

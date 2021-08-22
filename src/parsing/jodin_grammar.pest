@@ -193,8 +193,7 @@ uni_ops = {
 
 
 identifier = ${ single_identifier ~ ( "::" ~ single_identifier )* }
-single_identifier = ${!keywords ~ ( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_")*}
-
+single_identifier = ${!(keywords ~ WHITESPACE) ~ ( ASCII_ALPHA | "_" ) ~ ( ASCII_ALPHANUMERIC | "_")*}
 
 exact_string = @{(!"\"*)" ~ ANY)*}
 escapable_string = ${ ("\\" ~ escape_sequence | (!(NEWLINE | "\"") ~ ANY))*}
@@ -224,12 +223,12 @@ literal = @{
 }
 
 type_specifier = {
-    identifier |
     t_boolean |
     t_double |
     t_float |
     t_void |
-    t_unsigned? ~ (t_char | t_short | t_int | t_long)
+    t_unsigned? ~ (t_char | t_short | t_int | t_long) |
+    identifier
 }
 
 // Categories
@@ -243,6 +242,8 @@ top_level_declarations = {
 }
 
 top_level_declaration = {
+    trait_declaration |
+    extension |
     using_statement |
     in_namespace |
     function_definition |
@@ -574,5 +575,28 @@ extern_declaration = {
     visibility? ~ "extern" ~ !visibility ~ declaration
 }
 
+// extensions
 
+trait_declaration = {
+    generic_declarator? ~ t_trait ~ identifier ~ "{" ~
+        top_level_declarations ~
+    "}"
+}
 
+// implement trait
+extension = {
+    trait_implement |
+    function_implement
+}
+
+trait_implement = {
+    generic_declarator? ~
+    t_implement ~ t_trait ~ identifier ~ ("<" ~ type_list ~ ">")?~ t_for ~ canonical_type  ~ "{" ~
+        top_level_declarations ~
+    "}"
+}
+
+function_implement = {
+    generic_declarator? ~
+    t_implement ~ canonical_type ~ identifier ~ "(" ~ parameter_list ~ ")" ~ t_for ~ canonical_type ~ compound_statement
+}
