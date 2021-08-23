@@ -359,7 +359,7 @@ impl IdentifierCreator {
         id_resolver.push_namespace(string.clone());
         //id_resolver.create_absolute_path(&Identifier::from(""));
         id_resolver.use_namespace(last).unwrap();
-        println!("{:#?}", id_resolver);
+        //println!("{:#?}", id_resolver);
     }
 
     fn end_block(&mut self, id_resolver: &mut IdentifierResolver) {
@@ -376,7 +376,7 @@ impl IdentifierCreator {
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
         let mut resolver = IdentifierResolver::new();
         self.create_identities(&mut input, &mut resolver, registry)?;
-        println!("{:#?}", registry);
+        //println!("{:#?}", registry);
         Ok((input, resolver))
     }
 }
@@ -438,7 +438,7 @@ impl IdentifierSetter {
             } => {
                 let imports =
                     self.add_import_data(import_data, id_resolver, visibility_resolver)?;
-                println!("Imports: {:#?}", self.aliases);
+                // println!("Imports: {:#?}", self.aliases);
                 self.set_identities(affected, id_resolver, visibility_resolver)?;
                 for import in imports {
                     self.aliases.remove_absolute_identity(&import)?;

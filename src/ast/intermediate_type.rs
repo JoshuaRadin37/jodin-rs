@@ -44,8 +44,8 @@ use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
 
+use crate::core::error::{JodinErrorType, JodinResult};
 use itertools::Itertools;
-use crate::core::error::{JodinResult, JodinErrorType};
 
 /// Contains data to represent types without storing any actual type information.
 #[derive(Debug, Eq, PartialEq)]
@@ -103,21 +103,31 @@ impl IntermediateType {
 
     /// Get a pointer to this type
     pub fn get_pointer(&self) -> IntermediateType {
-        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        let Self {
+            is_const,
+            type_specifier,
+            generics,
+            mut tails,
+        } = self.lose_info();
         tails.push(TypeTail::Pointer);
         Self {
             is_const,
             type_specifier,
             generics,
-            tails
+            tails,
         }
     }
 
     /// Dereference this type
     pub fn get_deref(&self) -> JodinResult<IntermediateType> {
-        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        let Self {
+            is_const,
+            type_specifier,
+            generics,
+            mut tails,
+        } = self.lose_info();
         match tails.pop() {
-            Some(TypeTail::Pointer) => { },
+            Some(TypeTail::Pointer) => {}
             Some(_) | None => {
                 return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
             }
@@ -126,15 +136,20 @@ impl IntermediateType {
             is_const,
             type_specifier,
             generics,
-            tails
+            tails,
         })
     }
 
     /// Get this type indexed (only works on array types)
     pub fn get_indexed(&self) -> JodinResult<IntermediateType> {
-        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        let Self {
+            is_const,
+            type_specifier,
+            generics,
+            mut tails,
+        } = self.lose_info();
         match tails.pop() {
-            Some(TypeTail::Array(_)) => { },
+            Some(TypeTail::Array(_)) => {}
             Some(_) | None => {
                 return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
             }
@@ -143,15 +158,20 @@ impl IntermediateType {
             is_const,
             type_specifier,
             generics,
-            tails
+            tails,
         })
     }
 
     /// Get this type indexed (only works on array types)
     pub fn get_called(&self) -> JodinResult<IntermediateType> {
-        let Self { is_const, type_specifier, generics, mut tails } = self.lose_info();
+        let Self {
+            is_const,
+            type_specifier,
+            generics,
+            mut tails,
+        } = self.lose_info();
         match tails.pop() {
-            Some(TypeTail::Function(_)) => { },
+            Some(TypeTail::Function(_)) => {}
             Some(_) | None => {
                 return Err(JodinErrorType::TypeCantBeDereferenced(self.to_string()).into());
             }
@@ -161,10 +181,9 @@ impl IntermediateType {
             is_const,
             type_specifier,
             generics,
-            tails
+            tails,
         })
     }
-
 }
 
 impl Display for IntermediateType {

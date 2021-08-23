@@ -32,6 +32,7 @@ use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::primitives::Primitive;
 use crate::parsing::JodinRule;
 use std::convert::TryFrom;
+use crate::utility::{Bytes, HumanReadable, IntoBox};
 
 pub mod intermediate_type;
 mod jodin_node;
@@ -138,6 +139,7 @@ pub fn parse_identifier(pair: Pair<JodinRule>) -> JodinResult<Identifier> {
 /// Creates a tree from a single string.
 pub struct JodinNodeGenerator<'a> {
     path: String,
+    mem_ptrs: Vec<usize>,
     _data: &'a PhantomData<()>,
 }
 
@@ -146,8 +148,16 @@ impl JodinNodeGenerator<'_> {
     fn new(path: String) -> Self {
         JodinNodeGenerator {
             path,
+            mem_ptrs: vec![],
             _data: &PhantomData,
         }
+    }
+
+    fn stack_size<T>(&self, top_pointer: &T) -> usize {
+        let sum: usize= self.mem_ptrs.iter().sum();
+        let val_size = std::mem::size_of_val(top_pointer);
+        println!("Val size={}", Bytes::new(val_size).human_readable());
+        sum + val_size
     }
 
     /// The main method that creates jodin nodes from a parse tree.
@@ -157,47 +167,42 @@ impl JodinNodeGenerator<'_> {
         mut inherits: Vec<JodinNode>,
     ) -> JodinResult<JodinNode> {
         let inner_rules: Box<[JodinRule]> = pair_as_rules(&pair);
-        println!(
-            "Rule at {:p}: {:?} -> {:?}",
-            &pair,
-            pair.as_rule(),
-            inner_rules
-        );
+        let mem_location = &pair as *const _ as usize + std::mem::size_of_val(&pair);
+        let stack_size = Bytes::new(self.stack_size(&pair));
+        if let Some(&last) = self.mem_ptrs.last() {
+            let diff = ((last as isize) - (mem_location as isize)).abs() as usize;
+            let as_bytes = Bytes::new(diff);
+            println!(
+                "Rule at {:p} (diff: {}, stack size: {}): {:?} -> {:?}",
+                &pair,
+                as_bytes.human_readable(),
+                stack_size.human_readable(),
+                pair.as_rule(),
+                inner_rules
+            );
+        } else {
+            println!(
+                "Rule at {:p} (stack size: {}): {:?} -> {:?}",
+                &pair,
+                stack_size.human_readable(),
+                pair.as_rule(),
+                inner_rules
+            );
+        }
+        self.mem_ptrs.push(mem_location);
 
-        Ok(match pair.as_rule() {
+        let as_rule = pair.as_rule();
+        let mut inner = pair.clone().into_inner().boxed();
+
+        Ok(match as_rule {
             JodinRule::top_level_declarations => {
-                let mut decs = vec![];
-                for pair in pair.into_inner() {
-                    decs.push(self.generate_node(pair, vec![])?);
-                }
-                JodinNodeType::TopLevelDeclarations { decs }.into()
+                self.top_level_declarations(inner)?
             }
             JodinRule::using_statement => {
-                let mut inner = pair.into_inner();
-                let path = inner.nth(0).unwrap();
-                let import = Import::from_pair(path);
-                let next = inner.next().unwrap().generate_node(self)?;
-                JodinNodeType::ImportIdentifiers {
-                    import_data: import,
-                    affected: next,
-                }
-                .into()
+                self.using_statement(inner)?
             }
             JodinRule::in_namespace => {
-                let mut inner = pair.into_inner();
-                let id = inner.nth(0).unwrap();
-                let mut id_node = self.generate_node(id, vec![])?;
-
-                let visibility_tag = VisibilityTag::new(Visibility::Public);
-                id_node.add_tag(visibility_tag)?;
-
-                let affected = inner.nth(0).unwrap();
-                let affected_node = self.generate_node(affected, vec![])?;
-                JodinNodeType::InNamespace {
-                    namespace: id_node,
-                    inner: affected_node,
-                }
-                .into()
+                self.in_namespace(inner)?
             }
             //jodin_rule::function_definition => {}
             JodinRule::single_identifier => {
@@ -223,46 +228,7 @@ impl JodinNodeGenerator<'_> {
             JodinRule::t_true => JodinNodeType::Literal(Literal::Boolean(true)).into(),
             JodinRule::t_false => JodinNodeType::Literal(Literal::Boolean(false)).into(),
             JodinRule::declaration => {
-                let mut inner = pair.into_inner();
-                let (visibility, canonical_type, declarator_list) = match *inner_rules {
-                    [JodinRule::visibility, JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
-                        (inner.next(), inner.next().unwrap(), inner.next().unwrap())
-                    }
-                    [JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
-                        (None, inner.next().unwrap(), inner.next().unwrap())
-                    }
-                    _ => unreachable!(),
-                };
-
-                let canonical_type = self.new_intermediate_type(canonical_type)?;
-                let pairs = declarator_list.into_inner().into_iter();
-                let mut names = Vec::new();
-                let mut values = Vec::new();
-
-                let visibility = Visibility::try_from(
-                    visibility.map(|node| node.into_inner().next().unwrap().as_rule()),
-                )?;
-                let tag = VisibilityTag::new(visibility);
-
-                for init_declarator in pairs {
-                    println!("init declarator: {:?}", init_declarator.as_str());
-                    let mut inner = init_declarator.into_inner();
-                    let mut name = self.generate_node(inner.nth(0).unwrap(), vec![])?;
-                    name.add_tag(tag.clone());
-                    let value = match inner.nth(0) {
-                        Some(initializer) => Some(self.generate_node(initializer, vec![])?),
-                        None => None,
-                    };
-                    names.push(name);
-                    values.push(value);
-                }
-
-                JodinNodeType::VarDeclarations {
-                    var_type: canonical_type,
-                    names,
-                    values,
-                }
-                .into()
+                self.declaration(inner_rules, inner)?
             }
             JodinRule::canonical_type => {
                 let intermediate_type = self.new_intermediate_type(pair)?;
@@ -270,20 +236,7 @@ impl JodinNodeGenerator<'_> {
             }
             // Expressions
             JodinRule::expression => {
-                let mut dict = IndexedPair::new(pair.into_inner());
-                let expr =
-                    self.generate_node(dict.get(JodinRule::double_or_expression)?, vec![])?;
-                if let Ok(mut exprs) = dict.get_all(JodinRule::expression) {
-                    let yes = self.generate_node(exprs.remove(0), vec![])?;
-                    let no = self.generate_node(exprs.remove(0), vec![])?;
-                    return JodinNodeType::Ternary {
-                        cond: expr,
-                        yes,
-                        no,
-                    }
-                    .into_result();
-                }
-                expr
+                self.expression(inner)?
             }
             // binops
             JodinRule::double_or_expression
@@ -296,126 +249,14 @@ impl JodinNodeGenerator<'_> {
             | JodinRule::g_expression
             | JodinRule::t_expression
             | JodinRule::m_expression => {
-                let mut inner = pair.into_inner();
-                let lhs = self.generate_node(inner.nth(0).unwrap(), vec![])?;
-                let mut rest: Vec<_> = inner.collect();
-                if rest.is_empty() {
-                    lhs
-                } else {
-                    let mut last = lhs;
-                    while !rest.is_empty() {
-                        let op = rest.remove(0);
-                        let rhs = rest.remove(0);
-                        let rhs = self.generate_node(rhs, vec![])?;
-                        let op = match op.as_rule() {
-                            JodinRule::t_dor => Operator::Dor,
-                            JodinRule::t_or => Operator::Or,
-                            JodinRule::t_dand => Operator::Dand,
-                            JodinRule::t_xor => Operator::Xor,
-                            JodinRule::t_and => Operator::And,
-                            JodinRule::equality => {
-                                let inner = op.into_inner().nth(0).unwrap();
-                                let inner_rule = inner.as_rule();
-                                match inner_rule {
-                                    JodinRule::t_eq => Operator::Equal,
-                                    JodinRule::t_neq => Operator::Nequal,
-                                    _ => unreachable!(),
-                                }
-                            }
-                            JodinRule::comparison => {
-                                let inner = op.into_inner().nth(0).unwrap();
-                                let inner_rule = inner.as_rule();
-                                match inner_rule {
-                                    JodinRule::t_lcarot => Operator::Lt,
-                                    JodinRule::t_rcarot => Operator::Gt,
-                                    JodinRule::t_lte => Operator::Lte,
-                                    JodinRule::t_gte => Operator::Gte,
-                                    _ => unreachable!(),
-                                }
-                            }
-                            JodinRule::shift => {
-                                let inner = op.into_inner().nth(0).unwrap();
-                                let inner_rule = inner.as_rule();
-                                match inner_rule {
-                                    JodinRule::t_lshift => Operator::LShift,
-                                    JodinRule::t_rshift => Operator::RShift,
-                                    _ => unreachable!(),
-                                }
-                            }
-                            JodinRule::add_op => {
-                                let inner = op.into_inner().nth(0).unwrap();
-                                let inner_rule = inner.as_rule();
-                                match inner_rule {
-                                    JodinRule::t_plus => Operator::Plus,
-                                    JodinRule::t_minus => Operator::Minus,
-                                    _ => unreachable!(),
-                                }
-                            }
-                            JodinRule::mul_op => {
-                                let inner = op.into_inner().nth(0).unwrap();
-                                let inner_rule = inner.as_rule();
-                                match inner_rule {
-                                    JodinRule::t_star => Operator::Star,
-                                    JodinRule::t_div => Operator::Divide,
-                                    JodinRule::t_mod => Operator::Modulo,
-                                    _ => unreachable!(),
-                                }
-                            }
-                            _ => unreachable!(),
-                        };
-                        last = JodinNodeType::Binop { op, lhs: last, rhs }.into()
-                    }
-
-                    /*
-                    JodinNodeInner::Binop {
-                        op: op2,
-                        lhs: mid,
-                        rhs: rhs2,
-                    } => {
-                        let new_inner: JodinNode =
-                            JodinNodeInner::Binop { op, lhs, rhs: mid }.into();
-                        let outer = JodinNodeInner::Binop {
-                            op: op2,
-                            lhs: new_inner,
-                            rhs: rhs2,
-                        };
-                        outer.into()
-                    }
-
-                     */
-                    last
-                }
+                self.binop_expressions(inner)?
             }
             // uniop
             JodinRule::uni_op => {
-                let mut inner = pair.into_inner();
-                let operator = match inner.nth(0).unwrap().into_inner().nth(0).unwrap().as_rule() {
-                    JodinRule::t_minus => Operator::Minus,
-                    JodinRule::t_bang => Operator::Not,
-                    JodinRule::t_star => {
-                        // dereference
-                        let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
-                        return JodinNodeType::Dereference { node: factor }.into_result();
-                    }
-                    JodinRule::t_and => {
-                        // address of
-                        let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
-                        return JodinNodeType::GetReference { node: factor }.into_result();
-                    }
-                    JodinRule::t_plus => Operator::Plus,
-                    JodinRule::t_inc => Operator::Increment,
-                    JodinRule::t_dec => Operator::Decrement,
-                    _ => unreachable!(),
-                };
-                let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
-                JodinNodeType::Uniop {
-                    op: operator,
-                    inner: factor,
-                }
-                .into()
+                self.uni_op(inner)?
             }
             JodinRule::cast_expression => {
-                let mut indexed = IndexedPair::new(pair.into_inner());
+                let mut indexed = IndexedPair::new(*inner);
                 let canonical_type =
                     self.new_intermediate_type(indexed.get(JodinRule::canonical_type)?)?;
                 let factor = self.generate_node(indexed.get(JodinRule::factor)?, vec![])?;
@@ -426,7 +267,7 @@ impl JodinNodeGenerator<'_> {
                 .into()
             }
             JodinRule::struct_definition => {
-                let mut indexed_pair = IndexedPair::new(pair.into_inner());
+                let mut indexed_pair = IndexedPair::new(*inner);
                 let (visibility, id) = match *inner_rules {
                     [JodinRule::visibility, JodinRule::t_struct, JodinRule::identifier, ..] => (
                         Some(
@@ -468,7 +309,7 @@ impl JodinNodeGenerator<'_> {
                 node
             }
             JodinRule::struct_field_declaration => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let canonical_type: Pair<_> = inner.next().unwrap();
                 let single_id: Pair<_> = inner.next().unwrap();
 
@@ -479,7 +320,7 @@ impl JodinNodeGenerator<'_> {
                 .into()
             }
             JodinRule::function_definition => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let (visibility, generics) = match *inner_rules {
                     [JodinRule::visibility, JodinRule::generic_declarator, ..] => {
                         let visibility =
@@ -539,7 +380,7 @@ impl JodinNodeGenerator<'_> {
                 node
             }
             JodinRule::parameter_declaration => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let canonical_type: Pair<_> = inner.next().unwrap();
                 let id: Pair<_> = inner.next().unwrap();
 
@@ -553,7 +394,7 @@ impl JodinNodeGenerator<'_> {
                 [JodinRule::t_continue, JodinRule::t_semic] => JodinNodeType::Continue.into(),
                 [JodinRule::t_break, JodinRule::t_semic] => JodinNodeType::Break.into(),
                 [JodinRule::t_return, JodinRule::expression, JodinRule::t_semic] => {
-                    let mut inner = pair.into_inner();
+                    let mut inner = inner;
                     let expression_node = inner.nth(1).unwrap();
                     let expression = self.generate_node(expression_node, vec![])?;
 
@@ -569,7 +410,7 @@ impl JodinNodeGenerator<'_> {
             },
             JodinRule::expression_statement => match *inner_rules {
                 [JodinRule::expression, JodinRule::t_semic] => {
-                    let mut inner = pair.into_inner();
+                    let mut inner = inner;
                     let expression_node = inner.nth(0).unwrap();
                     self.generate_node(expression_node, vec![])?
                 }
@@ -577,9 +418,9 @@ impl JodinNodeGenerator<'_> {
                 _ => panic!("Illegal jump statement form: {:?}", inner_rules),
             },
             JodinRule::selection_statement => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let first = inner.next().unwrap().as_rule();
-                let mut indexed = IndexedPair::new(inner);
+                let mut indexed = IndexedPair::new(*inner);
                 match first {
                     JodinRule::t_if => {
                         // if statement
@@ -624,7 +465,7 @@ impl JodinNodeGenerator<'_> {
                 use crate::parsing::Rule::{
                     expression, expression_statement, statement, t_do, t_for, t_while,
                 };
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 match *inner_rules {
                     [t_while, expression, statement] => {
                         // while loop
@@ -681,7 +522,7 @@ impl JodinNodeGenerator<'_> {
                 }
             }
             JodinRule::atom => {
-                let mut inner = IndexedPair::new(pair.into_inner());
+                let mut inner = IndexedPair::new(*inner);
 
                 let atom: JodinNode = match *inner_rules {
                     [JodinRule::expression, ..] => {
@@ -751,7 +592,7 @@ impl JodinNodeGenerator<'_> {
                 }
             }
             JodinRule::atom_tail => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let last = inherits.remove(0);
                 let node: JodinNode = match *inner_rules {
                     [JodinRule::t_dec] => {
@@ -839,7 +680,7 @@ impl JodinNodeGenerator<'_> {
                 }
             }
             JodinRule::struct_initializer => {
-                let mut indexed_pair = IndexedPair::new(pair.into_inner());
+                let mut indexed_pair = IndexedPair::new(*inner);
                 let id_pair = indexed_pair.get(JodinRule::identifier)?;
                 let struct_id = self.generate_node(id_pair, vec![])?;
 
@@ -861,7 +702,7 @@ impl JodinNodeGenerator<'_> {
                 .into()
             }
             JodinRule::extern_declaration => {
-                let inner = pair.into_inner().nth(0).unwrap();
+                let inner = inner.nth(0).unwrap();
                 let inner_as_dec = self.generate_node(inner, vec![])?;
                 JodinNodeType::ExternDeclaration {
                     declaration: inner_as_dec,
@@ -869,7 +710,7 @@ impl JodinNodeGenerator<'_> {
                 .into()
             }
             JodinRule::assignment_statement => {
-                let mut inner = pair.into_inner();
+                let mut inner = inner;
                 let lhs = self.generate_node(inner.next().unwrap(), vec![])?;
 
                 let operator_rule: JodinRule =
@@ -903,20 +744,20 @@ impl JodinNodeGenerator<'_> {
             | JodinRule::function_call
             | JodinRule::initializer
             | JodinRule::factor => {
-                let inner = pair.into_inner().nth(0).unwrap();
+                let inner = inner.nth(0).unwrap();
                 self.generate_node(inner, vec![])?
             }
             // as_vector
             JodinRule::parameter_list | JodinRule::args_list => {
                 let mut vec = vec![];
-                for item in pair.into_inner() {
+                for item in inner {
                     vec.push(self.generate_node(item, vec![])?);
                 }
                 JodinNodeType::NodeVector { vec }.into()
             }
             JodinRule::compound_statement => {
                 let mut vec = vec![];
-                for item in pair.into_inner() {
+                for item in inner {
                     vec.push(self.generate_node(item, vec![])?);
                 }
                 JodinNodeType::Block { expressions: vec }.into()
@@ -930,6 +771,220 @@ impl JodinNodeGenerator<'_> {
                 //return Err(JodinErrorType::InvalidJodinRuleForASTCreation(rule).into())
             }
         })
+    }
+
+    fn uni_op(&mut self, inner: Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let mut inner = inner;
+        let operator = match inner.nth(0).unwrap().into_inner().nth(0).unwrap().as_rule() {
+            JodinRule::t_minus => Operator::Minus,
+            JodinRule::t_bang => Operator::Not,
+            JodinRule::t_star => {
+                // dereference
+                let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+                return JodinNodeType::Dereference { node: factor }.into_result();
+            }
+            JodinRule::t_and => {
+                // address of
+                let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+                return JodinNodeType::GetReference { node: factor }.into_result();
+            }
+            JodinRule::t_plus => Operator::Plus,
+            JodinRule::t_inc => Operator::Increment,
+            JodinRule::t_dec => Operator::Decrement,
+            _ => unreachable!(),
+        };
+        let factor = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+        JodinNodeType::Uniop {
+            op: operator,
+            inner: factor,
+        }
+            .into_result()
+    }
+
+    fn binop_expressions(&mut self, mut inner: Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let lhs = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+        let mut rest: Vec<_> = inner.collect();
+        if rest.is_empty() {
+            Ok(lhs)
+        } else {
+            let mut last = lhs;
+            while !rest.is_empty() {
+                let op = rest.remove(0);
+                let rhs = rest.remove(0);
+                let rhs = self.generate_node(rhs, vec![])?;
+                let op = match op.as_rule() {
+                    JodinRule::t_dor => Operator::Dor,
+                    JodinRule::t_or => Operator::Or,
+                    JodinRule::t_dand => Operator::Dand,
+                    JodinRule::t_xor => Operator::Xor,
+                    JodinRule::t_and => Operator::And,
+                    JodinRule::equality => {
+                        let inner = op.into_inner().nth(0).unwrap();
+                        let inner_rule = inner.as_rule();
+                        match inner_rule {
+                            JodinRule::t_eq => Operator::Equal,
+                            JodinRule::t_neq => Operator::Nequal,
+                            _ => unreachable!(),
+                        }
+                    }
+                    JodinRule::comparison => {
+                        let inner = op.into_inner().nth(0).unwrap();
+                        let inner_rule = inner.as_rule();
+                        match inner_rule {
+                            JodinRule::t_lcarot => Operator::Lt,
+                            JodinRule::t_rcarot => Operator::Gt,
+                            JodinRule::t_lte => Operator::Lte,
+                            JodinRule::t_gte => Operator::Gte,
+                            _ => unreachable!(),
+                        }
+                    }
+                    JodinRule::shift => {
+                        let inner = op.into_inner().nth(0).unwrap();
+                        let inner_rule = inner.as_rule();
+                        match inner_rule {
+                            JodinRule::t_lshift => Operator::LShift,
+                            JodinRule::t_rshift => Operator::RShift,
+                            _ => unreachable!(),
+                        }
+                    }
+                    JodinRule::add_op => {
+                        let inner = op.into_inner().nth(0).unwrap();
+                        let inner_rule = inner.as_rule();
+                        match inner_rule {
+                            JodinRule::t_plus => Operator::Plus,
+                            JodinRule::t_minus => Operator::Minus,
+                            _ => unreachable!(),
+                        }
+                    }
+                    JodinRule::mul_op => {
+                        let inner = op.into_inner().nth(0).unwrap();
+                        let inner_rule = inner.as_rule();
+                        match inner_rule {
+                            JodinRule::t_star => Operator::Star,
+                            JodinRule::t_div => Operator::Divide,
+                            JodinRule::t_mod => Operator::Modulo,
+                            _ => unreachable!(),
+                        }
+                    }
+                    _ => unreachable!(),
+                };
+                last = JodinNodeType::Binop { op, lhs: last, rhs }.into()
+            }
+
+            /*
+            JodinNodeInner::Binop {
+                op: op2,
+                lhs: mid,
+                rhs: rhs2,
+            } => {
+                let new_inner: JodinNode =
+                    JodinNodeInner::Binop { op, lhs, rhs: mid }.into();
+                let outer = JodinNodeInner::Binop {
+                    op: op2,
+                    lhs: new_inner,
+                    rhs: rhs2,
+                };
+                outer.into()
+            }
+
+             */
+            Ok(last)
+        }
+    }
+
+    fn expression(&mut self, inner:  Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let mut dict = IndexedPair::new(*inner);
+        let expr =
+            self.generate_node(dict.get(JodinRule::double_or_expression)?, vec![])?;
+        if let Ok(mut exprs) = dict.get_all(JodinRule::expression) {
+            let yes = self.generate_node(exprs.remove(0), vec![])?;
+            let no = self.generate_node(exprs.remove(0), vec![])?;
+            return JodinNodeType::Ternary {
+                cond: expr,
+                yes,
+                no,
+            }
+                .into_result();
+        }
+        Ok(expr)
+    }
+
+    fn declaration(&mut self, inner_rules: Box<[JodinRule]>, inner: Box<Pairs<JodinRule>>) ->  JodinResult<JodinNode> {
+        let mut inner = inner;
+        let (visibility, canonical_type, declarator_list) = match *inner_rules {
+            [JodinRule::visibility, JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
+                (inner.next(), inner.next().unwrap(), inner.next().unwrap())
+            }
+            [JodinRule::canonical_type, JodinRule::init_declarator_list, ..] => {
+                (None, inner.next().unwrap(), inner.next().unwrap())
+            }
+            _ => unreachable!(),
+        };
+
+        let canonical_type = self.new_intermediate_type(canonical_type)?;
+        let pairs = declarator_list.into_inner().into_iter();
+        let mut names = Vec::new();
+        let mut values = Vec::new();
+
+        let visibility = Visibility::try_from(
+            visibility.map(|node| node.into_inner().next().unwrap().as_rule()),
+        )?;
+        let tag = VisibilityTag::new(visibility);
+
+        for init_declarator in pairs {
+            println!("init declarator: {:?}", init_declarator.as_str());
+            let mut inner = init_declarator.into_inner();
+            let mut name = self.generate_node(inner.nth(0).unwrap(), vec![])?;
+            name.add_tag(tag.clone());
+            let value = match inner.nth(0) {
+                Some(initializer) => Some(self.generate_node(initializer, vec![])?),
+                None => None,
+            };
+            names.push(name);
+            values.push(value);
+        }
+
+        JodinNodeType::VarDeclarations {
+            var_type: canonical_type,
+            names,
+            values,
+        }
+            .into_result()
+    }
+
+    fn in_namespace(&mut self, mut inner: Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let id = inner.nth(0).unwrap();
+        let mut id_node = self.generate_node(id, vec![])?;
+
+        let visibility_tag = VisibilityTag::new(Visibility::Public);
+        id_node.add_tag(visibility_tag)?;
+
+        let affected = inner.nth(0).unwrap();
+        let affected_node = self.generate_node(affected, vec![])?;
+        JodinNodeType::InNamespace {
+            namespace: id_node,
+            inner: affected_node,
+        }
+            .into_result()
+    }
+
+    fn using_statement(&mut self, mut inner: Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let path = inner.nth(0).unwrap();
+        let import = Import::from_pair(path);
+        let next = inner.next().unwrap().generate_node(self)?;
+        JodinNodeType::ImportIdentifiers {
+            import_data: import,
+            affected: next,
+        }
+            .into_result()
+    }
+
+    fn top_level_declarations(&mut self, inner: Box<Pairs<JodinRule>>) -> JodinResult<JodinNode> {
+        let mut decs = vec![];
+        for pair in inner.boxed() {
+            decs.push(self.generate_node(pair, vec![])?);
+        }
+        JodinNodeType::TopLevelDeclarations { decs }.into_result()
     }
 
     /// Attempts to convert a parse tree into an [IntermediateType](crate::ast::intermediate_type::IntermediateType)

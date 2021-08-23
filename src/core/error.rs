@@ -79,7 +79,7 @@ pub enum JodinErrorType {
     /// Illegal node type for compiler
     IllegalTreeType,
     /// This type can't be dereferenced
-    TypeCantBeDereferenced(String)
+    TypeCantBeDereferenced(String),
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

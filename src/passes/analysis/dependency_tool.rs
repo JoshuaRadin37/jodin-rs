@@ -3,11 +3,10 @@ use std::iter::FromIterator;
 
 /// Creates dependency tags
 pub struct DependencyTool {
-    major_id: Vec<String>
+    major_id: Vec<String>,
 }
 
 impl DependencyTool {
-
     fn major_namespace(&self) -> Identifier {
         Identifier::from_iter(&self.major_id)
     }
@@ -16,4 +15,3 @@ impl DependencyTool {
         unimplemented!()
     }
 }
-

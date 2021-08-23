@@ -10,6 +10,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
+fn test(a: u32, b: u32) -> u32 {
+    a + b
+}
+
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
     let matches = cli.into_matches();
@@ -58,7 +62,7 @@ fn main() -> JodinResult<()> {
             }
         }
     }
-    println!("{:?}", full_paths);
+    //println!("{:?}", full_paths);
     let mut builder = FilesToJodinNodeTool::new(&settings);
     let result = builder.invoke(full_paths);
     if let Err(e) = result {
@@ -83,11 +87,11 @@ fn main() -> JodinResult<()> {
     }
 
     let node = builder.finish()?;
-    println!("{:?}", node);
+    // println!("{:?}", node);
 
     let analyzed = analyze(node)?;
     let optimized = optimize(analyzed)?;
-    println!("{:?}", optimized);
+   //  println!("{:?}", optimized);
 
     if settings.output_tast {
         let string = format!("{:#?}", optimized);

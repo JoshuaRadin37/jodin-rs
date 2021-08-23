@@ -9,9 +9,9 @@ pub use identity_resolution_tool::{
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 
+mod dependency_tool;
 mod identity_resolution_tool;
 mod type_resolution_tool;
-mod dependency_tool;
 
 /// Performs analysis on the tree, adding tags to the tree where appropriate
 ///

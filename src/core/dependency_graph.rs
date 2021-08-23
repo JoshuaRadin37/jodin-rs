@@ -1,14 +1,14 @@
 //! Allows the tracking of dependencies and produce an in order representation
 
-use crate::core::error::{JodinErrorType, JodinResult, JodinError};
+use crate::ast::tags::Tag;
+use crate::ast::JodinNode;
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, Namespaced};
+use crate::passes::analysis::ResolvedIdentityTag;
+use std::any::Any;
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
-use crate::ast::tags::Tag;
-use std::any::Any;
 use std::convert::TryFrom;
-use crate::ast::JodinNode;
-use crate::passes::analysis::ResolvedIdentityTag;
 
 /// Create a graph of dependencies between identifiers. An edge
 /// represents that this id has a dependency
@@ -132,7 +132,7 @@ pub trait HasDependencies: Namespaced {
 /// A tag that contains the identifiers that this node is dependent on
 pub struct DependencyTag {
     /// What this node is dependent on
-    pub dependencies: Vec<Identifier>
+    pub dependencies: Vec<Identifier>,
 }
 
 impl Tag for DependencyTag {
@@ -158,7 +158,7 @@ pub struct DependencyInfo<'a> {
     /// This identifier for this node
     pub this: &'a Identifier,
     /// The identifiers that this is dependent on
-    pub dependencies: Vec<&'a Identifier>
+    pub dependencies: Vec<&'a Identifier>,
 }
 
 impl<'a> TryFrom<&'a JodinNode> for DependencyInfo<'a> {
@@ -166,12 +166,11 @@ impl<'a> TryFrom<&'a JodinNode> for DependencyInfo<'a> {
 
     fn try_from(value: &'a JodinNode) -> Result<Self, Self::Error> {
         let this = value.get_tag::<ResolvedIdentityTag>()?.absolute_id();
-        let dependencies: Vec<_> = value.get_tag::<DependencyTag>().map_or(vec![], |tag| tag.dependencies.iter().collect());
+        let dependencies: Vec<_> = value
+            .get_tag::<DependencyTag>()
+            .map_or(vec![], |tag| tag.dependencies.iter().collect());
 
-        Ok(Self {
-            this,
-            dependencies
-        })
+        Ok(Self { this, dependencies })
     }
 }
 
@@ -186,7 +185,6 @@ impl HasDependencies for DependencyInfo<'_> {
         self.dependencies.clone()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
