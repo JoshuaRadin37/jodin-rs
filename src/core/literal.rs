@@ -76,6 +76,7 @@ impl FromStr for Literal {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.contains(".") {
+            todo!("floats")
         } else {
             match HEX_LITERAL.captures(s) {
                 Some(captures) if captures.get(0).unwrap().as_str() == s => {

@@ -7,6 +7,7 @@
 use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType};
 use crate::core::identifier::Identifier;
+#[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 use std::any::Any;
 use std::convert::TryFrom;
@@ -33,7 +34,7 @@ impl Visibility {
         }
     }
 }
-
+#[cfg(feature = "pest_parser")]
 impl TryFrom<Option<JodinRule>> for Visibility {
     type Error = JodinError;
 

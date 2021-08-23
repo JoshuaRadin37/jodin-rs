@@ -25,11 +25,14 @@
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
-#![deny(unused_imports)]
+// #![deny(unused_imports)]
 #![deny(unused_mut)]
 
 #[macro_use]
 extern crate clap;
+
+#[macro_use]
+extern crate logos;
 
 #[macro_use]
 extern crate lazy_static;

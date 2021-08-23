@@ -9,7 +9,9 @@
 
 use crate::ast::parse_identifier;
 use crate::core::identifier::Identifier;
+#[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
+#[cfg(feature = "pest_parser")]
 use pest::iterators::Pair;
 
 /// Represents an import "tree".
@@ -50,6 +52,7 @@ impl Import {
     }
 
     /// Create an import value by evaluating part of a parse tree.
+    #[cfg(feature = "pest_parser")]
     pub fn from_pair(pair: Pair<JodinRule>) -> Import {
         if JodinRule::using_path != pair.as_rule() {
             panic!(
@@ -104,9 +107,11 @@ pub enum ImportType {
 mod tests {
     use super::*;
     use crate::core::error::JodinErrorType;
+    #[cfg(feature = "pest_parser")]
     use crate::parsing::complete_parse;
 
     #[test]
+    #[cfg(feature = "pest_parser")]
     fn parse_using_path() {
         let string = "std::{vec::*, map, a::b as c}";
         match complete_parse(JodinRule::using_path, string).map_err(|e| e.into_err_and_bt().0) {

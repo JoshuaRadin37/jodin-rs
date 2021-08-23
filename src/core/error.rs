@@ -4,12 +4,14 @@
 //! [JodinError]: crate::core::error::JodinError
 
 use crate::core::identifier::Identifier;
+#[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 use backtrace::Backtrace;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::ParseIntError;
+
 
 /// The inner data type for the error that contains specific information required by the error.
 #[derive(Debug)]
@@ -38,10 +40,10 @@ pub enum JodinErrorType {
     TagCastError,
     /// The requested tag is not present in the node.
     TagNotPresent,
-    /// The [pest] parser through an error.
+    /// The parser through an error.
     ///
-    /// [pest]: pest
-    ParserError(pest::error::Error<crate::parsing::Rule>, Option<String>),
+    ///
+    ParserError(Box<dyn Error>, Option<String>),
     /// The entire string was not parsed.
     IncompleteParse {
         /// The extra text that was not parsed.
@@ -54,7 +56,7 @@ pub enum JodinErrorType {
     /// The Jodin tree is empty.
     EmptyJodinTree,
     /// An illegal jodin rule was passed along to attempt to create an AST from.
-    InvalidJodinRuleForASTCreation(JodinRule),
+    InvalidJodinRuleForASTCreation(String),
     /// This expression can not be evaluated as a constant expression
     NotAConstantExpression,
     /// Attempted to use invalid operator in a constant expression
@@ -66,7 +68,7 @@ pub enum JodinErrorType {
     /// A circular dependency has been detected
     CircularDependencyDetected,
     /// This rule can not be used for visibility
-    InvalidVisibilityRule(JodinRule),
+    InvalidVisibilityRule(String),
     /// The target identifier is not visible from the originating namespace
     IdentifierProtected {
         /// The targeted import
@@ -80,6 +82,8 @@ pub enum JodinErrorType {
     IllegalTreeType,
     /// This type can't be dereferenced
     TypeCantBeDereferenced(String),
+    /// There was a lexing error
+    LexerError,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
@@ -144,6 +148,6 @@ wrap_error!(ParseIntError);
 wrap_error!(ParseCharError);
 wrap_error!(std::io::Error);
 wrap_error!(std::fmt::Error);
-wrap_error!(pest::error::Error<crate::parsing::Rule>);
+// wrap_error!(pest::error::Error<crate::parsing::Rule>);
 /// Convenience result
 pub type JodinResult<T> = Result<T, JodinError>;

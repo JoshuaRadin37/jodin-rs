@@ -1,0 +1,36 @@
+use crate::core::identifier::Identifier;
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::core::literal::Literal;
+use crate::parsing::Tok;
+
+
+use std::str::FromStr;
+
+grammar<'input>(input: &'input str);
+
+pub SingleIdentifier: Identifier =
+    <s:t_identifier> => Identifier::from(s);
+
+pub Identifier: Identifier = {
+    <SingleIdentifier> => <>,
+    <p:Identifier> "::" <s:SingleIdentifier> => Identifier::new_concat(p, s)
+};
+
+
+pub String: Literal = {
+    t_string_literal => Literal::from_str(<>).unwrap(),
+};
+
+pub Literal: Literal = t_constant => Literal::from_str(<>).unwrap();
+
+extern {
+    type Location = usize;
+    type Error = crate::core::error::JodinError;
+
+    enum Tok<'input> {
+        t_constant => Tok::Constant(<&'input str>),
+        t_identifier => Tok::Identifier(<&'input str>),
+        t_string_literal => Tok::StringLiteral(<&'input str>),
+        "::" => Tok::Namespaced,
+    }
+}

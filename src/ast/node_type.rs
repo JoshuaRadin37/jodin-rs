@@ -8,6 +8,7 @@ use crate::core::operator::Operator;
 
 use crate::ast::intermediate_type::IntermediateType;
 use crate::ast::jodin_node::JodinNode;
+#[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 
 /// Contains JodinNode variant information.
@@ -178,7 +179,7 @@ pub enum JodinNodeType {
     /// Unimplemented nodes represent parts of the parse tree that can't be converted into AST (yet).
     Unimplemented {
         /// The rule that wasn't converted.
-        jodin_rule: JodinRule,
+        jodin_rule: String,
         /// The string from the original code that wasn't converted.
         affected_string: String,
     },

@@ -69,7 +69,8 @@ fn main() -> JodinResult<()> {
         match e.into_err_and_bt() {
             (JodinErrorType::ParserError(e, file), bt) => {
                 let error = if let Some(path) = file {
-                    e.with_path(path.as_str())
+                    // e.with_path(path.as_str())
+                    e
                 } else {
                     e
                 };
