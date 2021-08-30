@@ -10,6 +10,7 @@ use pest::Parser;
 #[cfg(feature = "pest_parser")]
 use pest_derive::Parser;
 
+use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
@@ -17,7 +18,6 @@ use logos::internal::CallbackResult;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::{CharIndices, FromStr};
-use crate::ast::JodinNode;
 
 /// The JodinParser. Used the pest engine to perform parsing.
 #[cfg(all(feature = "pest_parser", not(feature = "larlpop_parser")))]
@@ -336,6 +336,10 @@ pub enum Tok<'input> {
     RPar,
     #[token(";")]
     Semic,
+    #[token(":")]
+    Colon,
+    #[token("?")]
+    Qmark,
     #[regex(r"__\w+", priority = 100)]
     SpecialKeyword(&'input str),
     #[token("==", |_| Operator::Equal)]
@@ -429,7 +433,6 @@ macro_rules! parse {
     }};
 }
 
-
 type ParseResult = JodinResult<JodinNode>;
 
 #[cfg(all(not(feature = "pest_parser"), feature = "larlpop_parser"))]
@@ -496,7 +499,10 @@ mod tests {
         assert!(parse!(jodin_grammar::IdentifierListParser, "hello").is_ok());
         assert!(parse!(jodin_grammar::IdentifierListParser, "hello,").is_err());
         assert!(parse!(jodin_grammar::IdentifierListParser, "hello, my_name").is_ok());
-        assert!(parse!(jodin_grammar::IdentifierListParser, "hello, __my_name").is_err(), "@my_name is a special keyword, not an identifier");
+        assert!(
+            parse!(jodin_grammar::IdentifierListParser, "hello, __my_name").is_err(),
+            "@my_name is a special keyword, not an identifier"
+        );
         assert!(parse!(jodin_grammar::IdentifierListParser, "hello, my_name,").is_err());
         let ids = parse!(jodin_grammar::IdentifierListParser, "hello, my_name, bleh").unwrap();
         assert_eq!(ids, vec!["hello", "my_name", "bleh"]);

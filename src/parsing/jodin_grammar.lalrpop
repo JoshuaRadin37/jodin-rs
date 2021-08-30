@@ -36,7 +36,43 @@ pub IdentifierList = OptionalList<Identifier>;
 
 pub CanonicalType: JodinResult<IntermediateType> = { }
 
-pub Expression: JodinResult<JodinNode> = { }
+pub Expression: JodinResult<JodinNode> = {
+    DorExpression,
+    <cond:DorExpression> "?" <t:Expression> ":" <f:Expression> => {
+        JodinNodeType::Ternary {
+            cond: cond?,
+            yes: t?,
+            no: f?
+        }.into_result()
+    }
+}
+
+DorExpression = Tier<"||", DandExpression>;
+
+DandExpression = Tier<"&&", OrExpression>;
+
+OrExpression = Tier<"|", XorExpression>;
+
+XorExpression = Tier<"^", AndExpression>;
+
+AndExpression = Tier<"&", EqualityExpression>;
+
+EqualityExpression = Tier<EqualityOps, ComparisonExpression>;
+
+EqualityOps: Operator = {
+    "!=" => Operator::Nequal,
+    "==" => Operator::Equal
+}
+
+ComparisonExpression = Tier<ComparisonOps, ShiftExpression>;
+
+ComparisonOps: Operator = {
+    "<" => Operator::Lt,
+    "<=" => Operator::Lte,
+    ">" => Operator::Gt,
+    ">=" => Operator::Gte,
+
+}
 
 ShiftExpression = Tier<ShiftOps, AddExpression>;
 
@@ -192,7 +228,7 @@ extern {
         "t_identifier" => Tok::Identifier(<&'input str>),
         "t_string_literal" => Tok::StringLiteral(<&'input str>),
         "t_operator" => Tok::Operator(<Operator>),
-        "||" => Tok::Operator(Operator::Dor),
+        "||" => Operator::Dor,
         "++" => Tok::Operator(Operator::Increment),
         "--" => Tok::Operator(Operator::Decrement),
         "*" => Tok::Operator(Operator::Star),
@@ -200,6 +236,19 @@ extern {
         "%" => Tok::Operator(Operator::Modulo),
         "+" => Tok::Operator(Operator::Plus),
         "-" => Tok::Operator(Operator::Minus),
+        ">>" => Tok::Operator(Operator::RShift),
+        "<<" => Tok::Operator(Operator::LShift),
+        ">=" => Tok::Operator(Operator::Gte),
+        "<=" => Tok::Operator(Operator::Lte),
+        "!=" => Tok::Operator(Operator::Nequal),
+        "==" => Tok::Operator(Operator::Equal),
+        ">" => Tok::Operator(Operator::Gt),
+        "<" => Tok::Operator(Operator::Lt),
+        "&" => Tok::Operator(Operator::And),
+        "&&" => Tok::Operator(Operator::Dand),
+        "|" => Tok::Operator(Operator::Or),
+        "||" => Tok::Operator(Operator::Dor),
+        "^" => Tok::Operator(Operator::Xor),
         "t_assign" => Tok::Assign(<Option<Operator>>),
         "break" => Tok::Break,
         "case" => Tok::Case,
@@ -251,7 +300,7 @@ extern {
         ";" => Tok::Semic,
         "(" => Tok::LPar,
         ")" => Tok::RPar,
-        ">" => Tok::Operator(Operator::Gt),
-        "<" => Tok::Operator(Operator::Lt),
+        ":" => Tok::Colon,
+        "?" => Tok::Qmark
     }
 }
