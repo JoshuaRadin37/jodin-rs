@@ -1,36 +1,193 @@
 use crate::core::identifier::Identifier;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
+use crate::core::operator::Operator;
+use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType};
 use crate::parsing::Tok;
 
+use super::UnwrapVector;
+use super::ParseResult;
 
+use std::iter::FromIterator;
 use std::str::FromStr;
+
+
 
 grammar<'input>(input: &'input str);
 
-pub SingleIdentifier: Identifier =
-    <s:t_identifier> => Identifier::from(s);
 
-pub Identifier: Identifier = {
-    <SingleIdentifier> => <>,
-    <p:Identifier> "::" <s:SingleIdentifier> => Identifier::new_concat(p, s)
-};
+
+// atomic types
+pub SingleIdentifier: Identifier =
+    <s:"t_identifier"> => Identifier::from(s);
+
+pub Identifier: Identifier = Joined<"t_identifier", "::"> => Identifier::from_iter(<>);
+
 
 
 pub String: Literal = {
-    t_string_literal => Literal::from_str(<>).unwrap(),
+    "t_string_literal" => Literal::from_str(<>).unwrap(),
 };
 
-pub Literal: Literal = t_constant => Literal::from_str(<>).unwrap();
+pub Literal: Literal = "t_constant" => Literal::from_str(<>).unwrap();
+
+
+pub IdentifierList = OptionalList<Identifier>;
+
+pub CanonicalType: JodinResult<IntermediateType> = { }
+
+pub Expression: JodinResult<JodinNode> = { }
+
+Atom: JodinResult<JodinNode> = {
+    "(" <Expression> ")",
+    Identifier => JodinNodeType::Identifier(<>).into_result(),
+    "new" <ty:CanonicalType> <generics:GenericInstance?> "(" <args:ArgsList> ")" => {
+        JodinNodeType::ConstructorCall {
+            name: ty?,
+            generic_parameters: generics.unwrap_or(vec![]).unwrap_vec()?,
+            arguments: args.unwrap_vec()?
+        }.into_result()
+    }
+}
+
+AtomModifier: JodinResult
+
+
+GenericInstance = "<" <OptionalList<CanonicalType>> ">";
+
+
+ArgsList = OptionalList<Expression>;
+
+
+
+
+
+
+
+pub JodinFile: JodinResult<JodinNode> = TopLevelDeclarations;
+
+pub TopLevelDeclarations: JodinResult<JodinNode> = {
+    <decs:TopLevelDeclarationsList> => JodinNodeType::TopLevelDeclarations {decs: decs? }.into_result()
+}
+
+TopLevelDeclarationsList: JodinResult<Vec<JodinNode>> = {
+  <dec:TopLevelDeclaration> => Ok(vec![dec?]),
+  <v:TopLevelDeclarationsList> <dec:TopLevelDeclaration> => {
+    let mut vector = v?;
+    vector.push(dec?);
+    Ok(vector)
+  }
+};
+
+
+pub TopLevelDeclaration: JodinResult<JodinNode> = {
+
+    ";" => JodinNodeType::Empty.into_result()
+};
+
+
+
+
+
+
+// macros
+
+
+
+Joined<T, Seperator>: Vec<T> = {
+    <v:T> => vec![v],
+    <mut hd:Joined<T, Seperator>> <u:Seperator> <tl:T> => {
+        hd.push(tl);
+        hd
+    }
+}
+
+
+List<T>: Vec<T> = Joined<T, ",">;
+
+Optional<T>: Option<T> = {
+    <v:T?> => v
+};
+
+OptionalJoined<T, Seperator>: Vec<T> = {
+    <list:Optional<Joined<T, Seperator>>> =>
+    match list {
+        Some(list) => list,
+        None => vec![]
+    }
+};
+
+OptionalList<T>: Vec<T> = OptionalJoined<T, ",">;
+
+
+Tier<Op, NextTier>: JodinResult<JodinNode> = {
+    <lhs:Tier<Op,NextTier>> <op:Op> <rhs:NextTier> => JodinNodeType::Binop { op, lhs: lhs?, rhs: rhs? }.into_result(),
+    NextTier
+};
+
 
 extern {
     type Location = usize;
     type Error = crate::core::error::JodinError;
 
     enum Tok<'input> {
-        t_constant => Tok::Constant(<&'input str>),
-        t_identifier => Tok::Identifier(<&'input str>),
-        t_string_literal => Tok::StringLiteral(<&'input str>),
+        "t_constant" => Tok::Constant(<&'input str>),
+        "t_identifier" => Tok::Identifier(<&'input str>),
+        "t_string_literal" => Tok::StringLiteral(<&'input str>),
+        "t_operator" => Tok::Operator(<Operator>),
+        "||" => Tok::Operator(Operator::Dor),
+        "t_assign" => Tok::Assign(<Option<Operator>>),
+        "break" => Tok::Break,
+        "case" => Tok::Case,
+        "char" => Tok::Char,
+        "const" => Tok::Const,
+        "continue" => Tok::Continue,
+        "default" => Tok::Default,
+        "double" => Tok::Double,
+        "do" => Tok::Do,
+        "else" => Tok::Else,
+        "float" => Tok::Float,
+        "for" => Tok::For,
+        "if" => Tok::If,
+        "int" => Tok::Int,
+        "long" => Tok::Long,
+        "return" => Tok::Return,
+        "short" => Tok::Short,
+        "static" => Tok::Static,
+        "typedef" => Tok::Typedef,
+        "union" => Tok::Union,
+        "unsigned" => Tok::Unsigned,
+        "struct" => Tok::Struct,
+        "void" => Tok::Void,
+        "while" => Tok::While,
+        "class" => Tok::Class,
+        "public" => Tok::Public,
+        "private" => Tok::Private,
+        "new" => Tok::New,
+        "super" => Tok::Super,
+        "virtual" => Tok::Virtual,
+        "sizeof" => Tok::Sizeof,
+        "boolean" => Tok::Boolean,
+        "in" => Tok::In,
+        "implement" => Tok::Implement,
+        "internal" => Tok::Internal,
+        "using" => Tok::Using,
+        "typeof" => Tok::Typeof,
+        "true" => Tok::True,
+        "false" => Tok::False,
+        "abstract" => Tok::Abstract,
+        "is" => Tok::Is,
+        "trait" => Tok::Trait,
+        "enum" => Tok::Enum,
+        "switch" => Tok::Switch,
+        "as" => Tok::As,
+        "..." => Tok::Varargs,
         "::" => Tok::Namespaced,
+        "," => Tok::Comma,
+        ";" => Tok::Semic,
+        "(" => Tok::LPar,
+        ")" => Tok::RPar,
+        ">" => Tok::Operator(Operator::Gt),
+        "<" => Tok::Operator(Operator::Lt),
     }
 }

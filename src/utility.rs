@@ -32,17 +32,14 @@ pub trait Tree {
     }
 }
 /// Box a value
-pub trait IntoBox : Sized {
+pub trait IntoBox: Sized {
     /// Put this value into the heap
     fn boxed(self) -> Box<Self> {
         Box::new(self)
     }
 }
 
-impl <T: Sized> IntoBox for T {
-
-}
-
+impl<T: Sized> IntoBox for T {}
 
 /// A human readable interpretation of a value. This can be the same as display, but may
 /// be different. For example, a date object can have a display implementation
@@ -54,7 +51,6 @@ pub trait HumanReadable: ToString {
         self.to_string()
     }
 }
-
 
 /// A wrapper to get human writable bytes
 #[derive(Debug)]
@@ -73,7 +69,7 @@ impl HumanReadable for Bytes {
             1024..=1048575 => (1, "KB"),
             1048576..=1073741823 => (2, "MB"),
             1073741824..=1099511627775 => (3, "GB"),
-            _ => (4, "TB")
+            _ => (4, "TB"),
         };
 
         let value = self.0 / (1024usize.pow(power));
@@ -88,7 +84,6 @@ impl Bytes {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::utility::{Bytes, HumanReadable};
@@ -98,11 +93,20 @@ mod tests {
         assert_eq!(Bytes::new(92).human_readable(), "92 B");
         assert_eq!(Bytes::new(1023).human_readable(), "1023 B");
         assert_eq!(Bytes::new(1024).human_readable(), "1 KB");
-        assert_eq!(Bytes::new(1024*1024 - 1).human_readable(), "1023 KB");
-        assert_eq!(Bytes::new(1024*1024).human_readable(), "1 MB");
-        assert_eq!(Bytes::new(1024*1024*1024-1).human_readable(), "1023 MB");
-        assert_eq!(Bytes::new(1024*1024*1024).human_readable(), "1 GB");
-        assert_eq!(Bytes::new(1024*1024*1024*1024 - 1).human_readable(), "1023 GB");
-        assert_eq!(Bytes::new(1024*1024*1024*1024).human_readable(), "1 TB");
+        assert_eq!(Bytes::new(1024 * 1024 - 1).human_readable(), "1023 KB");
+        assert_eq!(Bytes::new(1024 * 1024).human_readable(), "1 MB");
+        assert_eq!(
+            Bytes::new(1024 * 1024 * 1024 - 1).human_readable(),
+            "1023 MB"
+        );
+        assert_eq!(Bytes::new(1024 * 1024 * 1024).human_readable(), "1 GB");
+        assert_eq!(
+            Bytes::new(1024 * 1024 * 1024 * 1024 - 1).human_readable(),
+            "1023 GB"
+        );
+        assert_eq!(
+            Bytes::new(1024 * 1024 * 1024 * 1024).human_readable(),
+            "1 TB"
+        );
     }
 }

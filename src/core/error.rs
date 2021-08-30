@@ -12,7 +12,6 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::ParseIntError;
 
-
 /// The inner data type for the error that contains specific information required by the error.
 #[derive(Debug)]
 pub enum JodinErrorType {

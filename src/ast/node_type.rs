@@ -171,7 +171,7 @@ pub enum JodinNodeType {
         /// The type being called
         name: IntermediateType,
         /// The generic parameters of the function.
-        generic_parameters: Vec<JodinNode>,
+        generic_parameters: Vec<IntermediateType>,
         /// The arguments of the function.
         arguments: Vec<JodinNode>,
     },
@@ -368,7 +368,6 @@ impl JodinNodeType {
                 arguments,
             } => {
                 let mut ret = vec![];
-                ret.extend(generic_parameters);
                 ret.extend(arguments);
                 ret
             }
@@ -554,7 +553,6 @@ impl JodinNodeType {
                 arguments,
             } => {
                 let mut ret = vec![];
-                ret.extend(generic_parameters);
                 ret.extend(arguments);
                 ret
             }

@@ -92,7 +92,7 @@ fn main() -> JodinResult<()> {
 
     let analyzed = analyze(node)?;
     let optimized = optimize(analyzed)?;
-   //  println!("{:?}", optimized);
+    //  println!("{:?}", optimized);
 
     if settings.output_tast {
         let string = format!("{:#?}", optimized);

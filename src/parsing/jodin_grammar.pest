@@ -481,7 +481,7 @@ function_call = {
 }
 
 generic_instance = {
-    "<" ~ canonical_type ~ ">"
+    "<" ~ canonical_type+ ~ ">"
 }
 
 pointer = {

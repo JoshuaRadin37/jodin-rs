@@ -10,14 +10,17 @@ use pest::Parser;
 #[cfg(feature = "pest_parser")]
 use pest_derive::Parser;
 
-use crate::core::error::{JodinErrorType, JodinResult, JodinError};
-use std::str::CharIndices;
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
-use logos::{Logos, Lexer, SpannedIter, Skip};
+use logos::internal::CallbackResult;
+use logos::{Lexer, Logos, Skip, SpannedIter};
+use regex::Regex;
+use std::str::{CharIndices, FromStr};
+use crate::ast::JodinNode;
 
 /// The JodinParser. Used the pest engine to perform parsing.
-#[cfg(all(feature="pest_parser", not(feature = "larlpop_parser")))]
+#[cfg(all(feature = "pest_parser", not(feature = "larlpop_parser")))]
 #[derive(Parser, Debug)]
 #[grammar = "parsing/jodin_grammar.pest"]
 pub struct JodinParser;
@@ -35,8 +38,6 @@ pub fn complete_parse(rule: Rule, input: &str) -> JodinResult<Pairs<Rule>> {
     result.map_err(|err| JodinErrorType::ParserError(err, None).into())
     //Ok(result)
 }
-
-
 
 #[cfg(test)]
 #[cfg(feature = "pest_parser")]
@@ -178,38 +179,44 @@ mod tests {
     }
 }
 
-#[cfg(all(not(feature="pest_parser"), feature = "larlpop_parser"))]
+#[cfg(all(not(feature = "pest_parser"), feature = "larlpop_parser"))]
 pub mod jodin_grammar;
 
 pub type Spanned<Tok, Loc> = Result<(Loc, Tok, Loc), JodinError>;
 
 /// The jodin lexer
 pub struct JodinLexer<'input> {
-    lexer: SpannedIter<'input, Tok<'input>>
+    lexer: SpannedIter<'input, Tok<'input>>,
 }
 
 impl<'input> JodinLexer<'input> {
     /// Create a new lexer from an input
     pub fn new(input: &'input str) -> Self {
         JodinLexer {
-            lexer: Tok::lexer(input).spanned()
+            lexer: Tok::lexer(input).spanned(),
         }
     }
 }
 
-/*
+impl<'input> Iterator for JodinLexer<'input> {
+    type Item = Spanned<Tok<'input>, usize>;
 
-D			[0-9]
-L			[a-zA-Z_]
-H			[a-fA-F0-9]
-E			[Ee][+-]?{D}+
-FS			(f|F|l|L)
-IS			(u|U|l|L)*
-
- */
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((tok, span)) = self.lexer.next() {
+            match tok {
+                Tok::Error => return Some(Err(JodinErrorType::LexerError.into())),
+                tok => Some(Ok((span.start, tok, span.end))),
+            }
+        } else {
+            None
+        }
+    }
+}
 
 #[derive(Debug, Copy, Clone, Logos)]
 pub enum Tok<'input> {
+    #[regex(r"[ \t\n\f]+", logos::skip)]
+    Whitespace,
     #[regex(r"0[xX][a-fA-F0-9]+(u|U|l|L)*")]
     #[regex(r"0[0-9]+(u|U|l|L)*")]
     #[regex(r"[0-9]+(u|U|l|L)*")]
@@ -223,68 +230,150 @@ pub enum Tok<'input> {
     StringLiteral(&'input str),
     #[token("break")]
     Break,
+    #[token("case")]
     Case,
+    #[token("char")]
     Char,
+    #[token("const")]
     Const,
+    #[token("continue")]
     Continue,
+    #[token("default")]
     Default,
+    #[token("double")]
     Double,
+    #[token("do")]
     Do,
+    #[token("else")]
     Else,
+    #[token("float")]
     Float,
+    #[token("for")]
     For,
+    #[token("if")]
     If,
+    #[token("int")]
     Int,
+    #[token("long")]
     Long,
+    #[token("return")]
     Return,
+    #[token("short")]
     Short,
+    #[token("static")]
     Static,
+    #[token("typedef")]
     Typedef,
+    #[token("union")]
     Union,
+    #[token("unsigned")]
     Unsigned,
+    #[token("struct")]
     Struct,
+    #[token("void")]
     Void,
+    #[token("while")]
     While,
+    #[token("class")]
     Class,
+    #[token("public")]
     Public,
+    #[token("private")]
     Private,
+    #[token("new")]
     New,
+    #[token("super")]
     Super,
+    #[token("virtual")]
     Virtual,
+    #[token("sizeof")]
     Sizeof,
+    #[token("boolean")]
     Boolean,
+    #[token("in")]
     In,
+    #[token("implement")]
     Implement,
+    #[token("internal")]
     Internal,
+    #[token("using")]
     Using,
+    #[token("typeof")]
     Typeof,
+    #[token("true")]
     True,
+    #[token("false")]
     False,
+    #[token("abstract")]
     Abstract,
+    #[token("is")]
     Is,
+    #[token("trait")]
     Trait,
+    #[token("enum")]
     Enum,
+    #[token("switch")]
     Switch,
+    #[token("as")]
     As,
+    #[token("...")]
     Varargs,
     #[token("::")]
     Namespaced,
+    #[token(",")]
+    Comma,
+    #[token("[")]
+    LBrac,
+    #[token("]")]
+    RBrac,
+    #[token("{")]
+    LCurl,
+    #[token("}")]
+    RCurl,
+    #[token("(")]
+    LPar,
+    #[token(")")]
+    RPar,
+    #[token(";")]
+    Semic,
+    #[regex(r"__\w+", priority = 100)]
     SpecialKeyword(&'input str),
+    #[token("==", |_| Operator::Equal)]
+    #[token("!=", |_| Operator::Nequal)]
+    #[token("<=", |_| Operator::Lte)]
+    #[token(">=", |_| Operator::Gte)]
+    #[regex(r"[+\-*/&%<>!^|][+\-*/&%<>!^|]?", |lex| Operator::from_str(lex.slice()))]
     Operator(Operator),
+    #[token("=", |_| Option::<Operator>::None)]
+    #[regex(r"[+\-*/&%^|]=", maybe_assign_operator, priority = 10)]
     Assign(Option<Operator>),
     #[regex(r"[a-zA-Z_]\w+")]
+    #[regex(r"@[a-zA-Z_]\w+", |lex| &lex.source()[1..])]
     Identifier(&'input str),
-    #[error]
-    Error,
-    #[regex(r"[ \t\n\f]+", logos::skip)]
-    Whitespace,
     #[regex(r"//.*", logos::skip)]
     #[token("/*", comment)]
     Comment,
+    #[error]
+    Error,
+}
+
+fn maybe_assign_operator<'input>(
+    lex: &mut Lexer<'input, Tok<'input>>,
+) -> JodinResult<Option<Operator>> {
+    let full_operator: &str = lex.slice();
+    let regex = Regex::new(r"(?P<operator>.[^=]?)=").unwrap();
+    if let Some(captures) = regex.captures(full_operator) {
+        let op = captures
+            .name("operator")
+            .expect("operator group should exist");
+        let operator = op.as_str();
+        Operator::from_str(operator).map(|op| Some(op))
+    } else {
+        Err(JodinErrorType::LexerError.into())
+    }
 }
 
 fn comment<'input>(lex: &mut Lexer<'input, Tok<'input>>) -> Skip {
-
     loop {
         let remaining: &str = lex.remainder();
         if remaining.len() < 2 {
@@ -304,9 +393,6 @@ fn comment<'input>(lex: &mut Lexer<'input, Tok<'input>>) -> Skip {
 }
 
 fn string<'input>(lex: &mut Lexer<'input, Tok<'input>>) -> &'input str {
-
-
-
     let mut count = 0;
     let mut remainder = &lex.source()[count..(count + 3)];
     while remainder != r#""*)"# {
@@ -315,60 +401,78 @@ fn string<'input>(lex: &mut Lexer<'input, Tok<'input>>) -> &'input str {
     }
     let found: &'input str = &lex.remainder()[..count];
     lex.bump(found.bytes().len());
-    let ret = &lex.source()[..(count+3)];
+    let ret = &lex.source()[..(count + 3)];
     ret
 }
 
+trait UnwrapVector<T, E> {
+    fn unwrap_vec(self) -> Result<Vec<T>, E>;
+}
 
-
-impl<'input> Iterator for JodinLexer<'input> {
-    type Item = Spanned<Tok<'input>, usize>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some((tok, span)) = self.lexer.next() {
-            match tok {
-                Tok::Error => return Some(Err(JodinErrorType::LexerError.into())),
-                tok => Some(Ok((span.start, tok, span.end)))
-            }
-        } else {
-            None
+impl<T, E> UnwrapVector<T, E> for Vec<Result<T, E>> {
+    fn unwrap_vec(self) -> Result<Vec<T>, E> {
+        let mut ret = vec![];
+        for result in self {
+            ret.push(result?);
         }
+        Ok(ret)
     }
 }
 
 #[macro_use]
 macro_rules! parse {
-    ($parser:ty, $ex:expr) => {
-        {
-            let string: &str = $ex;
-            let lexer = $crate::parsing::JodinLexer::new(string);
-            let parser = <$parser>::new();
-            parser.parse(string, lexer)
-        }
-    };
+    ($parser:ty, $ex:expr) => {{
+        let string: &str = $ex;
+        let lexer = $crate::parsing::JodinLexer::new(string);
+        let parser = <$parser>::new();
+        parser.parse(string, lexer)
+    }};
 }
 
-#[cfg(all(not(feature="pest_parser"), feature = "larlpop_parser"))]
+
+type ParseResult = JodinResult<JodinNode>;
+
+#[cfg(all(not(feature = "pest_parser"), feature = "larlpop_parser"))]
 mod tests {
     use super::jodin_grammar;
     use crate::core::identifier::Identifier;
-    use std::iter::FromIterator;
     use crate::core::literal::Literal;
+    use crate::core::operator::Operator;
+    use crate::parsing::{JodinLexer, Tok};
+    use std::iter::FromIterator;
     use std::str::FromStr;
-    use crate::parsing::JodinLexer;
+
+    #[test]
+    fn lex_identifiers() {
+        let string = "+=";
+        let mut lexer = JodinLexer::new(string);
+        match lexer.next() {
+            Some(Ok((_, Tok::Assign(Some(Operator::Plus)), _))) => {}
+            v => {
+                panic!("Didn't lex correctly: {:?}", v)
+            }
+        }
+    }
 
     #[test]
     fn parse_identifiers() {
-
         let string = "std::mod::hello";
         let lexer = JodinLexer::new(string);
         let identifier_parser = jodin_grammar::IdentifierParser::new();
-        assert_eq!(identifier_parser.parse(string, lexer).unwrap(), Identifier::from_iter(["std", "mod", "hello"]));
+        assert_eq!(
+            identifier_parser.parse(string, lexer).unwrap(),
+            Identifier::from_iter(["std", "mod", "hello"])
+        );
+        assert!(parse!(jodin_grammar::IdentifierParser, "int").is_err());
+        assert!(parse!(jodin_grammar::IdentifierParser, "@int").is_ok());
     }
 
     #[test]
     fn parse_constant() {
-        assert_eq!(parse!(jodin_grammar::LiteralParser, "10").unwrap(), Literal::Int(10));
+        assert_eq!(
+            parse!(jodin_grammar::LiteralParser, "10").unwrap(),
+            Literal::Int(10)
+        );
         // assert!(parse!(jodin_grammar::LiteralParser, "10.1").is_ok());
         // assert!(parse!(jodin_grammar::LiteralParser, ".1F").is_ok());
         assert!(parse!(jodin_grammar::LiteralParser, "0xAFD").is_ok());
@@ -376,8 +480,25 @@ mod tests {
 
     #[test]
     fn parse_string() {
-        assert_eq!(parse!(jodin_grammar::StringParser, r#""hello, world!""#).unwrap(), Literal::String("hello, world!".to_string()));
-        assert_eq!(parse!(jodin_grammar::StringParser, r#"(*"hello, world!"*)"#).unwrap(), Literal::String("hello, world!".to_string()));
+        assert_eq!(
+            parse!(jodin_grammar::StringParser, r#""hello, world!""#).unwrap(),
+            Literal::String("hello, world!".to_string())
+        );
+        assert_eq!(
+            parse!(jodin_grammar::StringParser, r#"(*"hello, world!"*)"#).unwrap(),
+            Literal::String("hello, world!".to_string())
+        );
     }
 
+    #[test]
+    fn parse_id_list() {
+        assert!(parse!(jodin_grammar::IdentifierListParser, "").is_ok());
+        assert!(parse!(jodin_grammar::IdentifierListParser, "hello").is_ok());
+        assert!(parse!(jodin_grammar::IdentifierListParser, "hello,").is_err());
+        assert!(parse!(jodin_grammar::IdentifierListParser, "hello, my_name").is_ok());
+        assert!(parse!(jodin_grammar::IdentifierListParser, "hello, __my_name").is_err(), "@my_name is a special keyword, not an identifier");
+        assert!(parse!(jodin_grammar::IdentifierListParser, "hello, my_name,").is_err());
+        let ids = parse!(jodin_grammar::IdentifierListParser, "hello, my_name, bleh").unwrap();
+        assert_eq!(ids, vec!["hello", "my_name", "bleh"]);
+    }
 }

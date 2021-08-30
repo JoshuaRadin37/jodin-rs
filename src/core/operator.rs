@@ -6,6 +6,7 @@ use num_traits::PrimInt;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 /// The operators
 #[derive(Debug, Copy, Clone)]
@@ -152,6 +153,32 @@ impl Display for Operator {
             Operator::RShift => {
                 write!(f, ">>")
             }
+        }
+    }
+}
+
+impl FromStr for Operator {
+    type Err = JodinError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use Operator::*;
+        match s {
+            "!" => Ok(Not),
+            "++" => Ok(Increment),
+            "--" => Ok(Decrement),
+            "+" => Ok(Plus),
+            "-" => Ok(Minus),
+            "*" => Ok(Star),
+            "/" => Ok(Divide),
+            "%" => Ok(Modulo),
+            "^" => Ok(Xor),
+            "|" => Ok(Or),
+            "||" => Ok(Dor),
+            "&" => Ok(And),
+            "&&" => Ok(Dand),
+            "<<" => Ok(LShift),
+            ">>" => Ok(RShift),
+            _ => Err(JodinErrorType::LexerError.into()),
         }
     }
 }

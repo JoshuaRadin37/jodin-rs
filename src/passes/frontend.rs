@@ -6,25 +6,21 @@ use std::io::Write;
 use std::io::{BufReader, Read};
 use std::path::PathBuf;
 
-use crate::ast::JodinNode;
 #[cfg(feature = "pest_parser")]
 use crate::ast::pest::JodinNodeBuilder;
+use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
 /// A tool to turn files into a jodin node tree
 pub struct FilesToJodinNodeTool<'a> {
-
     settings: &'a CompilationSettings,
 }
 
 impl<'a> FilesToJodinNodeTool<'a> {
     /// Creates a new toolchain that uses the a reference to compilation settings
     pub fn new(settings: &'a CompilationSettings) -> Self {
-        Self {
-
-            settings,
-        }
+        Self { settings }
     }
 
     /// When finish is called, no more files can be added to this JodinNode.

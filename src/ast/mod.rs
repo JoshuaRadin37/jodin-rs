@@ -17,7 +17,6 @@ use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
-
 use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 pub use crate::ast::jodin_node::JodinNode;
 pub use crate::ast::node_type::JodinNodeType;
