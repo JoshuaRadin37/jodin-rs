@@ -38,6 +38,48 @@ pub CanonicalType: JodinResult<IntermediateType> = { }
 
 pub Expression: JodinResult<JodinNode> = { }
 
+ShiftExpression = Tier<ShiftOps, AddExpression>;
+
+ShiftOps: Operator = {
+    ">>" => Operator::RShift,
+    "<<" => Operator::LShift
+}
+
+AddExpression = Tier<AddOps, MultExpression>;
+
+AddOps: Operator = {
+    "+" => Operator::Plus,
+    "-" => Operator::Minus
+}
+
+MultExpression = Tier<MultOps, Factor>;
+
+MultOps: Operator = {
+    "*" => Operator::Star,
+    "/" => Operator::Divide,
+    "%" => Operator::Modulo
+}
+
+pub UniOp: ParseResult = {
+    "++" <Factor> => JodinNodeType::Uniop { op: Operator::Increment, inner: <>?}.into_result(),
+    "--" <Factor> => JodinNodeType::Uniop { op: Operator::Decrement, inner: <>?}.into_result(),
+}
+
+pub Factor:  ParseResult = {
+    UniOp,
+    String => JodinNodeType::Literal(<>).into_result(),
+    Literal => JodinNodeType::Literal(<>).into_result(),
+    "true" => JodinNodeType::Literal(Literal::Boolean(true)).into_result(),
+    "false" => JodinNodeType::Literal(Literal::Boolean(false)).into_result(),
+    CastExpression,
+    AtomModifier
+}
+
+CastExpression: ParseResult = "(" <c_type:CanonicalType> ")" <factor:Factor> => JodinNodeType::CastExpression {
+    to_type: c_type?,
+    factor: factor?
+ }.into_result();
+
 Atom: JodinResult<JodinNode> = {
     "(" <Expression> ")",
     Identifier => JodinNodeType::Identifier(<>).into_result(),
@@ -50,7 +92,17 @@ Atom: JodinResult<JodinNode> = {
     }
 }
 
-AtomModifier: JodinResult
+pub AtomModifier: ParseResult = {
+    <atom: Atom> <call: FunctionCall> => {
+        let (generics, arguments) = call?;
+        JodinNodeType::Call {
+            called: atom?,
+            generics_instance: generics,
+            arguments
+        }.into_result()
+    },
+    Atom,
+}
 
 
 GenericInstance = "<" <OptionalList<CanonicalType>> ">";
@@ -58,7 +110,12 @@ GenericInstance = "<" <OptionalList<CanonicalType>> ">";
 
 ArgsList = OptionalList<Expression>;
 
-
+FunctionCall: JodinResult<(Vec<JodinNode>, Vec<JodinNode>)> = {
+    "(" <args: ArgsList> ")" => {
+        let args = args.unwrap_vec()?;
+        Ok((vec![], args))
+    }
+}
 
 
 
@@ -136,6 +193,13 @@ extern {
         "t_string_literal" => Tok::StringLiteral(<&'input str>),
         "t_operator" => Tok::Operator(<Operator>),
         "||" => Tok::Operator(Operator::Dor),
+        "++" => Tok::Operator(Operator::Increment),
+        "--" => Tok::Operator(Operator::Decrement),
+        "*" => Tok::Operator(Operator::Star),
+        "/" => Tok::Operator(Operator::Divide),
+        "%" => Tok::Operator(Operator::Modulo),
+        "+" => Tok::Operator(Operator::Plus),
+        "-" => Tok::Operator(Operator::Minus),
         "t_assign" => Tok::Assign(<Option<Operator>>),
         "break" => Tok::Break,
         "case" => Tok::Case,

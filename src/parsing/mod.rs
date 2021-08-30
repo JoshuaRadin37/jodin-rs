@@ -501,4 +501,13 @@ mod tests {
         let ids = parse!(jodin_grammar::IdentifierListParser, "hello, my_name, bleh").unwrap();
         assert_eq!(ids, vec!["hello", "my_name", "bleh"]);
     }
+
+    #[test]
+    fn parse_atom_modifier() {
+        assert!(parse!(jodin_grammar::AtomModifierParser, "value").is_ok());
+        assert!(parse!(jodin_grammar::AtomModifierParser, "value()").is_ok());
+        assert!(parse!(jodin_grammar::AtomModifierParser, "value(1,2,3)").is_ok());
+        assert!(parse!(jodin_grammar::AtomModifierParser, "(value)(1,2)").is_ok());
+        assert!(parse!(jodin_grammar::AtomModifierParser, "(value)(1,2,)").is_err());
+    }
 }
