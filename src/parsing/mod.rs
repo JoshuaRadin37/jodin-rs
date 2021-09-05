@@ -361,11 +361,13 @@ pub enum Tok<'input> {
     #[token(">=", |_| Operator::Gte)]
     #[regex(r"[+\-*/&%<>!^|][\*/&%<>!^|]?", |lex| Operator::from_str(lex.slice()))]
     Op(Operator),
+    #[token(".")]
+    Dot,
     #[token("=", |_| Option::<Operator>::None)]
     #[regex(r"[+\-*/&%^|]=", maybe_assign_operator, priority = 10)]
     Assign(Option<Operator>),
-    #[regex(r"[a-zA-Z_]\w+")]
-    #[regex(r"@[a-zA-Z_]\w+", |lex| &lex.source()[1..])]
+    #[regex(r"[a-zA-Z_]\w*")]
+    #[regex(r"@[a-zA-Z_]\w*", |lex| &lex.source()[1..])]
     Identifier(&'input str),
     #[regex(r"//.*", logos::skip)]
     #[token("/*", comment)]
@@ -586,5 +588,11 @@ mod tests {
     fn parse_expression() {
         let result = parse!(jodin_grammar::ExpressionParser, "1+(2-3)*4/5==8");
         println!("{:#?}", result.unwrap());
+    }
+
+    #[test]
+    fn parse_statement() {
+        parse!(jodin_grammar::StatementParser, "a[0] = 3;").unwrap();
+        parse!(jodin_grammar::StatementParser, "a.hello[3].beep = 3;").unwrap();
     }
 }

@@ -109,13 +109,27 @@ Atom: JodinResult<JodinNode> = {
 }
 
 pub AtomModifier: ParseResult = {
-    <atom: Atom> <call: FunctionCall> => {
+    <atom: AtomModifier> <call: FunctionCall> => {
         let (generics, arguments) = call?;
         JodinNodeType::Call {
             called: atom?,
             generics_instance: generics,
             arguments
         }.into_result()
+    },
+    <atom: AtomModifier> <index: GetIndex> => {
+        JodinNodeType::Index {
+            indexed: atom?,
+            expression: index?
+        }.into_result()
+    },
+    <atom: AtomModifier> "." <field: SingleIdentifier> => {
+
+            JodinNodeType::GetMember {
+                compound: atom?,
+                id: JodinNodeType::Identifier(field).into()
+            }.into_result()
+
     },
     Atom,
 }
@@ -130,6 +144,24 @@ FunctionCall: JodinResult<(Vec<JodinNode>, Vec<JodinNode>)> = {
     "(" <args: ArgsList> ")" => {
         let args = args.unwrap_vec()?;
         Ok((vec![], args))
+    }
+}
+
+GetIndex: JodinResult<JodinNode> = {
+    "[" <node:Expression> "]" => node
+}
+
+pub Statement: ParseResult = {
+    AssignmentStatement,
+}
+
+AssignmentStatement: ParseResult = {
+    <atom:AtomModifier> <assign:"t_assign"> <exp:Expression> ";" => {
+        JodinNodeType::AssignmentExpression {
+            maybe_assignment_operator: assign,
+            lhs: atom?,
+            rhs: exp?
+        }.into_result()
     }
 }
 
@@ -271,7 +303,12 @@ extern {
         ";" => Tok::Semic,
         "(" => Tok::LPar,
         ")" => Tok::RPar,
+        "[" => Tok::LBrac,
+        "]" => Tok::RBrac,
+        "{" => Tok::LCurl,
+        "}" => Tok::RCurl,
         ":" => Tok::Colon,
-        "?" => Tok::Qmark
+        "?" => Tok::Qmark,
+        "." => Tok::Dot
     }
 }
