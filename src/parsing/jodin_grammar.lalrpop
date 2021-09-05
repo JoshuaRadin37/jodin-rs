@@ -5,8 +5,10 @@ use crate::core::operator::Operator;
 use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType};
 use crate::parsing::Tok;
 
-use super::UnwrapVector;
+use super::UnwrapVector;//
 use super::ParseResult;
+use super::ExpressionMember;
+use super::into_order_of_operations;
 
 use std::iter::FromIterator;
 use std::str::FromStr;
@@ -29,7 +31,11 @@ pub String: Literal = {
     "t_string_literal" => Literal::from_str(<>).unwrap(),
 };
 
-pub Literal: Literal = "t_constant" => Literal::from_str(<>).unwrap();
+pub Literal: Literal = "t_constant" => {
+    let lit = Literal::from_str(<>).unwrap();
+    println!("Found literal: {:?}", lit);
+    lit
+};
 
 
 pub IdentifierList = OptionalList<Identifier>;
@@ -37,8 +43,8 @@ pub IdentifierList = OptionalList<Identifier>;
 pub CanonicalType: JodinResult<IntermediateType> = { }
 
 pub Expression: JodinResult<JodinNode> = {
-    DorExpression,
-    <cond:DorExpression> "?" <t:Expression> ":" <f:Expression> => {
+    ExpressionWrapper,
+    <cond:ExpressionWrapper> "?" <t:Expression> ":" <f:Expression> => {
         JodinNodeType::Ternary {
             cond: cond?,
             yes: t?,
@@ -47,53 +53,27 @@ pub Expression: JodinResult<JodinNode> = {
     }
 }
 
-DorExpression = Tier<"||", DandExpression>;
-
-DandExpression = Tier<"&&", OrExpression>;
-
-OrExpression = Tier<"|", XorExpression>;
-
-XorExpression = Tier<"^", AndExpression>;
-
-AndExpression = Tier<"&", EqualityExpression>;
-
-EqualityExpression = Tier<EqualityOps, ComparisonExpression>;
-
-EqualityOps: Operator = {
-    "!=" => Operator::Nequal,
-    "==" => Operator::Equal
+ExpressionWrapper: JodinResult<JodinNode> = {
+    BinopExpression => {
+        Ok(into_order_of_operations(<>?))
+    }
 }
 
-ComparisonExpression = Tier<ComparisonOps, ShiftExpression>;
-
-ComparisonOps: Operator = {
-    "<" => Operator::Lt,
-    "<=" => Operator::Lte,
-    ">" => Operator::Gt,
-    ">=" => Operator::Gte,
-
+BinopExpression: JodinResult<Vec<ExpressionMember>> = {
+    // Factor => Ok(vec![ExpressionMember::Factor(<>?)]),
+    <hd:Factor> <tails:BinopTail*> => {
+        let mut first = vec![ExpressionMember::Factor(hd?)];
+        for tail in tails {
+            first.extend(tail?);
+        }
+        Ok(first)
+    }
 }
 
-ShiftExpression = Tier<ShiftOps, AddExpression>;
-
-ShiftOps: Operator = {
-    ">>" => Operator::RShift,
-    "<<" => Operator::LShift
-}
-
-AddExpression = Tier<AddOps, MultExpression>;
-
-AddOps: Operator = {
-    "+" => Operator::Plus,
-    "-" => Operator::Minus
-}
-
-MultExpression = Tier<MultOps, Factor>;
-
-MultOps: Operator = {
-    "*" => Operator::Star,
-    "/" => Operator::Divide,
-    "%" => Operator::Modulo
+BinopTail:  JodinResult<Vec<ExpressionMember>> = {
+    <op:"t_operator"> <tl:Factor> => {
+        Ok(vec![ExpressionMember::Op(op), ExpressionMember::Factor(tl?)])
+    }
 }
 
 pub UniOp: ParseResult = {
@@ -214,10 +194,18 @@ OptionalList<T>: Vec<T> = OptionalJoined<T, ",">;
 
 
 Tier<Op, NextTier>: JodinResult<JodinNode> = {
-    <lhs:Tier<Op,NextTier>> <op:Op> <rhs:NextTier> => JodinNodeType::Binop { op, lhs: lhs?, rhs: rhs? }.into_result(),
+    <rhs:Tier<Op,NextTier>> <op:Op> <lhs:NextTier>  => {
+        println!("parsed {:?} expression", op);
+        JodinNodeType::Binop { op, lhs: lhs?, rhs: rhs? }.into_result()
+    },
     NextTier
 };
 
+DerefOp<Op>: Operator = <op:Op> => if let Tok::Operator(op) = op {
+    op
+ } else {
+    panic!()
+ };
 
 extern {
     type Location = usize;
@@ -227,28 +215,11 @@ extern {
         "t_constant" => Tok::Constant(<&'input str>),
         "t_identifier" => Tok::Identifier(<&'input str>),
         "t_string_literal" => Tok::StringLiteral(<&'input str>),
-        "t_operator" => Tok::Operator(<Operator>),
-        "||" => Operator::Dor,
-        "++" => Tok::Operator(Operator::Increment),
-        "--" => Tok::Operator(Operator::Decrement),
-        "*" => Tok::Operator(Operator::Star),
-        "/" => Tok::Operator(Operator::Divide),
-        "%" => Tok::Operator(Operator::Modulo),
-        "+" => Tok::Operator(Operator::Plus),
-        "-" => Tok::Operator(Operator::Minus),
-        ">>" => Tok::Operator(Operator::RShift),
-        "<<" => Tok::Operator(Operator::LShift),
-        ">=" => Tok::Operator(Operator::Gte),
-        "<=" => Tok::Operator(Operator::Lte),
-        "!=" => Tok::Operator(Operator::Nequal),
-        "==" => Tok::Operator(Operator::Equal),
-        ">" => Tok::Operator(Operator::Gt),
-        "<" => Tok::Operator(Operator::Lt),
-        "&" => Tok::Operator(Operator::And),
-        "&&" => Tok::Operator(Operator::Dand),
-        "|" => Tok::Operator(Operator::Or),
-        "||" => Tok::Operator(Operator::Dor),
-        "^" => Tok::Operator(Operator::Xor),
+        "t_operator" => Tok::Op(<Operator>),
+        ">" => Tok::Op(Operator::Gt),
+        "<" => Tok::Op(Operator::Lt),
+        "++" => Tok::Increment,
+        "--" => Tok::Decrement,
         "t_assign" => Tok::Assign(<Option<Operator>>),
         "break" => Tok::Break,
         "case" => Tok::Case,

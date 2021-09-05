@@ -178,7 +178,13 @@ impl FromStr for Operator {
             "&&" => Ok(Dand),
             "<<" => Ok(LShift),
             ">>" => Ok(RShift),
-            _ => Err(JodinErrorType::LexerError.into()),
+            ">" => Ok(Gt),
+            ">=" => Ok(Gte),
+            "<" => Ok(Lt),
+            "<=" => Ok(Lte),
+            "==" => Ok(Equal),
+            "!=" => Ok(Nequal),
+            _ => Err(JodinErrorType::LexerError(s.to_string()).into()),
         }
     }
 }

@@ -10,10 +10,11 @@ use pest::Parser;
 #[cfg(feature = "pest_parser")]
 use pest_derive::Parser;
 
-use crate::ast::JodinNode;
+use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
-use crate::core::operator::Operator;
+use crate::core::operator::{Operator, Precedence};
+use itertools::Itertools;
 use logos::internal::CallbackResult;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
@@ -186,6 +187,7 @@ pub type Spanned<Tok, Loc> = Result<(Loc, Tok, Loc), JodinError>;
 
 /// The jodin lexer
 pub struct JodinLexer<'input> {
+    original: &'input str,
     lexer: SpannedIter<'input, Tok<'input>>,
 }
 
@@ -193,6 +195,7 @@ impl<'input> JodinLexer<'input> {
     /// Create a new lexer from an input
     pub fn new(input: &'input str) -> Self {
         JodinLexer {
+            original: input,
             lexer: Tok::lexer(input).spanned(),
         }
     }
@@ -203,8 +206,14 @@ impl<'input> Iterator for JodinLexer<'input> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((tok, span)) = self.lexer.next() {
+            println!("Parsed {:?} from {:?}", tok, &self.original[span.clone()]);
             match tok {
-                Tok::Error => return Some(Err(JodinErrorType::LexerError.into())),
+                Tok::Error => {
+                    return Some(Err(JodinErrorType::LexerError(
+                        self.original[span].to_string(),
+                    )
+                    .into()))
+                }
                 tok => Some(Ok((span.start, tok, span.end))),
             }
         } else {
@@ -342,12 +351,16 @@ pub enum Tok<'input> {
     Qmark,
     #[regex(r"__\w+", priority = 100)]
     SpecialKeyword(&'input str),
+    #[token("++")]
+    Increment,
+    #[token("--")]
+    Decrement,
     #[token("==", |_| Operator::Equal)]
     #[token("!=", |_| Operator::Nequal)]
     #[token("<=", |_| Operator::Lte)]
     #[token(">=", |_| Operator::Gte)]
-    #[regex(r"[+\-*/&%<>!^|][+\-*/&%<>!^|]?", |lex| Operator::from_str(lex.slice()))]
-    Operator(Operator),
+    #[regex(r"[+\-*/&%<>!^|][\*/&%<>!^|]?", |lex| Operator::from_str(lex.slice()))]
+    Op(Operator),
     #[token("=", |_| Option::<Operator>::None)]
     #[regex(r"[+\-*/&%^|]=", maybe_assign_operator, priority = 10)]
     Assign(Option<Operator>),
@@ -359,6 +372,58 @@ pub enum Tok<'input> {
     Comment,
     #[error]
     Error,
+}
+
+pub enum ExpressionMember {
+    Factor(JodinNode),
+    Op(Operator),
+}
+
+pub fn into_order_of_operations(segments: Vec<ExpressionMember>) -> JodinNode {
+    let mut expression_stack = vec![];
+    let mut op_stack: Vec<Operator> = vec![];
+
+    let consume_op = |expression_stack: &mut Vec<JodinNode>, op_stack: &mut Vec<Operator>| {
+        if let (Some(lhs), Some(rhs)) = {
+            let mut collected = expression_stack.drain(expression_stack.len() - 2..);
+            (collected.next(), collected.next())
+        } {
+            let op = op_stack.pop().unwrap();
+            let node: JodinNode = JodinNodeType::Binop { op, lhs, rhs }.into();
+            expression_stack.push(node);
+        } else {
+            panic!()
+        }
+    };
+
+    for segment in segments {
+        match segment {
+            ExpressionMember::Factor(factor) => {
+                expression_stack.push(factor);
+            }
+            ExpressionMember::Op(op) => {
+                loop {
+                    if let Some(peek) = op_stack.last() {
+                        if peek.as_precedence() <= op.as_precedence() {
+                            consume_op(&mut expression_stack, &mut op_stack);
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                op_stack.push(op);
+            }
+        }
+    }
+
+    while !op_stack.is_empty() {
+        consume_op(&mut expression_stack, &mut op_stack);
+    }
+
+    assert_eq!(expression_stack.len(), 1);
+    expression_stack.pop().unwrap()
 }
 
 fn maybe_assign_operator<'input>(
@@ -373,7 +438,7 @@ fn maybe_assign_operator<'input>(
         let operator = op.as_str();
         Operator::from_str(operator).map(|op| Some(op))
     } else {
-        Err(JodinErrorType::LexerError.into())
+        Err(JodinErrorType::LexerError(full_operator.to_string()).into())
     }
 }
 
@@ -515,5 +580,11 @@ mod tests {
         assert!(parse!(jodin_grammar::AtomModifierParser, "value(1,2,3)").is_ok());
         assert!(parse!(jodin_grammar::AtomModifierParser, "(value)(1,2)").is_ok());
         assert!(parse!(jodin_grammar::AtomModifierParser, "(value)(1,2,)").is_err());
+    }
+
+    #[test]
+    fn parse_expression() {
+        let result = parse!(jodin_grammar::ExpressionParser, "1+(2-3)*4/5==8");
+        println!("{:#?}", result.unwrap());
     }
 }

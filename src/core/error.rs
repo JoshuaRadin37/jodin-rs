@@ -7,6 +7,7 @@ use crate::core::identifier::Identifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 use backtrace::Backtrace;
+use logos::Span;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -82,7 +83,7 @@ pub enum JodinErrorType {
     /// This type can't be dereferenced
     TypeCantBeDereferenced(String),
     /// There was a lexing error
-    LexerError,
+    LexerError(String),
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
