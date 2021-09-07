@@ -208,7 +208,6 @@ impl<'input> Iterator for JodinLexer<'input> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((tok, span)) = self.lexer.next() {
-            println!("Parsed {:?} from {:?}", tok, &self.original[span.clone()]);
             match tok {
                 Tok::Error => {
                     return Some(Err(JodinErrorType::LexerError(
@@ -378,6 +377,8 @@ pub enum Tok<'input> {
     FunctionPointer,
     #[token("let")]
     Let,
+    #[token("foreach")]
+    Foreach,
     #[regex(r"//.*", logos::skip)]
     #[token("/*", comment)]
     Comment,
@@ -614,6 +615,8 @@ mod tests {
         parse!(jodin_grammar::StatementParser, "int a = 4;").expect_err("c-style declarations no longer supported");
         parse!(jodin_grammar::StatementParser, "let a: int = 3*2;").unwrap();
         parse!(jodin_grammar::StatementParser, "let a: fn() -> int;").unwrap();
+        parse!(jodin_grammar::StatementParser, "for(;;) { }").unwrap();
+        parse!(jodin_grammar::StatementParser, "for(let i: int = 0; i < 2; ++i) { }").unwrap();
     }
 
     #[test]

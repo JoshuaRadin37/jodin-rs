@@ -313,6 +313,7 @@ dependencies = [
  "either",
  "glob",
  "itertools",
+ "jodin-rs-vm",
  "lalrpop",
  "lalrpop-util",
  "lazy_static",
@@ -322,6 +323,10 @@ dependencies = [
  "pest_derive",
  "regex",
 ]
+
+[[package]]
+name = "jodin-rs-vm"
+version = "0.1.0"
 
 [[package]]
 name = "lalrpop"

@@ -325,8 +325,30 @@ IterationStatement: ParseResult = {
             statement: stat?
         }.into_result()
     },
-    "for" "(" <id:SingleIdentifier> ":" <ty:CanonicalType> "in" <ex:Expression> ")" <stat:CompoundStatement> => {
-        JodinNodeType:L:ForLoop
+    "for" "(" <init:Statement> <cond:Statement> <delta:Expression?> ")" <stat:CompoundStatement> => {
+        match delta {
+            Some(delta) => {
+                 JodinNodeType::ForStatement {
+                    init: init?.not_empty(),
+                    cond: cond?.not_empty(),
+                    delta: Some(delta?),
+                    statement: stat?
+                }.into_result()
+            },
+            None => {
+                JodinNodeType::ForStatement {
+                    init: init?.not_empty(),
+                    cond: cond?.not_empty(),
+                    delta: None,
+                    statement: stat?
+                }.into_result()
+            }
+        }
+
+    },
+    "foreach" "(" <id:SingleIdentifier> ":" <ty:CanonicalType> "in" <ex:Expression> ")" <stat:CompoundStatement> => {
+
+        unimplemented!()
     }
 }
 
@@ -621,6 +643,7 @@ extern {
         "." => Tok::Dot,
         "->" => Tok::Point,
         "fn" => Tok::FunctionPointer,
-        "let" => Tok::Let
+        "let" => Tok::Let,
+        "foreach" => Tok::Foreach
     }
 }

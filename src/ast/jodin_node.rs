@@ -237,6 +237,15 @@ impl JodinNode {
     pub fn empty() -> Self {
         JodinNodeType::Empty.into()
     }
+
+    /// Returns None if this is empty, or Some(self) if not empty
+    pub fn not_empty(self) -> Option<Self> {
+        if let JodinNodeType::Empty = self.inner() {
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 impl Debug for JodinNode {

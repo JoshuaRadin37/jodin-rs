@@ -3,6 +3,8 @@
 //! Jodin is an object-oriented programming language designed with the intent to be compiled into
 //! C code.
 //!
+//! Code is compi
+//!
 //! # Example
 //!
 //! ```cpp

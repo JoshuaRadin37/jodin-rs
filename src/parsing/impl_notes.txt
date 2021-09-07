@@ -1,0 +1,13 @@
+foreach (i: int in range(0,3)) {
+
+}
+=>
+{
+    let __range: Iterable<? : int> = range(0,3);
+    while (__range.has_next()) {
+        let i: int = __range.next();
+        {
+
+        }
+    }
+}

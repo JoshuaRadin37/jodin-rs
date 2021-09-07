@@ -7,6 +7,9 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = ["jodin-rs-vm"]
+
 [features]
 default = ["larlpop_parser"]
 larlpop_parser = ["lalrpop-util"]
@@ -29,3 +32,4 @@ num-traits = "0.2.14"
 either = "1.6.1"
 lalrpop-util = { version = "0.19.6", optional=true}
 logos = {version = "0.12.0"}
+jodin-rs-vm = { path="jodin-rs-vm" }
