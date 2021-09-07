@@ -28,8 +28,6 @@ use crate::core::literal::Literal;
 use crate::core::operator::{Operator, TryConstEvaluation};
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::primitives::Primitive;
-#[cfg(feature = "pest_parser")]
-use crate::parsing::JodinRule;
 use crate::utility::{Bytes, HumanReadable, IntoBox};
 
 pub mod intermediate_type;
