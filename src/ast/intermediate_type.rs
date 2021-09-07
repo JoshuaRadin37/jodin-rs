@@ -76,6 +76,7 @@ impl IntermediateType {
         }
     }
 
+    /// Creates a void (empty) type
     pub fn void() -> Self {
         Self::from(Primitive::Void)
     }

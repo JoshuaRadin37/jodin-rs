@@ -622,9 +622,9 @@ mod tests {
         parse!(jodin_grammar::CanonicalTypeParser, "*int").unwrap();
         parse!(jodin_grammar::CanonicalTypeParser, "fn(*int) -> void").unwrap();
         parse!(jodin_grammar::CanonicalTypeParser, "Array<int>").unwrap();
-        parse!(jodin_grammar::CanonicalTypeParser, "[5: int]").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "[int: 5]").unwrap();
         // is c giberish easier to understand?
-        parse!(jodin_grammar::CanonicalTypeParser, "fn() -> [13+2: fn() -> char]").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "fn() -> [fn() -> char: 5]").unwrap();
     }
 
     #[test]
@@ -642,6 +642,32 @@ mod tests {
         parse!(jodin_grammar::FunctionDefinitionParser, r"
         fn main(argc: int, argv: [argv]) -> int {
 
+        }
+       ").unwrap();
+        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        fn fibonacci(n: unsigned int) -> unsigned int {
+            switch(n) {
+                case 0:
+                    return 0;
+                case 1:
+                    return 1;
+                default:
+                    return fibonacci(n-1) + fibonacci(n-2);
+            }
+        }
+       ").unwrap();
+
+        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        fn fibonacci(n: unsigned int) -> unsigned int {
+            static table: *[unsigned int] = new [0u: n+1];
+            if (n < 2) {
+                return n;
+            }
+            (*table)[1] = 1;
+            for (i: int in range(2, n+1)) {
+                (*table)[i] = (*table)[i-1] + (*table)[i-2];
+            }
+            return (*table)[n];
         }
        ").unwrap();
     }

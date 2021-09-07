@@ -14,16 +14,20 @@ use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
+use crate::core::types::arrays::Array;
 
 pub mod primitives;
 pub mod structure;
 pub mod type_environment;
+pub mod arrays;
 
 /// Different types of types within Jodin
 #[derive(Debug)]
 pub enum JodinType {
     /// A primitive type
     Primitive(Primitive),
+    /// An array type
+    Array(Array),
     /// The basic [Structure](crate::core::types::structure::Structure) type.
     Structure(Structure),
 }
@@ -34,6 +38,7 @@ impl JodinType {
         match self {
             JodinType::Primitive(p) => p,
             JodinType::Structure(s) => s,
+            JodinType::Array(a) => {a}
         }
     }
 }

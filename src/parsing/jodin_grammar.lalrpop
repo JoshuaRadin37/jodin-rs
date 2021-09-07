@@ -3,7 +3,7 @@ use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
 use crate::core::types::primitives::Primitive;
 use crate::core::operator::Operator;
-use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType};
+use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType, tags::{Tag, LabeledStatementTag}};
 use crate::parsing::Tok;
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::StorageModifier;
@@ -60,7 +60,7 @@ pub CanonicalType: IntermediateType = {
     "[" <ty:CanonicalType> "]" => {
         ty.with_abstract_array()
     },
-    "[" <len:ConstExpression> ":" <ty:CanonicalType> "]" => {
+    "[" <ty:CanonicalType> ":" <len:Expression> "]" => {
         ty.with_array(len.expect("This should be a constant expression"))
     },
 }
@@ -113,7 +113,7 @@ BinopExpression: JodinResult<Vec<ExpressionMember>> = {
 }
 
 BinopTail:  JodinResult<Vec<ExpressionMember>> = {
-    <op:Operator> <tl:Factor> => {
+    <op:BiOperator> <tl:Factor> => {
         Ok(vec![ExpressionMember::Op(op), ExpressionMember::Factor(tl?)])
     }
 }
@@ -121,6 +121,11 @@ BinopTail:  JodinResult<Vec<ExpressionMember>> = {
 pub UniOp: ParseResult = {
     "++" <Factor> => JodinNodeType::Uniop { op: Operator::Increment, inner: <>?}.into_result(),
     "--" <Factor> => JodinNodeType::Uniop { op: Operator::Decrement, inner: <>?}.into_result(),
+    "+" <Factor>,
+    "-" <Factor> => JodinNodeType::Uniop { op: Operator::Minus, inner: <>?}.into_result(),
+    "!" <Factor> => JodinNodeType::Uniop { op: Operator::Not, inner: <>?}.into_result(),
+    "&" <Factor> => JodinNodeType::Uniop { op: Operator::And, inner: <>?}.into_result(),
+    "*" <Factor> => JodinNodeType::Uniop { op: Operator::Star, inner: <>?}.into_result(),
     "new" <Factor> => JodinNodeType::NewPointer { inner: <>? }.into_result(),
 }
 
@@ -142,8 +147,11 @@ CastExpression: ParseResult = "(" <factor:Factor> "as" <c_type:CanonicalType> ")
 Atom: JodinResult<JodinNode> = {
     "(" <Expression> ")",
     Identifier => JodinNodeType::Identifier(<>).into_result(),
-    StructInitializer
+    StructInitializer,
+    ArrayInitializer
 }
+
+
 
 pub AtomModifier: ParseResult = {
     <atom: AtomModifier> <call: FunctionCall> => {
@@ -189,7 +197,7 @@ ConstBinopExpression: JodinResult<Vec<ExpressionMember>> = {
 }
 
 ConstBinopTail:  JodinResult<Vec<ExpressionMember>> = {
-    <op:"t_operator"> <tl:ConstFactor> => {
+    <op:BiOperator> <tl:ConstFactor> => {
         Ok(vec![ExpressionMember::Op(op), ExpressionMember::Factor(tl?)])
     }
 }
@@ -201,6 +209,7 @@ ConstFactor: ParseResult = {
     "false" => JodinNodeType::Literal(Literal::Boolean(false)).into_result(),
     "(" <ConstExpression> ")",
     Identifier => JodinNodeType::Identifier(<>).into_result(),
+
 }
 
 
@@ -251,9 +260,23 @@ AssignmentStatement: ParseResult = {
 
 
 LabeledStatement: ParseResult = {
-    <id:SingleIdentifier> ":" <st: Statement> => { unimplemented!() },
-    "case" <case:Expression> ":" <st:Statement> => { unimplemented!() },
-    "default" ":" <st:Statement> => { unimplemented!() },
+    <id:SingleIdentifier> ":" <st: Statement> => {
+        let mut ret = st?;
+        ret.add_tag(LabeledStatementTag::new(id.to_string()));
+        Ok(ret)
+    },
+    "case" <case:ConstExpression> ":" <st:Statement> => {
+        JodinNodeType::Case {
+            case: Some(case?),
+            statement: st?
+        }.into_result()
+    },
+    "default" ":" <st:Statement> => {
+        JodinNodeType::Case {
+            case: None,
+            statement: st?
+        }.into_result()
+    },
 }
 
 CompoundStatement: ParseResult = {
@@ -302,8 +325,8 @@ IterationStatement: ParseResult = {
             statement: stat?
         }.into_result()
     },
-    "for" "(" <ty:CanonicalType> <id:SingleIdentifier> "in" <ex:Expression> ")" <stat:CompoundStatement> => {
-        unimplemented!()
+    "for" "(" <id:SingleIdentifier> ":" <ty:CanonicalType> "in" <ex:Expression> ")" <stat:CompoundStatement> => {
+        JodinNodeType:L:ForLoop
     }
 }
 
@@ -381,7 +404,7 @@ VariableDeclaration: ParseResult = {
 
 
 StructInitializer: ParseResult = {
-    <ty:Identifier> "{" <fields:StructFieldInitializer*> "}" => {
+    "struct" <ty:Identifier> "{" <fields:StructFieldInitializer*> "}" => {
         JodinNodeType::StructInitializer {
             struct_id: JodinNodeType::Identifier(ty).into(),
             fields_and_values: fields.unwrap_vec()?
@@ -396,11 +419,29 @@ StructFieldInitializer: JodinResult<(JodinNode, JodinNode)> = {
   }
 }
 
-Operator: Operator = {
+ArrayInitializer: ParseResult = {
+    "[" <val:Expression> ":" <repeats:ConstExpression> "]" => {
+        JodinNodeType::RepeatedArrayInitializer {
+            to_repeat: val?,
+            repeats: repeats?
+        }.into_result()
+    },
+    "[" <vals:OptionalList<Expression>> "]" => {
+        JodinNodeType::ListInitializer {
+            values: vals.unwrap_vec()?
+        }.into_result()
+    }
+}
+
+
+
+BiOperator: Operator = {
     "t_operator",
     "<" => Operator::Lt,
     ">" => Operator::Gt,
     "*" => Operator::Star,
+    "+" => Operator::Plus,
+    "-" => Operator::Minus,
 }
 
 
@@ -513,6 +554,10 @@ extern {
         ">" => Tok::Op(Operator::Gt),
         "<" => Tok::Op(Operator::Lt),
         "*" => Tok::Op(Operator::Star),
+        "+" => Tok::Op(Operator::Plus),
+        "-" => Tok::Op(Operator::Minus),
+        "!" => Tok::Op(Operator::Not),
+        "&" => Tok::Op(Operator::And),
         "++" => Tok::Increment,
         "--" => Tok::Decrement,
         "=" => Tok::Assign,

@@ -267,6 +267,25 @@ pub enum JodinNodeType {
     NewPointer {
         /// The value being put on the heap
         inner: JodinNode
+    },
+    /// A case statement
+    Case {
+        /// The case, None is default case
+        case: Option<JodinNode>,
+        /// The case statement
+        statement: JodinNode
+    },
+    /// An array initializer
+    RepeatedArrayInitializer {
+        /// The value to repeat
+        to_repeat: JodinNode,
+        /// The number of repeats
+        repeats: JodinNode
+    },
+    /// A list (array) initializer
+    ListInitializer {
+        /// The values in the list
+        values: Vec<JodinNode>
     }
 }
 
@@ -464,6 +483,18 @@ impl JodinNodeType {
                 vec.extend(maybe_initial_value);
                 vec
             }
+            JodinNodeType::Case { case, statement } => {
+                let mut ret = vec![];
+                ret.extend(case);
+                ret.push(statement);
+                ret
+            }
+            JodinNodeType::RepeatedArrayInitializer { to_repeat, repeats } => {
+                vec![to_repeat, repeats]
+            }
+            JodinNodeType::ListInitializer { values } => {
+                values.into_iter().collect()
+            }
         };
         vector
     }
@@ -653,6 +684,18 @@ impl JodinNodeType {
                 let mut vec = vec![name];
                 vec.extend(maybe_initial_value);
                 vec
+            }
+            JodinNodeType::Case { case, statement } => {
+                let mut ret = vec![];
+                ret.extend(case);
+                ret.push(statement);
+                ret
+            }
+            JodinNodeType::RepeatedArrayInitializer { to_repeat, repeats } => {
+                vec![to_repeat, repeats]
+            }
+            JodinNodeType::ListInitializer { values } => {
+                values.into_iter().collect()
             }
         };
         vector

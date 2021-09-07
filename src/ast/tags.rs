@@ -75,6 +75,40 @@ impl Tag for DummyTag {
     }
 }
 
+/// Marks that this statement is labeled
+#[derive(Debug)]
+pub struct LabeledStatementTag {
+    /// The label
+    pub label: String
+}
+
+impl Tag for LabeledStatementTag {
+    fn tag_type(&self) -> String {
+        "labeled_statement".to_string()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        u32::MAX
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+       self
+    }
+}
+
+impl LabeledStatementTag {
+    /// Create a new labeled statement tag
+    pub fn new(label: String) -> Self {
+        LabeledStatementTag { label }
+    }
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use crate::ast::tags::{DummyTag, Tag, TagUtilities};
