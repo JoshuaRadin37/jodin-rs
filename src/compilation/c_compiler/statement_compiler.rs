@@ -166,7 +166,7 @@ impl MicroCompiler<C99, Vec<Statement>> for StatementCompiler {
             JodinNodeType::GetMember { .. } => {}
             JodinNodeType::ReturnValue { .. } => {}
             JodinNodeType::Continue => {}
-            JodinNodeType::Break => {}
+            JodinNodeType::Break { .. } => {}
             JodinNodeType::ConstructorCall { .. } => {}
             JodinNodeType::Dereference { .. } => {}
             JodinNodeType::GetReference { .. } => {}

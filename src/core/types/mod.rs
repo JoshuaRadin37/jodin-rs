@@ -134,3 +134,14 @@ impl Tag for TypeTag {
         self
     }
 }
+
+/// Represents a way of storing variable
+#[derive(Debug)]
+pub enum StorageModifier {
+    /// A locally stored variable
+    Local,
+    /// A global variable
+    Static,
+    /// An immutable variable (also global)
+    Const,
+}

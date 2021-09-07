@@ -1,11 +1,14 @@
 use crate::core::identifier::Identifier;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
+use crate::core::types::primitives::Primitive;
 use crate::core::operator::Operator;
 use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType};
 use crate::parsing::Tok;
+use crate::core::privacy::{Visibility, VisibilityTag};
+use crate::core::types::StorageModifier;
 
-use super::UnwrapVector;//
+use super::UnwrapVector;
 use super::ParseResult;
 use super::ExpressionMember;
 use super::into_order_of_operations;
@@ -32,15 +35,54 @@ pub String: Literal = {
 };
 
 pub Literal: Literal = "t_constant" => {
-    let lit = Literal::from_str(<>).unwrap();
-    println!("Found literal: {:?}", lit);
-    lit
+    Literal::from_str(<>).unwrap()
 };
 
 
 pub IdentifierList = OptionalList<Identifier>;
 
-pub CanonicalType: JodinResult<IntermediateType> = { }
+pub CanonicalType: IntermediateType = {
+    "unsigned" <TypeSpecifier> => <>.into_unsigned(),
+    TypeSpecifier,
+    <ty:TypeSpecifier> "<" <generics:OptionalList<CanonicalType>> ">" => {
+        ty.with_generics(generics)
+    },
+    "fn" "(" <args:OptionalList<CanonicalType>> ")" "->" <ty:CanonicalType>  => {
+        ty.with_function_params(args)
+    },
+    "fn" "(" <args:OptionalList<CanonicalType>> ")"  => {
+        let ty: IntermediateType = Primitive::Void.into();
+        ty.with_function_params(args)
+    },
+     "*" <ty:CanonicalType> => {
+        ty.with_pointer()
+    },
+    "[" <ty:CanonicalType> "]" => {
+        ty.with_abstract_array()
+    },
+    "[" <len:ConstExpression> ":" <ty:CanonicalType> "]" => {
+        ty.with_array(len.expect("This should be a constant expression"))
+    },
+}
+
+
+TypeSpecifier: IntermediateType = {
+    "boolean" => IntermediateType::from(Primitive::Boolean),
+    "double" => IntermediateType::from(Primitive::Double),
+    "float" => IntermediateType::from(Primitive::Float),
+    "void" => IntermediateType::from(Primitive::Void),
+    "char" => IntermediateType::from(Primitive::Char),
+    "short" => IntermediateType::from(Primitive::Short),
+    "int" => IntermediateType::from(Primitive::Int),
+    "long" => IntermediateType::from(Primitive::Long),
+    Identifier => IntermediateType::from(<>)
+}
+
+
+pub Visibility: Visibility = {
+    "public" => Visibility::Public,
+    "private" => Visibility::Private
+}
 
 pub Expression: JodinResult<JodinNode> = {
     ExpressionWrapper,
@@ -71,7 +113,7 @@ BinopExpression: JodinResult<Vec<ExpressionMember>> = {
 }
 
 BinopTail:  JodinResult<Vec<ExpressionMember>> = {
-    <op:"t_operator"> <tl:Factor> => {
+    <op:Operator> <tl:Factor> => {
         Ok(vec![ExpressionMember::Op(op), ExpressionMember::Factor(tl?)])
     }
 }
@@ -79,6 +121,7 @@ BinopTail:  JodinResult<Vec<ExpressionMember>> = {
 pub UniOp: ParseResult = {
     "++" <Factor> => JodinNodeType::Uniop { op: Operator::Increment, inner: <>?}.into_result(),
     "--" <Factor> => JodinNodeType::Uniop { op: Operator::Decrement, inner: <>?}.into_result(),
+    "new" <Factor> => JodinNodeType::NewPointer { inner: <>? }.into_result(),
 }
 
 pub Factor:  ParseResult = {
@@ -91,21 +134,15 @@ pub Factor:  ParseResult = {
     AtomModifier
 }
 
-CastExpression: ParseResult = "(" <c_type:CanonicalType> ")" <factor:Factor> => JodinNodeType::CastExpression {
-    to_type: c_type?,
+CastExpression: ParseResult = "(" <factor:Factor> "as" <c_type:CanonicalType> ")" => JodinNodeType::CastExpression {
+    to_type: c_type,
     factor: factor?
  }.into_result();
 
 Atom: JodinResult<JodinNode> = {
     "(" <Expression> ")",
     Identifier => JodinNodeType::Identifier(<>).into_result(),
-    "new" <ty:CanonicalType> <generics:GenericInstance?> "(" <args:ArgsList> ")" => {
-        JodinNodeType::ConstructorCall {
-            name: ty?,
-            generic_parameters: generics.unwrap_or(vec![]).unwrap_vec()?,
-            arguments: args.unwrap_vec()?
-        }.into_result()
-    }
+    StructInitializer
 }
 
 pub AtomModifier: ParseResult = {
@@ -134,6 +171,39 @@ pub AtomModifier: ParseResult = {
     Atom,
 }
 
+pub ConstExpression: ParseResult = {
+    ConstBinopExpression => {
+        Ok(into_order_of_operations(<>?))
+    }
+}
+
+ConstBinopExpression: JodinResult<Vec<ExpressionMember>> = {
+    // Factor => Ok(vec![ExpressionMember::Factor(<>?)]),
+    <hd:ConstFactor> <tails:ConstBinopTail*> => {
+        let mut first = vec![ExpressionMember::Factor(hd?)];
+        for tail in tails {
+            first.extend(tail?);
+        }
+        Ok(first)
+    }
+}
+
+ConstBinopTail:  JodinResult<Vec<ExpressionMember>> = {
+    <op:"t_operator"> <tl:ConstFactor> => {
+        Ok(vec![ExpressionMember::Op(op), ExpressionMember::Factor(tl?)])
+    }
+}
+
+ConstFactor: ParseResult = {
+    String => JodinNodeType::Literal(<>).into_result(),
+    Literal => JodinNodeType::Literal(<>).into_result(),
+    "true" => JodinNodeType::Literal(Literal::Boolean(true)).into_result(),
+    "false" => JodinNodeType::Literal(Literal::Boolean(false)).into_result(),
+    "(" <ConstExpression> ")",
+    Identifier => JodinNodeType::Identifier(<>).into_result(),
+}
+
+
 
 GenericInstance = "<" <OptionalList<CanonicalType>> ">";
 
@@ -153,20 +223,113 @@ GetIndex: JodinResult<JodinNode> = {
 
 pub Statement: ParseResult = {
     AssignmentStatement,
+    LabeledStatement,
+    CompoundStatement,
+    ExpressionStatement,
+    SelectionStatement,
+    IterationStatement,
+    JumpStatement,
+    VariableDeclaration
 }
 
 AssignmentStatement: ParseResult = {
     <atom:AtomModifier> <assign:"t_assign"> <exp:Expression> ";" => {
         JodinNodeType::AssignmentExpression {
-            maybe_assignment_operator: assign,
+            maybe_assignment_operator: Some(assign),
             lhs: atom?,
             rhs: exp?
+        }.into_result()
+    },
+    <atom:AtomModifier> "=" <exp:Expression> ";" => {
+            JodinNodeType::AssignmentExpression {
+                maybe_assignment_operator: None,
+                lhs: atom?,
+                rhs: exp?
+            }.into_result()
+        }
+}
+
+
+LabeledStatement: ParseResult = {
+    <id:SingleIdentifier> ":" <st: Statement> => { unimplemented!() },
+    "case" <case:Expression> ":" <st:Statement> => { unimplemented!() },
+    "default" ":" <st:Statement> => { unimplemented!() },
+}
+
+CompoundStatement: ParseResult = {
+    "{" <Statement*> "}" => JodinNodeType::Block { expressions: <>.unwrap_vec()? }.into_result()
+}
+
+ExpressionStatement: ParseResult = {
+    <Expression> ";",
+    ";" => JodinNodeType::Empty.into_result()
+}
+
+SelectionStatement: ParseResult = {
+    "if" "(" <cond:Expression> ")" <yes:CompoundStatement> => {
+        JodinNodeType::IfStatement {
+            cond: cond?,
+            statement: yes?,
+            else_statement: None
+        }.into_result()
+    },
+    "if" "(" <cond:Expression> ")" <yes:CompoundStatement> "else" <no:SelectionStatement> => {
+        JodinNodeType::IfStatement {
+            cond: cond?,
+            statement: yes?,
+            else_statement: Some(no?)
+        }.into_result()
+    },
+    "if" "(" <cond:Expression> ")" <yes:CompoundStatement> "else" <no:CompoundStatement> => {
+        JodinNodeType::IfStatement {
+            cond: cond?,
+            statement: yes?,
+            else_statement: Some(no?)
+        }.into_result()
+    },
+    "switch" "(" <on_switch:Expression> ")" "{" <labels:LabeledStatement*> "}" => {
+        JodinNodeType::SwitchStatement {
+            to_switch: on_switch?,
+            labeled_statements: labels.unwrap_vec()?
         }.into_result()
     }
 }
 
+IterationStatement: ParseResult = {
+    "while" "(" <cond:Expression> ")" <stat:CompoundStatement> => {
+        JodinNodeType::WhileStatement {
+            cond: cond?,
+            statement: stat?
+        }.into_result()
+    },
+    "for" "(" <ty:CanonicalType> <id:SingleIdentifier> "in" <ex:Expression> ")" <stat:CompoundStatement> => {
+        unimplemented!()
+    }
+}
 
+JumpStatement: ParseResult = {
+    "continue" ";" => { JodinNodeType::Continue.into_result() },
+    "break" <id:SingleIdentifier?> ";" => {
+        JodinNodeType::Break {
+            id
+        }.into_result()
+    },
+    "return" <exp:Expression?> ";" => {
+        match exp {
+            Some(exp) => {
+                JodinNodeType::ReturnValue {
+                    expression: Some(exp?)
+                }.into_result()
+            },
+            None => {
+                JodinNodeType::ReturnValue {
+                    expression: None
+                }.into_result()
+            }
+        }
 
+    }
+}
 
 
 pub JodinFile: JodinResult<JodinNode> = TopLevelDeclarations;
@@ -186,18 +349,117 @@ TopLevelDeclarationsList: JodinResult<Vec<JodinNode>> = {
 
 
 pub TopLevelDeclaration: JodinResult<JodinNode> = {
-
+    WithVisibility<VariableDeclaration>,
     ";" => JodinNodeType::Empty.into_result()
 };
 
+StorageModifier: StorageModifier ={
+    "let" => StorageModifier::Local,
+    "const" => StorageModifier::Const,
+    "static" => StorageModifier::Static
+}
 
+
+VariableDeclaration: ParseResult = {
+    <storage:StorageModifier> <id:SingleIdentifier> ":" <ty:CanonicalType> ";" => {
+    JodinNodeType::StoreVariable {
+        storage_type: storage,
+        name: JodinNodeType::Identifier(id).into(),
+        var_type: ty,
+        maybe_initial_value: None
+    }.into_result()
+ },
+    <storage:StorageModifier> <id:SingleIdentifier> ":" <ty:CanonicalType> "=" <value:Expression> ";" => {
+        JodinNodeType::StoreVariable {
+                storage_type: storage,
+                name: JodinNodeType::Identifier(id).into(),
+                var_type: ty,
+                maybe_initial_value: Some(value?)
+            }.into_result()
+  },
+}
+
+
+StructInitializer: ParseResult = {
+    <ty:Identifier> "{" <fields:StructFieldInitializer*> "}" => {
+        JodinNodeType::StructInitializer {
+            struct_id: JodinNodeType::Identifier(ty).into(),
+            fields_and_values: fields.unwrap_vec()?
+        }.into_result()
+    }
+}
+
+
+StructFieldInitializer: JodinResult<(JodinNode, JodinNode)> = {
+    <id:Identifier> "=" <val:Expression> => {
+        Ok((JodinNodeType::Identifier(id).into(), val?))
+  }
+}
+
+Operator: Operator = {
+    "t_operator",
+    "<" => Operator::Lt,
+    ">" => Operator::Gt,
+    "*" => Operator::Star,
+}
+
+
+pub FunctionDefinition: ParseResult = {
+    "fn" <id:Identifier> "(" <params:Parameters> ")" <compound:CompoundStatement> => {
+        JodinNodeType::FunctionDefinition {
+            name: JodinNodeType::Identifier(id).into(),
+            return_type: IntermediateType::void(),
+            arguments: params,
+            block: compound?
+        }.into_result()
+    },
+    "fn" <id:Identifier> "(" <params:Parameters> ")" "->" <ret:CanonicalType> <compound:CompoundStatement> => {
+        JodinNodeType::FunctionDefinition {
+            name: JodinNodeType::Identifier(id).into(),
+            return_type: ret,
+            arguments: params,
+            block: compound?
+        }.into_result()
+    }
+}
+
+
+Parameters = OptionalList<Parameter>;
+
+Parameter: JodinNode = {
+    <name:Identifier> ":" <var_type:CanonicalType> => {
+        JodinNodeType::NamedValue {
+            name: JodinNodeType::Identifier(name).into(),
+            var_type
+        }.into()
+    }
+}
 
 
 
 
 // macros
 
+WithGenerics<Inner>: JodinResult<JodinNode> = {
+    "for" "<" ">" <inner:Inner> => {
+        inner
+    }
+}
 
+WithVisibility<Inner>: JodinResult<JodinNode> = {
+    <vis:Visibility?> <inner:Inner> => {
+        let mut inner: JodinNode = inner?;
+        let vis = match vis {
+            Some(vis) => {
+                vis
+            },
+            None => Visibility::Protected
+        };
+        let tag = VisibilityTag::new(vis);
+        inner.add_tag(tag)?;
+        Ok(inner)
+    }
+}
 
 Joined<T, Seperator>: Vec<T> = {
     <v:T> => vec![v],
@@ -250,9 +512,11 @@ extern {
         "t_operator" => Tok::Op(<Operator>),
         ">" => Tok::Op(Operator::Gt),
         "<" => Tok::Op(Operator::Lt),
+        "*" => Tok::Op(Operator::Star),
         "++" => Tok::Increment,
         "--" => Tok::Decrement,
-        "t_assign" => Tok::Assign(<Option<Operator>>),
+        "=" => Tok::Assign,
+        "t_assign" => Tok::OpAssign(<Operator>),
         "break" => Tok::Break,
         "case" => Tok::Case,
         "char" => Tok::Char,
@@ -309,6 +573,9 @@ extern {
         "}" => Tok::RCurl,
         ":" => Tok::Colon,
         "?" => Tok::Qmark,
-        "." => Tok::Dot
+        "." => Tok::Dot,
+        "->" => Tok::Point,
+        "fn" => Tok::FunctionPointer,
+        "let" => Tok::Let
     }
 }

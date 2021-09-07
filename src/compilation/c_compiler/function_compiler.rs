@@ -20,7 +20,6 @@ impl MicroCompiler<C99, FunctionInfo> for FunctionCompiler {
             name,
             return_type,
             arguments,
-            generic_parameters,
             block,
         } = tree.inner()
         {

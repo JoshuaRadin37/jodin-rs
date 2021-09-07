@@ -10,6 +10,7 @@ use crate::ast::intermediate_type::IntermediateType;
 use crate::ast::jodin_node::JodinNode;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
+use crate::core::types::StorageModifier;
 
 /// Contains JodinNode variant information.
 #[derive(Debug)]
@@ -29,7 +30,17 @@ pub enum JodinNodeType {
         /// The maybe values the variables are being initialized with.
         values: Vec<Option<JodinNode>>,
     },
-    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
+    /// Alternative to VarDeclarations that only allows for one declaration, but easier parsing
+    StoreVariable {
+        /// How the variable will be stored
+        storage_type: StorageModifier,
+        /// The name of the variable
+        name: JodinNode,
+        /// The type of the variable
+        var_type: IntermediateType,
+        /// An option initial value for this variable
+        maybe_initial_value: Option<JodinNode>
+    },    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
     FunctionDefinition {
         /// The name of the function.
         name: JodinNode,
@@ -37,8 +48,6 @@ pub enum JodinNodeType {
         return_type: IntermediateType,
         /// The arguments of the function.
         arguments: Vec<JodinNode>,
-        /// The generic parameters of the function.
-        generic_parameters: Vec<JodinNode>,
         /// The associated block of code.
         block: JodinNode,
     },
@@ -161,7 +170,10 @@ pub enum JodinNodeType {
     /// A continue statement
     Continue,
     /// A break statement
-    Break,
+    Break {
+        /// break to a labeled statement
+        id: Option<Identifier>
+    },
     /// An empty node
     Empty,
     /// Super
@@ -251,6 +263,11 @@ pub enum JodinNodeType {
         /// The right hand side of the expression
         rhs: JodinNode,
     },
+    /// Creates a heap-allocated piece of memory
+    NewPointer {
+        /// The value being put on the heap
+        inner: JodinNode
+    }
 }
 
 impl JodinNodeType {
@@ -285,12 +302,10 @@ impl JodinNodeType {
                 name,
                 return_type: _,
                 arguments: parameters,
-                generic_parameters,
                 block,
             } => {
                 let mut ret = vec![name];
                 ret.extend(parameters);
-                ret.extend(generic_parameters);
                 ret.push(block);
                 ret
             }
@@ -353,7 +368,7 @@ impl JodinNodeType {
             JodinNodeType::Continue => {
                 vec![]
             }
-            JodinNodeType::Break => {
+            JodinNodeType::Break { .. } => {
                 vec![]
             }
             JodinNodeType::Empty => {
@@ -441,6 +456,14 @@ impl JodinNodeType {
             } => {
                 vec![lhs, rhs]
             }
+            JodinNodeType::NewPointer { inner } => {
+                vec![inner]
+            }
+            JodinNodeType::StoreVariable { storage_type: _, name, var_type: _, maybe_initial_value } => {
+                let mut vec = vec![name];
+                vec.extend(maybe_initial_value);
+                vec
+            }
         };
         vector
     }
@@ -471,12 +494,10 @@ impl JodinNodeType {
                 name,
                 return_type: _,
                 arguments: parameters,
-                generic_parameters,
                 block,
             } => {
                 let mut ret = vec![name];
                 ret.extend(parameters);
-                ret.extend(generic_parameters);
                 ret.push(block);
                 ret
             }
@@ -538,7 +559,7 @@ impl JodinNodeType {
             JodinNodeType::Continue => {
                 vec![]
             }
-            JodinNodeType::Break => {
+            JodinNodeType::Break { .. }=> {
                 vec![]
             }
             JodinNodeType::Empty => {
@@ -624,6 +645,14 @@ impl JodinNodeType {
                 rhs,
             } => {
                 vec![lhs, rhs]
+            }
+            JodinNodeType::NewPointer { inner } => {
+                vec![inner]
+            }
+            JodinNodeType::StoreVariable { storage_type: _, name, var_type: _, maybe_initial_value } => {
+                let mut vec = vec![name];
+                vec.extend(maybe_initial_value);
+                vec
             }
         };
         vector

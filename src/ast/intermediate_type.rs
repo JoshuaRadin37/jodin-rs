@@ -76,6 +76,60 @@ impl IntermediateType {
         }
     }
 
+    pub fn void() -> Self {
+        Self::from(Primitive::Void)
+    }
+
+    /// Make this type constant if it isn't already
+    pub fn into_const(mut self) -> Self {
+        self.is_const = true;
+        self
+    }
+
+    /// Adds generics to a type
+    pub fn with_generics<I : IntoIterator<Item=IntermediateType>>(mut self, generics: I) -> Self {
+        self.generics.extend(generics);
+        self
+    }
+
+    /// Adds a pointer to a type
+    pub fn with_pointer(mut self) -> Self {
+        self.tails.push(TypeTail::Pointer);
+        self
+    }
+
+    /// Adds an abstract array
+    pub fn with_abstract_array(mut self) -> Self {
+        self.tails.push(TypeTail::Array(None));
+        self
+    }
+
+    /// Adds an array with an index
+    pub fn with_array(mut self, index: JodinNode) -> Self {
+        self.tails.push(TypeTail::Array(Some(index)));
+        self
+    }
+
+    /// Tries to make this type unsigned
+    pub fn into_unsigned(mut self) -> Self {
+        let new_type = match self.type_specifier {
+            TypeSpecifier::Primitive(Primitive::Char) => Primitive::UnsignedByte,
+            TypeSpecifier::Primitive(Primitive::Int) => Primitive::UnsignedShort,
+            TypeSpecifier::Primitive(Primitive::Short) => Primitive::UnsignedInt,
+            TypeSpecifier::Primitive(Primitive::Long) => Primitive::UnsignedLong,
+            r#else => panic!("{:?} can not be made unsigned", r#else)
+        };
+
+        self.type_specifier = TypeSpecifier::Primitive(new_type);
+        self
+    }
+
+    /// Adds parameters to this type
+    pub fn with_function_params<I : IntoIterator<Item=IntermediateType>>(mut self, param_types: I) -> Self {
+        self.tails.push(TypeTail::Function(param_types.into_iter().collect()));
+        self
+    }
+
     fn lose_info(&self) -> Self {
         let IntermediateType {
             is_const,
@@ -183,6 +237,28 @@ impl IntermediateType {
             generics,
             tails,
         })
+    }
+}
+
+impl From<Primitive> for IntermediateType {
+    fn from(p: Primitive) -> Self {
+        Self {
+            is_const: false,
+            type_specifier: TypeSpecifier::Primitive(p),
+            generics: vec![],
+            tails: vec![]
+        }
+    }
+}
+
+impl From<Identifier> for IntermediateType {
+    fn from(id: Identifier) -> Self {
+        Self {
+            is_const: false,
+            type_specifier: TypeSpecifier::Id(id),
+            generics: vec![],
+            tails: vec![]
+        }
     }
 }
 

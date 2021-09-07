@@ -213,7 +213,6 @@ impl IdentifierCreator {
                 name,
                 return_type: _,
                 arguments,
-                generic_parameters,
                 block,
             } => {
                 self.create_identities(name, id_resolver, visibility_registry)?;
@@ -225,9 +224,7 @@ impl IdentifierCreator {
                     self.create_identities(argument, id_resolver, visibility_registry)?;
                 }
 
-                for generic in generic_parameters {
-                    self.create_identities(generic, id_resolver, visibility_registry)?;
-                }
+
 
                 self.create_identities(block, id_resolver, visibility_registry)?;
 
@@ -463,7 +460,6 @@ impl IdentifierSetter {
                 name,
                 return_type,
                 arguments,
-                generic_parameters,
                 block,
             } => {
                 self.resolve_type(return_type, id_resolver, visibility_resolver)?;
@@ -475,10 +471,7 @@ impl IdentifierSetter {
                     self.set_identities(argument, id_resolver, visibility_resolver)?;
                 }
 
-                for generic in generic_parameters {
-                    // self.create_identities(generic, id_resolver, visibility_resolver)?;
-                    self.set_identities(generic, id_resolver, visibility_resolver)?;
-                }
+
 
                 self.set_identities(block, id_resolver, visibility_resolver)?;
 

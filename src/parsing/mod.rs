@@ -180,8 +180,10 @@ mod tests {
     }
 }
 
+
+// pub mod jodin_grammar;
 #[cfg(all(not(feature = "pest_parser"), feature = "larlpop_parser"))]
-pub mod jodin_grammar;
+lalrpop_mod!(pub jodin_grammar, "/parsing/jodin_grammar.rs");
 
 pub type Spanned<Tok, Loc> = Result<(Loc, Tok, Loc), JodinError>;
 
@@ -363,12 +365,19 @@ pub enum Tok<'input> {
     Op(Operator),
     #[token(".")]
     Dot,
-    #[token("=", |_| Option::<Operator>::None)]
+    #[token("=")]
+    Assign,
     #[regex(r"[+\-*/&%^|]=", maybe_assign_operator, priority = 10)]
-    Assign(Option<Operator>),
+    OpAssign(Operator),
     #[regex(r"[a-zA-Z_]\w*")]
     #[regex(r"@[a-zA-Z_]\w*", |lex| &lex.source()[1..])]
     Identifier(&'input str),
+    #[token("->")]
+    Point,
+    #[token("fn")]
+    FunctionPointer,
+    #[token("let")]
+    Let,
     #[regex(r"//.*", logos::skip)]
     #[token("/*", comment)]
     Comment,
@@ -430,7 +439,7 @@ pub fn into_order_of_operations(segments: Vec<ExpressionMember>) -> JodinNode {
 
 fn maybe_assign_operator<'input>(
     lex: &mut Lexer<'input, Tok<'input>>,
-) -> JodinResult<Option<Operator>> {
+) -> JodinResult<Operator> {
     let full_operator: &str = lex.slice();
     let regex = Regex::new(r"(?P<operator>.[^=]?)=").unwrap();
     if let Some(captures) = regex.captures(full_operator) {
@@ -438,7 +447,7 @@ fn maybe_assign_operator<'input>(
             .name("operator")
             .expect("operator group should exist");
         let operator = op.as_str();
-        Operator::from_str(operator).map(|op| Some(op))
+        Operator::from_str(operator)
     } else {
         Err(JodinErrorType::LexerError(full_operator.to_string()).into())
     }
@@ -503,6 +512,7 @@ macro_rules! parse {
 type ParseResult = JodinResult<JodinNode>;
 
 #[cfg(all(not(feature = "pest_parser"), feature = "larlpop_parser"))]
+#[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
     use crate::core::identifier::Identifier;
@@ -517,7 +527,7 @@ mod tests {
         let string = "+=";
         let mut lexer = JodinLexer::new(string);
         match lexer.next() {
-            Some(Ok((_, Tok::Assign(Some(Operator::Plus)), _))) => {}
+            Some(Ok((_, Tok::OpAssign(Operator::Plus), _))) => {}
             v => {
                 panic!("Didn't lex correctly: {:?}", v)
             }
@@ -586,13 +596,53 @@ mod tests {
 
     #[test]
     fn parse_expression() {
-        let result = parse!(jodin_grammar::ExpressionParser, "1+(2-3)*4/5==8");
+        let result = parse!(jodin_grammar::ExpressionParser, "1+(2-3)/5==8<9");
         println!("{:#?}", result.unwrap());
     }
 
     #[test]
     fn parse_statement() {
+        parse!(jodin_grammar::StatementParser, "a = 3;").unwrap();
         parse!(jodin_grammar::StatementParser, "a[0] = 3;").unwrap();
         parse!(jodin_grammar::StatementParser, "a.hello[3].beep = 3;").unwrap();
+        parse!(jodin_grammar::StatementParser, "if (true) { }").unwrap();
+        parse!(jodin_grammar::StatementParser, "if (true) { } else { }").unwrap();
+        parse!(jodin_grammar::StatementParser, "if (false) { } else if (true) { }").unwrap();
+        parse!(jodin_grammar::StatementParser, "while (false) { }").unwrap();
+        parse!(jodin_grammar::StatementParser, "return true;").unwrap();
+        parse!(jodin_grammar::StatementParser, "return;").unwrap();
+        parse!(jodin_grammar::StatementParser, "int a = 4;").expect_err("c-style declarations no longer supported");
+        parse!(jodin_grammar::StatementParser, "let a: int = 3*2;").unwrap();
+        parse!(jodin_grammar::StatementParser, "let a: fn() -> int;").unwrap();
+    }
+
+    #[test]
+    fn parse_types() {
+        parse!(jodin_grammar::CanonicalTypeParser, "int").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "*int").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "fn(*int) -> void").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "Array<int>").unwrap();
+        parse!(jodin_grammar::CanonicalTypeParser, "[5: int]").unwrap();
+        // is c giberish easier to understand?
+        parse!(jodin_grammar::CanonicalTypeParser, "fn() -> [13+2: fn() -> char]").unwrap();
+    }
+
+    #[test]
+    fn parse_function_definition() {
+        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        fn main() {
+
+        }
+       ").unwrap();
+        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        fn main(argc: int, argv: [argv]) {
+
+        }
+       ").unwrap();
+        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        fn main(argc: int, argv: [argv]) -> int {
+
+        }
+       ").unwrap();
     }
 }
