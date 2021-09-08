@@ -6,3 +6,8 @@
 //! The virtual machine for jodin-rs language.
 //!
 //! The virtual machine will be stack-based.
+
+pub mod vm;
+
+pub mod frame;
+

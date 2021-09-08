@@ -5,13 +5,13 @@
 
 use std::fmt::Write;
 
-pub use c_compiler::{C99Compiler, C99};
+// pub use c_compiler::{C99Compiler, C99};
 
 use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
-pub mod c_compiler;
+// pub mod c_compiler;
 
 /// A target for compilation.
 pub trait Target {}
@@ -45,6 +45,7 @@ impl Context {
     }
 }
 
+/*
 /// Compile a tree into C99 code.
 pub fn compile_c99<W: std::fmt::Write>(
     tree: JodinNode,
@@ -54,6 +55,8 @@ pub fn compile_c99<W: std::fmt::Write>(
     let compiler = C99Compiler::new(writer);
     execute_compiler(tree, compiler, compiler_settings)
 }
+
+ */
 
 /// Execute an arbitrary compiler
 pub fn execute_compiler<T, C>(

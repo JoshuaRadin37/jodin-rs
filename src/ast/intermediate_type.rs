@@ -46,6 +46,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::core::error::{JodinErrorType, JodinResult};
 use itertools::Itertools;
+use crate::core::generic_context::GenericParameter;
 
 /// Contains data to represent types without storing any actual type information.
 #[derive(Debug, Eq, PartialEq)]
@@ -294,6 +295,8 @@ pub enum TypeSpecifier {
     Id(Identifier),
     /// A built-in data type, such as `float` or `unsigned int`
     Primitive(Primitive),
+    /// A generic parameter
+    Generic(GenericParameter)
 }
 
 impl Display for TypeSpecifier {
@@ -304,6 +307,9 @@ impl Display for TypeSpecifier {
             }
             TypeSpecifier::Primitive(p) => {
                 write!(f, "{}", p)
+            }
+            TypeSpecifier::Generic(g) => {
+                todo!()
             }
         }
     }

@@ -5,6 +5,7 @@ use std::{collections::HashMap, iter::FromIterator};
 use super::identifier::Identifier;
 
 /// A single generic parameter in a generic declaration
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum GenericParameter {
     /// Just a simple identifier being declared
     Invariant(Identifier),
