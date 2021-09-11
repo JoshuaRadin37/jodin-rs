@@ -1,7 +1,7 @@
 //! Store frame information
 
 use std::collections::HashMap;
-use std::ops::{Index, IndexMut};
+use std::ops::Index;
 use std::sync::Arc;
 
 /// The actual storage used within a frame
@@ -97,12 +97,14 @@ pub struct FrameVarsMutContext<'a, FS: FrameStorage> {
 }
 
 impl<'a, FS: FrameStorage> FrameVarsMutContext<'a, FS> {
-    fn set_value(&mut self, index: &str) {
+    /// Set a variable to a value
+    pub fn set_value(&mut self, index: &str, value_as_bytes: &[u8]) {
         let mut frame_pointer = self.frame_store.get_frame_mut(self.head_frame);
         while let Some(ptr) = frame_pointer {
             frame_pointer = None;
             if let Some(var) = ptr.vars.get_mut(index) {
-                return var;
+                var.clone_from_slice(value_as_bytes);
+                return;
             } else if let Some(next) = ptr.vars.parent {
                 frame_pointer = self.frame_store.get_frame_mut(next);
             }

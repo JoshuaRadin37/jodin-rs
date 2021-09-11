@@ -14,14 +14,13 @@ pub enum GenericParameter {
         /// The type being declared
         declaration: Identifier,
         /// The super class of this type
-        super_class: Identifier
+        super_class: Identifier,
     },
     /// An identifier that is a super type of another type
     Contravariant {
         /// The type being declared
         declaration: Identifier,
         /// The child class of this type
-        child_class: Identifier
-    }
+        child_class: Identifier,
+    },
 }
-

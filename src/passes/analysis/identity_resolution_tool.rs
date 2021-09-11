@@ -224,8 +224,6 @@ impl IdentifierCreator {
                     self.create_identities(argument, id_resolver, visibility_registry)?;
                 }
 
-
-
                 self.create_identities(block, id_resolver, visibility_registry)?;
 
                 id_resolver.pop_namespace();
@@ -470,8 +468,6 @@ impl IdentifierSetter {
                 for argument in arguments {
                     self.set_identities(argument, id_resolver, visibility_resolver)?;
                 }
-
-
 
                 self.set_identities(block, id_resolver, visibility_resolver)?;
 

@@ -12,14 +12,14 @@ use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
+use crate::core::types::arrays::Array;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
-use crate::core::types::arrays::Array;
 
+pub mod arrays;
 pub mod primitives;
 pub mod structure;
 pub mod type_environment;
-pub mod arrays;
 
 /// Different types of types within Jodin
 #[derive(Debug)]
@@ -38,7 +38,7 @@ impl JodinType {
         match self {
             JodinType::Primitive(p) => p,
             JodinType::Structure(s) => s,
-            JodinType::Array(a) => {a}
+            JodinType::Array(a) => a,
         }
     }
 }

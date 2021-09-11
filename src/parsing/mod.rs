@@ -1,8 +1,6 @@
 //! Different modules that make up the parsing mechanisms for jodin. The parsing system is based
 //! off of the pest crate.
 
-
-
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::literal::Literal;
@@ -12,7 +10,6 @@ use logos::internal::CallbackResult;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::{CharIndices, FromStr};
-
 
 // pub mod jodin_grammar;
 lalrpop_mod!(#[allow(missing_docs)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
@@ -276,9 +273,7 @@ pub fn into_order_of_operations(segments: Vec<ExpressionMember>) -> JodinNode {
     expression_stack.pop().unwrap()
 }
 
-fn maybe_assign_operator<'input>(
-    lex: &mut Lexer<'input, Tok<'input>>,
-) -> JodinResult<Operator> {
+fn maybe_assign_operator<'input>(lex: &mut Lexer<'input, Tok<'input>>) -> JodinResult<Operator> {
     let full_operator: &str = lex.slice();
     let regex = Regex::new(r"(?P<operator>.[^=]?)=").unwrap();
     if let Some(captures) = regex.captures(full_operator) {
@@ -446,15 +441,24 @@ mod tests {
         parse!(jodin_grammar::StatementParser, "a.hello[3].beep = 3;").unwrap();
         parse!(jodin_grammar::StatementParser, "if (true) { }").unwrap();
         parse!(jodin_grammar::StatementParser, "if (true) { } else { }").unwrap();
-        parse!(jodin_grammar::StatementParser, "if (false) { } else if (true) { }").unwrap();
+        parse!(
+            jodin_grammar::StatementParser,
+            "if (false) { } else if (true) { }"
+        )
+        .unwrap();
         parse!(jodin_grammar::StatementParser, "while (false) { }").unwrap();
         parse!(jodin_grammar::StatementParser, "return true;").unwrap();
         parse!(jodin_grammar::StatementParser, "return;").unwrap();
-        parse!(jodin_grammar::StatementParser, "int a = 4;").expect_err("c-style declarations no longer supported");
+        parse!(jodin_grammar::StatementParser, "int a = 4;")
+            .expect_err("c-style declarations no longer supported");
         parse!(jodin_grammar::StatementParser, "let a: int = 3*2;").unwrap();
         parse!(jodin_grammar::StatementParser, "let a: fn() -> int;").unwrap();
         parse!(jodin_grammar::StatementParser, "for(;;) { }").unwrap();
-        parse!(jodin_grammar::StatementParser, "for(let i: int = 0; i < 2; ++i) { }").unwrap();
+        parse!(
+            jodin_grammar::StatementParser,
+            "for(let i: int = 0; i < 2; ++i) { }"
+        )
+        .unwrap();
     }
 
     #[test]
@@ -465,27 +469,45 @@ mod tests {
         parse!(jodin_grammar::CanonicalTypeParser, "Array<int>").unwrap();
         parse!(jodin_grammar::CanonicalTypeParser, "[int: 5]").unwrap();
         // is c giberish easier to understand?
-        parse!(jodin_grammar::CanonicalTypeParser, "fn() -> [fn() -> char: 5]").unwrap();
+        parse!(
+            jodin_grammar::CanonicalTypeParser,
+            "fn() -> [fn() -> char: 5]"
+        )
+        .unwrap();
     }
 
     #[test]
     fn parse_function_definition() {
-        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        parse!(
+            jodin_grammar::FunctionDefinitionParser,
+            r"
         fn main() {
 
         }
-       ").unwrap();
-        parse!(jodin_grammar::FunctionDefinitionParser, r"
+       "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::FunctionDefinitionParser,
+            r"
         fn main(argc: int, argv: [argv]) {
 
         }
-       ").unwrap();
-        parse!(jodin_grammar::FunctionDefinitionParser, r"
+       "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::FunctionDefinitionParser,
+            r"
         fn main(argc: int, argv: [argv]) -> int {
 
         }
-       ").unwrap();
-        parse!(jodin_grammar::FunctionDefinitionParser, r"
+       "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::FunctionDefinitionParser,
+            r"
         fn fibonacci(n: unsigned int) -> unsigned int {
             switch(n) {
                 case 0:
@@ -496,9 +518,13 @@ mod tests {
                     return fibonacci(n-1) + fibonacci(n-2);
             }
         }
-       ").unwrap();
+       "
+        )
+        .unwrap();
 
-        parse!(jodin_grammar::FunctionDefinitionParser, r"
+        parse!(
+            jodin_grammar::FunctionDefinitionParser,
+            r"
         fn fibonacci(n: unsigned int) -> unsigned int {
             static table: *[unsigned int] = new [0u: n+1];
             if (n < 2) {
@@ -510,6 +536,8 @@ mod tests {
             }
             return (*table)[n];
         }
-       ").unwrap();
+       "
+        )
+        .unwrap();
     }
 }

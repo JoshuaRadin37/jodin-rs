@@ -1,9 +1,9 @@
 //! The array types that exist within Jodin
 
-use crate::ast::JodinNode;
-use crate::core::types::{Type, get_type_id};
-use crate::core::identifier::Identifier;
 use crate::ast::intermediate_type::IntermediateType;
+use crate::ast::JodinNode;
+use crate::core::identifier::Identifier;
+use crate::core::types::{get_type_id, Type};
 
 /// An array type
 #[derive(Debug)]
@@ -13,13 +13,13 @@ pub enum ArrayType {
         /// The value being repeated
         value: JodinNode,
         /// The number of repeats
-        repeats: usize
+        repeats: usize,
     },
     /// An array created from a list of expressions
     List {
         /// The values in the array
-        values: Vec<JodinNode>
-    }
+        values: Vec<JodinNode>,
+    },
 }
 
 /// An Array type
@@ -35,10 +35,13 @@ pub struct Array {
 impl Array {
     /// Create a new array type
     pub fn new(base_type: IntermediateType, array_type: ArrayType) -> Self {
-        Array { base_type, array_type, type_id: get_type_id() }
+        Array {
+            base_type,
+            array_type,
+            type_id: get_type_id(),
+        }
     }
 }
-
 
 impl Type for Array {
     fn type_name(&self) -> Identifier {

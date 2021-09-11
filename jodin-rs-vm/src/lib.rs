@@ -1,4 +1,3 @@
-#![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unused_imports)]
 #![deny(unused_mut)]
@@ -7,7 +6,11 @@
 //!
 //! The virtual machine will be stack-based.
 
-pub mod vm;
+#[macro_use]
+extern crate num_derive;
 
+pub mod bytecode;
+pub mod chunk;
 pub mod frame;
-
+pub mod vm;
+pub mod memory;

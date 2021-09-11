@@ -45,8 +45,8 @@ use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
 
 use crate::core::error::{JodinErrorType, JodinResult};
-use itertools::Itertools;
 use crate::core::generic_context::GenericParameter;
+use itertools::Itertools;
 
 /// Contains data to represent types without storing any actual type information.
 #[derive(Debug, Eq, PartialEq)]
@@ -89,7 +89,7 @@ impl IntermediateType {
     }
 
     /// Adds generics to a type
-    pub fn with_generics<I : IntoIterator<Item=IntermediateType>>(mut self, generics: I) -> Self {
+    pub fn with_generics<I: IntoIterator<Item = IntermediateType>>(mut self, generics: I) -> Self {
         self.generics.extend(generics);
         self
     }
@@ -119,7 +119,7 @@ impl IntermediateType {
             TypeSpecifier::Primitive(Primitive::Int) => Primitive::UnsignedShort,
             TypeSpecifier::Primitive(Primitive::Short) => Primitive::UnsignedInt,
             TypeSpecifier::Primitive(Primitive::Long) => Primitive::UnsignedLong,
-            r#else => panic!("{:?} can not be made unsigned", r#else)
+            r#else => panic!("{:?} can not be made unsigned", r#else),
         };
 
         self.type_specifier = TypeSpecifier::Primitive(new_type);
@@ -127,8 +127,12 @@ impl IntermediateType {
     }
 
     /// Adds parameters to this type
-    pub fn with_function_params<I : IntoIterator<Item=IntermediateType>>(mut self, param_types: I) -> Self {
-        self.tails.push(TypeTail::Function(param_types.into_iter().collect()));
+    pub fn with_function_params<I: IntoIterator<Item = IntermediateType>>(
+        mut self,
+        param_types: I,
+    ) -> Self {
+        self.tails
+            .push(TypeTail::Function(param_types.into_iter().collect()));
         self
     }
 
@@ -248,7 +252,7 @@ impl From<Primitive> for IntermediateType {
             is_const: false,
             type_specifier: TypeSpecifier::Primitive(p),
             generics: vec![],
-            tails: vec![]
+            tails: vec![],
         }
     }
 }
@@ -259,7 +263,7 @@ impl From<Identifier> for IntermediateType {
             is_const: false,
             type_specifier: TypeSpecifier::Id(id),
             generics: vec![],
-            tails: vec![]
+            tails: vec![],
         }
     }
 }
@@ -296,7 +300,7 @@ pub enum TypeSpecifier {
     /// A built-in data type, such as `float` or `unsigned int`
     Primitive(Primitive),
     /// A generic parameter
-    Generic(GenericParameter)
+    Generic(GenericParameter),
 }
 
 impl Display for TypeSpecifier {

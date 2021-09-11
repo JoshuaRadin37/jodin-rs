@@ -8,9 +8,9 @@ use crate::core::operator::Operator;
 
 use crate::ast::intermediate_type::IntermediateType;
 use crate::ast::jodin_node::JodinNode;
+use crate::core::types::StorageModifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
-use crate::core::types::StorageModifier;
 
 /// Contains JodinNode variant information.
 #[derive(Debug)]
@@ -39,8 +39,9 @@ pub enum JodinNodeType {
         /// The type of the variable
         var_type: IntermediateType,
         /// An option initial value for this variable
-        maybe_initial_value: Option<JodinNode>
-    },    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
+        maybe_initial_value: Option<JodinNode>,
+    },
+    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
     FunctionDefinition {
         /// The name of the function.
         name: JodinNode,
@@ -172,7 +173,7 @@ pub enum JodinNodeType {
     /// A break statement
     Break {
         /// break to a labeled statement
-        id: Option<Identifier>
+        id: Option<Identifier>,
     },
     /// An empty node
     Empty,
@@ -266,27 +267,27 @@ pub enum JodinNodeType {
     /// Creates a heap-allocated piece of memory
     NewPointer {
         /// The value being put on the heap
-        inner: JodinNode
+        inner: JodinNode,
     },
     /// A case statement
     Case {
         /// The case, None is default case
         case: Option<JodinNode>,
         /// The case statement
-        statement: JodinNode
+        statement: JodinNode,
     },
     /// An array initializer
     RepeatedArrayInitializer {
         /// The value to repeat
         to_repeat: JodinNode,
         /// The number of repeats
-        repeats: JodinNode
+        repeats: JodinNode,
     },
     /// A list (array) initializer
     ListInitializer {
         /// The values in the list
-        values: Vec<JodinNode>
-    }
+        values: Vec<JodinNode>,
+    },
 }
 
 impl JodinNodeType {
@@ -478,7 +479,12 @@ impl JodinNodeType {
             JodinNodeType::NewPointer { inner } => {
                 vec![inner]
             }
-            JodinNodeType::StoreVariable { storage_type: _, name, var_type: _, maybe_initial_value } => {
+            JodinNodeType::StoreVariable {
+                storage_type: _,
+                name,
+                var_type: _,
+                maybe_initial_value,
+            } => {
                 let mut vec = vec![name];
                 vec.extend(maybe_initial_value);
                 vec
@@ -492,9 +498,7 @@ impl JodinNodeType {
             JodinNodeType::RepeatedArrayInitializer { to_repeat, repeats } => {
                 vec![to_repeat, repeats]
             }
-            JodinNodeType::ListInitializer { values } => {
-                values.into_iter().collect()
-            }
+            JodinNodeType::ListInitializer { values } => values.into_iter().collect(),
         };
         vector
     }
@@ -590,7 +594,7 @@ impl JodinNodeType {
             JodinNodeType::Continue => {
                 vec![]
             }
-            JodinNodeType::Break { .. }=> {
+            JodinNodeType::Break { .. } => {
                 vec![]
             }
             JodinNodeType::Empty => {
@@ -680,7 +684,12 @@ impl JodinNodeType {
             JodinNodeType::NewPointer { inner } => {
                 vec![inner]
             }
-            JodinNodeType::StoreVariable { storage_type: _, name, var_type: _, maybe_initial_value } => {
+            JodinNodeType::StoreVariable {
+                storage_type: _,
+                name,
+                var_type: _,
+                maybe_initial_value,
+            } => {
                 let mut vec = vec![name];
                 vec.extend(maybe_initial_value);
                 vec
@@ -694,9 +703,7 @@ impl JodinNodeType {
             JodinNodeType::RepeatedArrayInitializer { to_repeat, repeats } => {
                 vec![to_repeat, repeats]
             }
-            JodinNodeType::ListInitializer { values } => {
-                values.into_iter().collect()
-            }
+            JodinNodeType::ListInitializer { values } => values.into_iter().collect(),
         };
         vector
     }

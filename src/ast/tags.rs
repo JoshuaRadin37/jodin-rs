@@ -79,7 +79,7 @@ impl Tag for DummyTag {
 #[derive(Debug)]
 pub struct LabeledStatementTag {
     /// The label
-    pub label: String
+    pub label: String,
 }
 
 impl Tag for LabeledStatementTag {
@@ -96,7 +96,7 @@ impl Tag for LabeledStatementTag {
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
-       self
+        self
     }
 }
 
@@ -106,8 +106,6 @@ impl LabeledStatementTag {
         LabeledStatementTag { label }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
