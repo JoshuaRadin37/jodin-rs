@@ -1,20 +1,17 @@
 //! A chunk is a set of data being used by the virtual machine that contains instructions and
 //! constants.
 
+use crate::bytecode::{BinaryOpOperand, ByteCode};
 use std::ops::{Index};
 use std::slice::SliceIndex;
-use crate::bytecode::{ByteCode, BinaryOpOperand};
 
 use num_traits::FromPrimitive;
+
 
 /// A chunk of code
 pub struct Chunk(pub Vec<u8>);
 
-
-
-impl<I : SliceIndex<[u8], Output=[u8]>> Index<I> for Chunk
-where
-{
+impl<I: SliceIndex<[u8], Output = [u8]>> Index<I> for Chunk {
     type Output = [u8];
 
     fn index(&self, index: I) -> &Self::Output {
@@ -22,11 +19,15 @@ where
     }
 }
 
-
 impl Chunk {
     /// Create a new chunk
     pub fn new() -> Self {
         Chunk(vec![])
+    }
+
+    /// Create a new chunk
+    pub fn new_start_at(start_ip: usize) -> Self {
+        Chunk(vec![0u8; start_ip])
     }
 
     /// Gets a byte at an index
@@ -40,9 +41,17 @@ impl Chunk {
         let op_string = format!("{:?}", op).replace("ByteCode::", "");
         let instruction = format!("0x{:016x}:", index);
 
-
         let bytes = bytes.unwrap_or(&[]);
-        let instruction = format!("{} {:02x} {:24}", instruction, op as u8, bytes.iter().map(|b| format!("{:02x}", b)).collect::<Vec<String>>().join(" "));
+        let instruction = format!(
+            "{} {:02x} {:24}",
+            instruction,
+            op as u8,
+            bytes
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<String>>()
+                .join(" ")
+        );
         if let Some(interpret) = op.interpret_operand_as_string(bytes) {
             format!("{} | {} {}", instruction, op_string, interpret)
         } else {
@@ -93,9 +102,11 @@ impl Chunk {
         self.0.push(opcode as u8)
     }
 
-    fn append_bytes(&mut self, bytes: &[u8]) {
+    pub fn append_bytes(&mut self, bytes: &[u8]) {
         self.0.extend(bytes)
     }
+
+
 
     /// Add a ret opcode
     pub fn ret(&mut self) {
@@ -111,42 +122,42 @@ impl Chunk {
     /// Pushes a short to the stack
     pub fn constant_2byte(&mut self, short: u16) {
         self.append_bytecode(ByteCode::Const2);
-        let bytes: [u8; 2] = short.to_be_bytes();
+        let bytes: [u8; 2] = short.to_le_bytes();
         self.append_bytes(&bytes)
     }
 
     /// Pushes an integer to the stack
     pub fn constant_4byte(&mut self, int: u32) {
         self.append_bytecode(ByteCode::Const4);
-        let bytes: [u8; 4] = int.to_be_bytes();
+        let bytes: [u8; 4] = int.to_le_bytes();
         self.append_bytes(&bytes)
     }
 
     /// Pushes a long integer to the stack
     pub fn constant_8byte(&mut self, long: u64) {
         self.append_bytecode(ByteCode::Const8);
-        let bytes: [u8; 8] = long.to_be_bytes();
+        let bytes: [u8; 8] = long.to_le_bytes();
         self.append_bytes(&bytes)
     }
 
     /// Pushes an integer to the stack
     pub fn constant_float4(&mut self, float: f32) {
         self.append_bytecode(ByteCode::Float4);
-        let bytes: [u8; 4] = float.to_be_bytes();
+        let bytes: [u8; 4] = float.to_le_bytes();
         self.append_bytes(&bytes)
     }
 
     /// Pushes a long integer to the stack
     pub fn constant_float8(&mut self, double: f64) {
         self.append_bytecode(ByteCode::Float8);
-        let bytes: [u8; 8] = double.to_be_bytes();
+        let bytes: [u8; 8] = double.to_le_bytes();
         self.append_bytes(&bytes)
     }
 
     /// Pop n amount of bytes from the stack
     pub fn pop_n(&mut self, bytes_to_pop: usize) {
         self.append_bytecode(ByteCode::PopN);
-        let bytes = bytes_to_pop.to_be_bytes();
+        let bytes = bytes_to_pop.to_le_bytes();
         self.append_bytes(&bytes);
     }
 
@@ -161,7 +172,14 @@ impl Chunk {
     }
 }
 
+impl From<Vec<u8>> for Chunk {
+    fn from(c: Vec<u8>) -> Self {
+        Chunk(c)
+    }
+}
+
 pub struct ByteCodeVector<'a>(&'a [u8]);
+
 
 impl<'a> ByteCodeVector<'a> {
     pub fn new(code: &'a [u8]) -> Self {
@@ -194,17 +212,26 @@ impl<'a> ByteCodeVector<'a> {
             Some(index + count)
         }
     }
-}
 
+    pub fn disassemble_instruction(&self, index: usize) -> String {
+        let mut chunk = Chunk::new_start_at(index);
+        match self.next_bytecode(index) {
+            None => {  chunk.append_bytes(self.0.get(index..).unwrap());}
+            Some(end) => { chunk.append_bytes(self.0.get(index..end).unwrap()); }
+        };
+
+        chunk.disassemble_single_bytecode(index)
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use crate::bytecode::{BinaryOpOperand, ByteCode};
     use crate::chunk::Chunk;
-    use crate::bytecode::{ByteCode, BinaryOpOperand};
 
     #[test]
     fn disassemble() {
-        let mut chunk = Chunk::new();
+        let mut chunk = Chunk::new_start_at(32);
         chunk.constant_2byte(2048);
         chunk.constant_4byte(2048);
         chunk.constant_2byte(2048);

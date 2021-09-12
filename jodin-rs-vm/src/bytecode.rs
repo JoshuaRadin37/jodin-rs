@@ -2,8 +2,8 @@
 //!
 //! Does not store any information about how byte codes are actually implemented
 
-use byteorder::{BigEndian, ByteOrder};
 use bitfield::bitfield;
+use byteorder::{ByteOrder, LittleEndian};
 
 /// The size of pointers
 pub const PTR_SIZE: usize = std::mem::size_of::<usize>();
@@ -71,48 +71,39 @@ impl ByteCode {
             return None;
         }
         match self {
-            ByteCode::Const1 => {
-                Some(bytes[0].to_string())
-            }
-            ByteCode::Const2 => {
-                Some(BigEndian::read_u16(bytes).to_string())
-            }
-            ByteCode::Const4 => {
-                Some(BigEndian::read_u32(bytes).to_string())
-            }
+            ByteCode::Const1 => Some(bytes[0].to_string()),
+            ByteCode::Const2 => Some(LittleEndian::read_u16(bytes).to_string()),
+            ByteCode::Const4 => Some(LittleEndian::read_u32(bytes).to_string()),
 
-            ByteCode::Const8 => {
-                Some(BigEndian::read_u64(bytes).to_string())
-            }
-            ByteCode::Float4 => {
-                Some(BigEndian::read_f32(bytes).to_string())
-            }
-            ByteCode::Float8 => {
-                Some(BigEndian::read_f64(bytes).to_string())
-            }
+            ByteCode::Const8 => Some(LittleEndian::read_u64(bytes).to_string()),
+            ByteCode::Float4 => Some(LittleEndian::read_f32(bytes).to_string()),
+            ByteCode::Float8 => Some(LittleEndian::read_f64(bytes).to_string()),
             ByteCode::PopN => {
                 if PTR_SIZE == 4 {
-                    Some(BigEndian::read_u32(bytes).to_string())
+                    Some(LittleEndian::read_u32(bytes).to_string())
                 } else if PTR_SIZE == 8 {
-                    Some(BigEndian::read_u64(bytes).to_string())
+                    Some(LittleEndian::read_u64(bytes).to_string())
                 } else {
                     panic!("Only 32 byte or 64 byte systems supported")
                 }
             }
-            ByteCode::Return |
-            ByteCode::Add |
-            ByteCode::Subtract |
-            ByteCode::Multiply |
-            ByteCode::Divide |
-            ByteCode::Remainder => {
+            ByteCode::Return
+            | ByteCode::Add
+            | ByteCode::Subtract
+            | ByteCode::Multiply
+            | ByteCode::Divide
+            | ByteCode::Remainder => {
                 let b = BinaryOpOperand(bytes[0]);
-                Some(format!("{} {} bytes, {} bytes", if b.is_floats() { "float"} else { "integer"}, b.lhs_size(), b.rhs_size()))
+                Some(format!(
+                    "{} {} bytes, {} bytes",
+                    if b.is_floats() { "float" } else { "integer" },
+                    b.lhs_size(),
+                    b.rhs_size()
+                ))
             }
-            _ => None
+            _ => None,
         }
     }
-
-
 }
 
 bitfield! {
@@ -138,7 +129,7 @@ impl BinaryOpOperand {
     pub fn is_floats(&self) -> bool {
         self._is_floats()
     }
-    
+
     /// Gets the size of the lhs operand
     pub fn lhs_size(&self) -> usize {
         self.min_lhs_size() as usize + 1
