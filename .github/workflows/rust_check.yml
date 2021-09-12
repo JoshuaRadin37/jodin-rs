@@ -22,6 +22,7 @@ jobs:
     - name: GitHub Checks
       uses: LouisBrunner/checks-action@v1.2.0
       with:
+        token: ${{ secrets.GITHUB_TOKEN }}
         name: Cargo Check
-        conclusion: ${{ steps.check.status }}
+        conclusion: ${{ job.status }}
 
