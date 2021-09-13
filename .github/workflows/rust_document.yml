@@ -1,32 +1,26 @@
-name: Rust
-
+name: Rust Release
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: ["Rust Test"]
+    branches: [main]
+    types:
+      - completed
+
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  run:
-
+  create_release:
     runs-on: ubuntu-latest
-
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --workspace --verbose
-    - name: Test
-      run: cargo test --workspace --verbose
-      id: test
     - name: Bump version and push tag
-      if: steps.test.success
       id: tag_version
       uses: mathieudutour/github-tag-action@v5.6
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
     - name: Create a GitHub release
-      if: steps.test.success
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,8 +1,10 @@
 name: Rust Check
 
 on:
-  pull_request:
-    branches: [ develop, main ]
+  push:
+    branches:
+      - '!main'
+      - '!develop'
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,8 +18,3 @@ jobs:
     - uses: actions/checkout@v2
     - name: Check
       run: cargo check --workspace --verbose
-      id: check
-    - name: Test
-      run: cargo test --workspace --verbose
-      id: test
-
