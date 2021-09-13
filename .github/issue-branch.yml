@@ -1,9 +1,4 @@
 mode: chatops
 defaultBranch: 'develop'
 autoCloseIssue: true
-branches:
-  - label: feature
-    prefix: 'feature/'
-  - label: bug
-    prefex: 'bugfix/'
-branchName: '${assignee.login}/issue-${issue.number}-${issue.title,}'
+branchName: 'feature-${issue.number}-${issue.title,}'
