@@ -1,8 +1,10 @@
 name: Rust Release
 on:
-  push:
-    branches:
-      - staging
+  workflow_run:
+    workflows:
+      - "Stage Develop Changes"
+    types:
+      - completed
 
 
 env:
