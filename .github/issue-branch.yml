@@ -3,7 +3,7 @@ defaultBranch: 'develop'
 autoCloseIssue: true
 branches:
   - label: feature
-    prefix: 'feature/${assignee.login}/'
+    prefix: 'feature/'
   - label: bug
-    prefex: 'bugfix/${assignee.login}/'
-branchName: 'issue-${issue.id}-${issue.title,}'
+    prefex: 'bugfix/'
+branchName: '${assignee.login}/issue-${issue.number}-${issue.title,}'
