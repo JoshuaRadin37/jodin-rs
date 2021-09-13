@@ -49,6 +49,14 @@ jobs:
   push_to_main:
     needs: document
     runs-on: ubuntu-latest
-
+    steps:
+      - uses: actions/checkout@master
+      - name: Merge develop-> staging
+        uses: devmasx/merge-branch@v1.4.0
+        with:
+          type: now
+          from_branch: development
+          target_branch: staging
+          github_token: ${{ github.token }}
 
     
