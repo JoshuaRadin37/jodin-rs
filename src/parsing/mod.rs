@@ -3,13 +3,12 @@
 
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
-use crate::core::literal::Literal;
-use crate::core::operator::{Operator, Precedence};
-use itertools::Itertools;
-use logos::internal::CallbackResult;
+
+use crate::core::operator::{Operator};
+
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
-use std::str::{CharIndices, FromStr};
+use std::str::{FromStr};
 
 // pub mod jodin_grammar;
 lalrpop_mod!(#[allow(missing_docs)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
@@ -334,6 +333,7 @@ impl<T, E> UnwrapVector<T, E> for Vec<Result<T, E>> {
 }
 
 #[macro_use]
+#[allow(unused)]
 macro_rules! parse {
     ($parser:ty, $ex:expr) => {{
         let string: &str = $ex;

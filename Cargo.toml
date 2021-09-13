@@ -14,6 +14,8 @@ members = ["jodin-rs-vm"]
 [build-dependencies]
 lalrpop = "0.19.6"
 
+[features]
+strict = []
 
 [dependencies]
 regex = "1.5.4"
