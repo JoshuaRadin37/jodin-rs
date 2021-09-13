@@ -18,9 +18,13 @@ jobs:
         with:
           ref: staging
       - name: Run lint on project
-        run: cargo check --features strict
+        run: RUSTFLAGScargo check
+        env:
+          RUSTFLAGS: "-D warnings"
       - name: Run lint on VM
-        run: cargo check -p "jodin-rs-vm" --features strict
+        run: cargo check -p "jodin-rs-vm"
+        env:
+          RUSTFLAGS: "-D warnings"
 
   push_to_main:
     needs: lint
