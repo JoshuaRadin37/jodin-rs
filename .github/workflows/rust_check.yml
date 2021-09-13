@@ -17,12 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Check
-      run: cargo check --verbose
+      run: cargo check --workspace --verbose
       id: check
-    - name: GitHub Checks
-      uses: LouisBrunner/checks-action@v1.2.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        name: Cargo Check
-        conclusion: ${{ job.status }}
+    - name: Test
+      run: cargo test --workspace --verbose
+      id: test
 
