@@ -1,10 +1,7 @@
 name: Rust Release
 on:
-  workflow_run:
-    workflows: ["Rust Test"]
-    branches: [main]
-    types:
-      - completed
+  push:
+    branches: [ staging ]
 
 
 env:
@@ -16,13 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Run lint
-        run: cargo
+        run: cargo check --workspace --features strict
 
 
   create_release:
     needs: lint
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
     - name: Bump version and push tag
       id: tag_version
@@ -41,7 +37,6 @@ jobs:
   document:
     needs: create_release
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v2
       - name: Create Documentation
@@ -50,4 +45,10 @@ jobs:
         with:
           commit_message: "Update Documentation"
           file_pattern: docs/*
+
+  push_to_main:
+    needs: document
+    runs-on: ubuntu-latest
+
+
     
