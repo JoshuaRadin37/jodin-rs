@@ -7,10 +7,7 @@
 use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType};
 use crate::core::identifier::Identifier;
-#[cfg(feature = "pest_parser")]
-use crate::parsing::JodinRule;
 use std::any::Any;
-use std::convert::TryFrom;
 use std::fmt::Debug;
 
 /// The visibility of a declaration
@@ -32,23 +29,6 @@ impl Visibility {
             Visibility::Protected => checking_path >= protected_path,
             Visibility::Private => checking_path == protected_path,
         }
-    }
-}
-#[cfg(feature = "pest_parser")]
-impl TryFrom<Option<JodinRule>> for Visibility {
-    type Error = JodinError;
-
-    fn try_from(value: Option<JodinRule>) -> Result<Self, Self::Error> {
-        Ok(match value {
-            Some(JodinRule::t_private) => Visibility::Private,
-            None => Visibility::Protected,
-            Some(JodinRule::t_public) => Visibility::Public,
-            Some(other) => {
-                return Err(JodinError::new(JodinErrorType::InvalidVisibilityRule(
-                    other,
-                )))
-            }
-        })
     }
 }
 

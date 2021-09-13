@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "strict", deny(warnings))]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unused_imports)]
 
@@ -13,4 +14,3 @@ pub mod chunk;
 pub mod frame;
 pub mod memory;
 pub mod vm;
-//
