@@ -204,11 +204,6 @@ impl JodinNode {
 
 impl Debug for JodinNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut node_type = format!("{:?}", self.jodin_node_type);
-        if node_type.contains(" ") {
-            node_type = node_type[..node_type.find(" ").unwrap()].to_string();
-        }
-
         if f.alternate() {
             write!(
                 f,

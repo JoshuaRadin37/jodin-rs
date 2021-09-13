@@ -4,11 +4,11 @@ use crate::memory::{Heap, Stack};
 
 use crate::bytecode::ByteCode;
 use crate::chunk::{ByteCodeVector, Chunk};
+use crate::frame::{Frame, FrameHeap, FrameStorage, FrameVarsContext};
 use std::collections::VecDeque;
+use std::panic::{catch_unwind, UnwindSafe};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use crate::frame::{FrameHeap, FrameStorage, FrameVarsContext, Frame};
-use std::panic::{catch_unwind, UnwindSafe};
 
 /// The machine that actually runs the bytecode
 pub struct VirtualMachine {
@@ -39,7 +39,9 @@ impl VirtualMachine {
     }
 
     pub fn send_interrupt(&self, interrupt: Interrupt) {
-        self.interrupt_sender.send(interrupt).expect("Could not send interrupt")
+        self.interrupt_sender
+            .send(interrupt)
+            .expect("Could not send interrupt")
     }
 
     pub fn wait_for_halt(&self) {
@@ -49,7 +51,7 @@ impl VirtualMachine {
 
 pub enum Interrupt {
     RunCode(Chunk),
-    Halt
+    Halt,
 }
 
 pub struct Core {
@@ -67,9 +69,7 @@ pub struct Core {
     cont: bool,
 }
 
-impl UnwindSafe for Core {
-    
-}
+impl UnwindSafe for Core {}
 
 impl Core {
     fn handle_interrupts(&mut self) {
@@ -112,40 +112,39 @@ impl Core {
     fn run(mut self) {
         let send = self.halt.clone();
         let result = catch_unwind(move || {
-            
             while self.cont {
                 self.handle_interrupts();
 
                 if !self.wait_for_interrupt && self.cont {
                     let ip = self.current_frame().instruction_pointer;
 
-
                     let chunkish = ByteCodeVector::new(self.heap.data());
                     println!("{}", chunkish.disassemble_instruction(ip));
-                    let (code, bytes) = chunkish.bytecode_and_operands(ip);
-                    let ops = bytes.unwrap_or(&[]);
+                    let (code, _bytes) = chunkish.bytecode_and_operands(ip);
 
                     let next_ip = chunkish.next_bytecode(ip);
                     match code {
                         ByteCode::Halt => {
-                            self.halt.send(());
+                            self.halt.send(()).unwrap();
                             break;
                         }
                         _ => {}
                     }
 
                     if next_ip.is_none() {
-                        self.halt.send(());
+                        self.halt.send(()).unwrap();
                         break;
                     } else {
-                        self.frames.get_frame_mut(self.current_frame).unwrap().instruction_pointer = next_ip.unwrap();
+                        self.frames
+                            .get_frame_mut(self.current_frame)
+                            .unwrap()
+                            .instruction_pointer = next_ip.unwrap();
                     }
                 }
             }
-        }
-        );
+        });
         if result.is_err() {
-            send.send(());
+            send.send(()).unwrap();
         }
     }
 
@@ -167,13 +166,13 @@ impl Core {
 #[cfg(test)]
 mod tests {
     use crate::chunk::Chunk;
-    use crate::vm::{VirtualMachine, Interrupt};
+    use crate::vm::{Interrupt, VirtualMachine};
 
     #[test]
     fn run_basic() {
         let mut chunk = Chunk::new_start_at(256);
         chunk.halt();
-        let mut vm = VirtualMachine::boot_with(chunk);
+        let vm = VirtualMachine::boot_with(chunk);
         vm.wait_for_halt();
         println!("VM Finished")
     }
@@ -184,7 +183,7 @@ mod tests {
         let mut chunk = Chunk::new_start_at(256);
 
         chunk.halt();
-        let mut vm = VirtualMachine::boot_with(chunk);
+        let vm = VirtualMachine::boot_with(chunk);
         vm.wait_for_halt();
         println!("VM Finished");
         vm.send_interrupt(Interrupt::Halt);

@@ -277,7 +277,7 @@ impl<N: NumType> TryConstEvaluation<N> for Operator {
     fn evaluate_binop<R: TryInto<N>>(&self, lhs: N, rhs: R) -> JodinResult<Literal> {
         let rhs = rhs
             .try_into()
-            .map_err(|e| JodinErrorType::IncorrectLiteralType)?;
+            .map_err(|_e| JodinErrorType::IncorrectLiteralType)?;
 
         match self {
             Operator::Plus => (lhs + rhs).try_into(),
@@ -298,19 +298,19 @@ impl<N: NumType> TryConstEvaluation<N> for Operator {
                 let rhs = rhs.to_usize().ok_or(JodinErrorType::IncorrectLiteralType)?;
                 (lhs << rhs)
                     .try_into()
-                    .map_err(|e| JodinErrorType::IncorrectLiteralType.into())
+                    .map_err(|_e| JodinErrorType::IncorrectLiteralType.into())
             }
             Operator::RShift => {
                 let rhs = rhs.to_usize().ok_or(JodinErrorType::IncorrectLiteralType)?;
                 (lhs >> rhs)
                     .try_into()
-                    .map_err(|e| JodinErrorType::IncorrectLiteralType.into())
+                    .map_err(|_e| JodinErrorType::IncorrectLiteralType.into())
             }
             _ => return Err(JodinErrorType::InvalidOperatorForConstantExpression.into()),
         }
     }
 
-    fn evaluate_uniop(&self, lhs: N) -> JodinResult<Literal> {
+    fn evaluate_uniop(&self, _lhs: N) -> JodinResult<Literal> {
         todo!()
     }
 }
@@ -318,13 +318,13 @@ impl<N: NumType> TryConstEvaluation<N> for Operator {
 impl TryConstEvaluation<char> for Operator {
     fn evaluate_binop<R: TryInto<char, Error = JodinError>>(
         &self,
-        lhs: char,
-        rhs: R,
+        _lhs: char,
+        _rhs: R,
     ) -> JodinResult<Literal> {
         todo!()
     }
 
-    fn evaluate_uniop(&self, lhs: char) -> JodinResult<Literal> {
+    fn evaluate_uniop(&self, _lhs: char) -> JodinResult<Literal> {
         todo!()
     }
 }
@@ -332,13 +332,13 @@ impl TryConstEvaluation<char> for Operator {
 impl TryConstEvaluation<f32> for Operator {
     fn evaluate_binop<R: TryInto<f32, Error = JodinError>>(
         &self,
-        lhs: f32,
-        rhs: R,
+        _lhs: f32,
+        _rhs: R,
     ) -> JodinResult<Literal> {
         todo!()
     }
 
-    fn evaluate_uniop(&self, lhs: f32) -> JodinResult<Literal> {
+    fn evaluate_uniop(&self, _lhs: f32) -> JodinResult<Literal> {
         todo!()
     }
 }
@@ -346,13 +346,13 @@ impl TryConstEvaluation<f32> for Operator {
 impl TryConstEvaluation<f64> for Operator {
     fn evaluate_binop<R: TryInto<f64, Error = JodinError>>(
         &self,
-        lhs: f64,
-        rhs: R,
+        _lhs: f64,
+        _rhs: R,
     ) -> JodinResult<Literal> {
         todo!()
     }
 
-    fn evaluate_uniop(&self, lhs: f64) -> JodinResult<Literal> {
+    fn evaluate_uniop(&self, _lhs: f64) -> JodinResult<Literal> {
         todo!()
     }
 }
@@ -360,13 +360,13 @@ impl TryConstEvaluation<f64> for Operator {
 impl TryConstEvaluation<bool> for Operator {
     fn evaluate_binop<R: TryInto<bool, Error = JodinError>>(
         &self,
-        lhs: bool,
-        rhs: R,
+        _lhs: bool,
+        _rhs: R,
     ) -> JodinResult<Literal> {
         todo!()
     }
 
-    fn evaluate_uniop(&self, lhs: bool) -> JodinResult<Literal> {
+    fn evaluate_uniop(&self, _lhs: bool) -> JodinResult<Literal> {
         todo!()
     }
 }
