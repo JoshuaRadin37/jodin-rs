@@ -7,7 +7,7 @@ use crate::core::identifier::Identifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 use backtrace::Backtrace;
-use logos::Span;
+
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};

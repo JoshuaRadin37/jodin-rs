@@ -262,7 +262,7 @@ AssignmentStatement: ParseResult = {
 LabeledStatement: ParseResult = {
     <id:SingleIdentifier> ":" <st: Statement> => {
         let mut ret = st?;
-        ret.add_tag(LabeledStatementTag::new(id.to_string()));
+        ret.add_tag(LabeledStatementTag::new(id.to_string()))?;
         Ok(ret)
     },
     "case" <case:ConstExpression> ":" <st:Statement> => {
@@ -353,7 +353,7 @@ IterationStatement: ParseResult = {
 }
 
 JumpStatement: ParseResult = {
-    "continue" ";" => { JodinNodeType::Continue.into_result() },
+    "continue" ";" => JodinNodeType::Continue.into_result(),
     "break" <id:SingleIdentifier?> ";" => {
         JodinNodeType::Break {
             id

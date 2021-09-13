@@ -26,7 +26,7 @@ impl<'a> FilesToJodinNodeTool<'a> {
     }
 
     /// invoke the front end
-    pub fn invoke<I: IntoIterator<Item = PathBuf>>(&mut self, input_iter: I) -> JodinResult<()> {
+    pub fn invoke<I: IntoIterator<Item = PathBuf>>(&mut self, _input_iter: I) -> JodinResult<()> {
         /*
         for path in input_iter {
             let file = File::open(&path)?;

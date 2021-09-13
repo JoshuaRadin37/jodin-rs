@@ -361,7 +361,7 @@ impl<T: Namespaced> NamespaceTree<T> {
         path: &Identifier,
     ) -> HashSet<&Identifier> {
         //println!("Attempting to find namespace {}", path);
-        if let Some(current) = current_namespace {
+        if let Some(_current) = current_namespace {
             //println!("Using {} as current namespace", current);
         }
         let mut output = HashSet::new();

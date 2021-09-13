@@ -5,7 +5,7 @@
 //! important this declaration. Private means only code within this namespace can see this declaration.
 
 use crate::ast::tags::Tag;
-use crate::core::error::{JodinError, JodinErrorType};
+
 use crate::core::identifier::Identifier;
 use std::any::Any;
 use std::fmt::Debug;
