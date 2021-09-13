@@ -2,8 +2,8 @@ name: Fast Track CI Changes
 
 on:
   push:
-    paths-ignore:
-      - '!.github/*'
+    paths:
+      - '.github/*'
     branches:
       - develop
 
