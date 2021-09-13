@@ -1,4 +1,4 @@
 mode: chatops
 defaultBranch: 'develop'
 autoCloseIssue: true
-branchName: 'feature-${issue.number}-${issue.title,}'
+branchName: 'feature/${issue.number}-${issue.title,}'
