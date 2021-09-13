@@ -20,7 +20,7 @@ jobs:
           conclusion: ${{ job.status }}
       - uses: actions/checkout@master
       - name: Merge develop-> staging
-        uses: devmasx/merge-branch@v1.4.0
+        uses: devmasx/merge-branch@master
         with:
           type: now
           from_branch: development
