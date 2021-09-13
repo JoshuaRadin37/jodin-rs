@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  check:
 
     runs-on: ubuntu-latest
 
@@ -18,3 +18,11 @@ jobs:
     - uses: actions/checkout@v2
     - name: Check
       run: cargo check --verbose
+      id: check
+    - name: GitHub Checks
+      uses: LouisBrunner/checks-action@v1.2.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: Cargo Check
+        conclusion: ${{ job.status }}
+
