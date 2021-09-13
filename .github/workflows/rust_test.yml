@@ -1,0 +1,21 @@
+name: Rust Test
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test
+        run: cargo test --workspace --verbose
