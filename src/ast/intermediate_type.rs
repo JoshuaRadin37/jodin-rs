@@ -312,7 +312,7 @@ impl Display for TypeSpecifier {
             TypeSpecifier::Primitive(p) => {
                 write!(f, "{}", p)
             }
-            TypeSpecifier::Generic(g) => {
+            TypeSpecifier::Generic(_g) => {
                 todo!()
             }
         }

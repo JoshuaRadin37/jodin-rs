@@ -7,7 +7,7 @@
 //! - `namespace::{id1, id2}`
 //! - `namespace::{id1, id2::id3 as id3}`
 
-use crate::ast::parse_identifier;
+
 use crate::core::identifier::Identifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
@@ -105,8 +105,8 @@ pub enum ImportType {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::core::error::JodinErrorType;
+    
+    
     #[cfg(feature = "pest_parser")]
     use crate::parsing::complete_parse;
 
