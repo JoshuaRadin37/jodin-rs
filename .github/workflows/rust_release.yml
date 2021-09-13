@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: staging
       - name: Run lint
         run: cargo check --workspace --features strict
 
@@ -23,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: staging
       - name: Create Documentation
         run: cargo doc --workspace --no-deps --verbose --target-dir "docs"
       - uses: stefanzweifel/git-auto-commit-action@v4
