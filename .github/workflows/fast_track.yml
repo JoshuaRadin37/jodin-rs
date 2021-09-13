@@ -18,18 +18,22 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: check
+        conclusion: success
     - uses: LouisBrunner/checks-action@v1.1.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: test
+        conclusion: success
     - uses: LouisBrunner/checks-action@v1.1.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: lint
+        conclusion: success
     - uses: LouisBrunner/checks-action@v1.1.1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: document
+        conclusion: success
 
   push_to_main:
     needs: apply_checks
