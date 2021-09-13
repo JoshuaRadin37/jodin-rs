@@ -309,7 +309,7 @@ impl JodinNodeType {
                 vec![]
             }
             JodinNodeType::VarDeclarations {
-                var_type,
+                var_type: _,
                 names,
                 values,
             } => {
@@ -399,7 +399,7 @@ impl JodinNodeType {
             }
             JodinNodeType::ConstructorCall {
                 name: _,
-                generic_parameters,
+                generic_parameters: _,
                 arguments,
             } => {
                 let mut ret = vec![];
@@ -465,7 +465,7 @@ impl JodinNodeType {
                 vec![cond, statement]
             }
             JodinNodeType::ExternDeclaration {
-                declaration: declaration,
+                declaration,
             } => {
                 vec![declaration]
             }
@@ -516,7 +516,7 @@ impl JodinNodeType {
                 vec![]
             }
             JodinNodeType::VarDeclarations {
-                var_type,
+                var_type: _,
                 names,
                 values,
             } => {
@@ -605,7 +605,7 @@ impl JodinNodeType {
             }
             JodinNodeType::ConstructorCall {
                 name: _,
-                generic_parameters,
+                generic_parameters: _,
                 arguments,
             } => {
                 let mut ret = vec![];
@@ -670,7 +670,7 @@ impl JodinNodeType {
                 vec![cond, statement]
             }
             JodinNodeType::ExternDeclaration {
-                declaration: declaration,
+                declaration,
             } => {
                 vec![declaration]
             }

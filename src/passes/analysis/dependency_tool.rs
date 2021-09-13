@@ -11,7 +11,7 @@ impl DependencyTool {
         Identifier::from_iter(&self.major_id)
     }
 
-    fn id_within_major_namespace(&self, id: &Identifier) -> bool {
+    fn id_within_major_namespace(&self, _id: &Identifier) -> bool {
         unimplemented!()
     }
 }

@@ -7,12 +7,8 @@ use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimize;
 use std::fs::File;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::exit;
-
-fn test(a: u32, b: u32) -> u32 {
-    a + b
-}
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
@@ -68,7 +64,7 @@ fn main() -> JodinResult<()> {
     if let Err(e) = result {
         match e.into_err_and_bt() {
             (JodinErrorType::ParserError(e, file), bt) => {
-                let error = if let Some(path) = file {
+                let error = if let Some(_path) = file {
                     // e.with_path(path.as_str())
                     e
                 } else {
@@ -103,7 +99,7 @@ fn main() -> JodinResult<()> {
         writeln!(file, "{}", string)?;
     }
 
-    let mut buffer = String::new();
+    let buffer = String::new();
     // compile_c99(optimized, &settings, &mut buffer)?;
     println!("####START C OUTPUT####");
     println!("{}", buffer);
