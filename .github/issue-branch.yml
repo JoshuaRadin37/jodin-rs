@@ -6,4 +6,4 @@ branches:
     prefix: 'feature/${assignee.login}/'
   - label: bug
     prefex: 'bugfix/${assignee.login}/'
-branch: '/issue-${issue.id}-${issue.title,}'
+branchName: 'issue-${issue.id}-${issue.title,}'
