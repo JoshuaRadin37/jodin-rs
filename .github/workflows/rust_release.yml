@@ -1,10 +1,8 @@
 name: Rust Release
 on:
-  workflow_run:
-    workflows:
-      - "Stage Develop Changes"
-    types:
-      - completed
+  push:
+    branches:
+      - staging
 
 
 env:
@@ -17,25 +15,13 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: staging
-      - name: Run lint
-        run: cargo check --workspace --features strict
-
-  document:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: staging
-      - name: Create Documentation
-        run: cargo doc --workspace --no-deps --verbose --target-dir "docs"
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Update Documentation"
-          file_pattern: docs/*
+      - name: Run lint on project
+        run: cargo check --features strict
+      - name: Run lint on VM
+        run: cargo check -p "jodin-rs-vm" --features strict
 
   push_to_main:
-    needs: document
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
