@@ -72,52 +72,6 @@ impl JodinNode {
         Ok(())
     }
 
-    /// Adds an iterator of tags to the jodin node.
-    ///
-    /// These tags must be boxed so that they can be of different tag types. Otherwise, only one type
-    /// of tags can be added.
-    ///
-    /// # Arguments
-    ///
-    /// * `iter`: The iterator of tags
-    ///
-    /// returns: Result<(), JodinError> Whether the tags were all added successfully.
-    ///
-    /// # Error
-    ///
-    /// Will error out if any tag fails to be added. Will not revert to before operation was completed, but will
-    /// not also add any more tags after a failure occurred.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::ast::tags::DummyTag;
-    /// use std::iter::FromIterator;
-    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
-    /// node.add_boxed_tags(
-    ///     vec![Box::new(DummyTag), Box::new(DummyTag)]
-    /// ).unwrap();
-    /// ```
-    pub fn add_boxed_tags<I: IntoIterator<Item = Box<dyn Tag>>>(
-        &mut self,
-        iter: I,
-    ) -> JodinResult<()> {
-        for tag in iter.into_iter() {
-            if self.get_tags_by_type(&*tag.tag_type()).len() as u32 == tag.max_of_this_tag() {
-                return Err(JodinErrorType::MaxNumOfTagExceeded {
-                    tag_type: tag.tag_type(),
-                    max: tag.max_of_this_tag(),
-                }
-                .into());
-            }
-            self.tags.push(tag);
-        }
-        Ok(())
-    }
-
     /// Gets the first tag it finds for a tag type
     pub fn get_tag_by_type(&self, tag_type: &str) -> JodinResult<&dyn Tag> {
         self.get_tags_by_type(tag_type)
