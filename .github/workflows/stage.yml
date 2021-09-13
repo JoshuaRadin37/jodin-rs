@@ -1,4 +1,4 @@
-name: Stage Develop changes
+name: Stage Develop Changes
 
 on:
   workflow_run:

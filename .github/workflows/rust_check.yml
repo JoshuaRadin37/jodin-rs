@@ -2,9 +2,10 @@ name: Rust Check
 
 on:
   push:
-    branches:
-      - '!main'
-      - '!develop'
+    branches-ignore:
+      - master
+      - staging
+      - develop
 
 env:
   CARGO_TERM_COLOR: always
