@@ -261,6 +261,7 @@ impl<T: Namespaced> Node<T> {
         self.children.push(node)
     }
 
+    #[allow(unused)]
     fn add_related_value(&mut self, related: T) {
         self.related_values.push(related)
     }
@@ -302,6 +303,7 @@ impl<T: Namespaced> NamespaceTree<T> {
         }
     }
 
+    #[allow(unused)]
     fn top_namespaces(&self) -> &Vec<Node<T>> {
         self.head.children()
     }

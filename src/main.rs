@@ -7,12 +7,8 @@ use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimize;
 use std::fs::File;
 use std::io::Write;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::process::exit;
-
-fn test(a: u32, b: u32) -> u32 {
-    a + b
-}
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
