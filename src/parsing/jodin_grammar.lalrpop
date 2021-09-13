@@ -1,9 +1,9 @@
 use crate::core::identifier::Identifier;
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::core::error::{JodinResult};
 use crate::core::literal::Literal;
 use crate::core::types::primitives::Primitive;
 use crate::core::operator::Operator;
-use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType, tags::{Tag, LabeledStatementTag}};
+use crate::ast::{JodinNode, JodinNodeType, intermediate_type::IntermediateType, tags::{LabeledStatementTag}};
 use crate::parsing::Tok;
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::StorageModifier;

@@ -27,8 +27,11 @@
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
-// #![deny(unused_imports)]
+#![deny(unused_imports)]
 #![deny(unused_mut)]
+
+#![cfg_attr(feature = "strict", deny(warnings))]
+
 
 #[macro_use]
 extern crate clap;

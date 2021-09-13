@@ -2,10 +2,9 @@ name: Rust Test
 
 on:
   pull_request:
-    branches: [ develop, main ]
+    branches: [ develop, staging ]
   push:
-    branches:
-      - main
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
