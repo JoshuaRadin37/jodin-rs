@@ -4,11 +4,11 @@
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 
-use crate::core::operator::{Operator};
+use crate::core::operator::Operator;
 
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
-use std::str::{FromStr};
+use std::str::FromStr;
 
 // pub mod jodin_grammar;
 lalrpop_mod!(#[allow(missing_docs)] pub jodin_grammar, "/parsing/jodin_grammar.rs");

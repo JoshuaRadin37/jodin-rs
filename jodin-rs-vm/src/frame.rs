@@ -139,7 +139,7 @@ pub struct FrameVarFactory {
 impl FrameVarFactory {
     pub fn new_factory(metadata: FrameVarsMetadata) -> Self {
         Self {
-            meta_data: Arc::new(metadata)
+            meta_data: Arc::new(metadata),
         }
     }
 
@@ -153,7 +153,7 @@ impl FrameVarFactory {
         let metadata = FrameVarsMetadata {
             frame_name: "init_frame".to_string(),
             id_to_ptr: Default::default(),
-            starting_instruction: 256
+            starting_instruction: 256,
         };
         Self::new_factory(metadata)
     }

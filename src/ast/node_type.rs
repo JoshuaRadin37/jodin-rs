@@ -464,9 +464,7 @@ impl JodinNodeType {
             JodinNodeType::DoStatement { statement, cond } => {
                 vec![cond, statement]
             }
-            JodinNodeType::ExternDeclaration {
-                declaration,
-            } => {
+            JodinNodeType::ExternDeclaration { declaration } => {
                 vec![declaration]
             }
             JodinNodeType::AssignmentExpression {
@@ -669,9 +667,7 @@ impl JodinNodeType {
             JodinNodeType::DoStatement { statement, cond } => {
                 vec![cond, statement]
             }
-            JodinNodeType::ExternDeclaration {
-                declaration,
-            } => {
+            JodinNodeType::ExternDeclaration { declaration } => {
                 vec![declaration]
             }
             JodinNodeType::AssignmentExpression {

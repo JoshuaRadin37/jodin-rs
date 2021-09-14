@@ -1,9 +1,7 @@
 //! The frontend of the compiler.
 //!
 
-
 use std::path::PathBuf;
-
 
 use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;

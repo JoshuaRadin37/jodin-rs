@@ -16,6 +16,25 @@ pub enum ByteCode {
     Nop,
     Halt,
     WaitForRunCode,
+
+    /// Declare a new function within the virtual machine
+    ///
+    /// Takes in a string from the stack
+    StartFunction,
+    /// End a function
+    EndFunction,
+    /// Start a factory
+    StartFactory,
+    /// Set the number of generics within the factory
+    SetGenericQuantity,
+    /// Declare a local variable within the function
+    DeclareLocal,
+    StartData,
+    EndData,
+    /// Should only exist with the StartData and EndData block
+    GetGenericN,
+    EndFactory,
+
     /// Return to the previous frame
     Return,
     /// Put one byte onto the stack
@@ -30,6 +49,7 @@ pub enum ByteCode {
     Float4,
     /// Puts a 64 bite float onto the stack
     Float8,
+
     /// Pop N bytes from the stack
     PopN,
     /// Add two values

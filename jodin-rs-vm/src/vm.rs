@@ -122,11 +122,14 @@ impl Core {
                     println!("{}", chunkish.disassemble_instruction(ip));
                     let (code, _bytes) = chunkish.bytecode_and_operands(ip);
 
-                    let next_ip = chunkish.next_bytecode(ip);
+                    let mut next_ip = chunkish.next_bytecode(ip);
                     match code {
                         ByteCode::Halt => {
                             self.halt.send(()).unwrap();
                             break;
+                        }
+                        ByteCode::WaitForRunCode => {
+                            next_ip = Some(ip);
                         }
                         _ => {}
                     }

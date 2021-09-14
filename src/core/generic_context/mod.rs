@@ -1,7 +1,5 @@
 //! Create a generic context for something to exist in
 
-
-
 use super::identifier::Identifier;
 
 /// A single generic parameter in a generic declaration
