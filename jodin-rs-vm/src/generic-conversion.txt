@@ -1,0 +1,50 @@
+for <T> create_t() -> T {
+    T a = new T::build();
+    return a;
+}
+
+gets converted into
+
+function create_t:
+    factory:
+    - GenericQuantity = 1
+    - StartData
+        - StartFunction
+        - GetGeneric 0
+        - GetSize
+        - Declare local 0
+        - GetGeneric 0
+        - String "build"
+        - SymbolLookup 1
+        - Call
+        - Store local 0
+        - Push local 0
+        - Return
+        - EndFunction
+    - EndData
+
+...
+
+the code "create_t<int>()" would run the following:
+
+
+- CONST8 <int type_id>
+- String "create_t"
+- SymbolLookup 1
+
+if create_t<int> hasn't been created before, SymbolLookup 1 causes the create_t factory to run with input int:
+Runs the code
+- StartFunction
+- CONST8 <int type_id>
+- GetSize
+- Declare local 0
+- CONST8 <int type_id>
+- String "build"
+- SymbolLookup 1
+- Call
+- Store local 0
+- Push local 0
+- Return
+- EndFunction
+
+The bytecode for this is put into the stack, the pointer is saved such that create_t<int> is in the

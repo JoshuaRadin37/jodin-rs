@@ -31,12 +31,16 @@ pub enum ByteCode {
     DeclareLocal,
     StartData,
     EndData,
-    /// Should only exist with the StartData and EndData block
+    /// Should only exist with the StartData and EndData block. Returns the type-id of generic N.
     GetGenericN,
     EndFactory,
 
+    GetSize,
+
     /// Return to the previous frame
     Return,
+
+
     /// Put one byte onto the stack
     Const1,
     /// Put two bytes onto the stack
