@@ -285,9 +285,11 @@ dependencies = [
  "byteorder",
  "itertools",
  "jodin-rs-vm_derive",
+ "lazy_static",
  "num",
  "num-derive",
  "num-traits",
+ "regex",
 ]
 
 [[package]]

@@ -117,7 +117,7 @@ pub fn pop_from_stack(input: TokenStream) -> TokenStream {
                 fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
                     Some(Self {
                         #(
-                        #fields: #types::pop_from_stack(stack)?
+                        #fields: stack.pop::<#types>()?
                         ),*
                     })
                 }

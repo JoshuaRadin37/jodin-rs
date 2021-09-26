@@ -17,6 +17,9 @@ pub enum ByteCode {
     Halt,
     WaitForRunCode,
 
+    /// Calls a system call by popping a usize from the stack
+    SysCall,
+
     /// Declare a new function within the virtual machine
     ///
     /// Takes in a string from the stack

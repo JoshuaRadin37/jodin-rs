@@ -9,13 +9,14 @@ use std::collections::VecDeque;
 use std::panic::{catch_unwind, UnwindSafe};
 use std::sync::{mpsc, RwLock, Arc};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use crate::compound_types::{Pointer, Array};
+use crate::compound_types::{Pointer, Array, Pair, LocalVarsDeclarations};
 use crate::symbols::{SystemCallTable, SystemCall, Symbol};
 use std::ffi::CString;
 use std::str::FromStr;
 
 
 pub const PUSH_SYMBOL_TO_STACK: usize = 0;
+pub const CREATE_LOCAL_VARS_DECLARATION: usize = 1;
 
 
 
@@ -30,6 +31,7 @@ impl VirtualMachine {
     pub fn boot_with(chunk: Chunk) -> Self {
         let mut sys_calls = SystemCallTable::new();
         sys_calls[PUSH_SYMBOL_TO_STACK] = SystemCall::VM(Core::push_current_symbol);
+        sys_calls[CREATE_LOCAL_VARS_DECLARATION] = SystemCall::VM(Core::create_local_vars_declaration);
 
 
         let sys_calls = Arc::new(RwLock::new(sys_calls));
@@ -111,6 +113,18 @@ impl Core {
         }
     }
 
+    fn create_local_vars_declaration(&mut self) {
+        let count: usize = self.stack.pop().unwrap();
+        let mut vec = VecDeque::new();
+        for _ in 0..count {
+            let pair: Pair<usize, usize> = self.stack.pop().unwrap();
+            vec.push_front(pair);
+        }
+        let array = Array::new(Vec::from(vec));
+        let locals = LocalVarsDeclarations::new(array);
+        self.stack.push(locals);
+    }
+
     fn push_current_symbol(&mut self) {
         let symbol = self.current_frame().within_symbol.clone().unwrap();
         let string = symbol.to_string();
@@ -123,7 +137,7 @@ impl Core {
         let generics_array: Array<CString> = self.stack.pop().unwrap();
 
         let symbol = Symbol::from_str(symbol.to_str().unwrap()).unwrap();
-        
+
     }
 
 
@@ -229,6 +243,10 @@ impl Core {
                         }
                         ByteCode::WaitForRunCode => {
                             next_ip = Some(ip);
+                        }
+                        ByteCode::SysCall => {
+                            let sys_call_num: usize = self.stack.pop().unwrap();
+                            self.interrupt_queue.push_back(Interrupt::SysCall(sys_call_num));
                         }
                         _ => {}
                     }

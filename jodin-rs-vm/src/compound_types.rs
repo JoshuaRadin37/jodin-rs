@@ -29,12 +29,19 @@ pub struct SizedPointer {
 #[derive(Clone, PushToStack)]
 pub struct Array<K : PushToStack> {
     pub vector: Vec<K>,
-    length: u64,
+    length: usize,
+}
+
+impl<K: PushToStack> Array<K> {
+    pub fn new(vector: Vec<K>) -> Self {
+        let len = vector.len();
+        Array { vector, length: len }
+    }
 }
 
 impl<K : PushToStack + PopFromStack> PopFromStack for Array<K> {
     fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
-        let length = u64::pop_from_stack(stack)?;
+        let length = usize::pop_from_stack(stack)?;
         let mut bytes = vec![];
         for _ in 0..length {
             bytes.push(stack.pop()?);
@@ -48,8 +55,8 @@ impl<K : PushToStack + PopFromStack> PopFromStack for Array<K> {
 
 
 pub struct Pair<K, V> {
-    key: K,
-    value: V
+    pub key: K,
+    pub value: V
 }
 
 impl<K, V> Pair<K, V> {
@@ -82,9 +89,11 @@ pub struct LocalVarsDeclarations {
     map: Array<Pair<usize, usize>>
 }
 
-
-
-
+impl LocalVarsDeclarations {
+    pub fn new(map: Array<Pair<usize, usize>>) -> Self {
+        LocalVarsDeclarations { map }
+    }
+}
 
 
 #[cfg(test)]
