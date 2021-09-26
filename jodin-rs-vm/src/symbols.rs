@@ -133,9 +133,14 @@ impl Symbol {
 
 
 #[derive(Debug)]
-pub struct SymbolInfo {
+pub struct FunctionInfo {
     pub instruction_pointer: usize,
     pub locals_offset_size: HashMap<usize, (usize, usize)>
+}
+
+#[derive(Debug)]
+pub enum SymbolInfo {
+    Function(FunctionInfo)
 }
 
 #[derive(Debug)]
