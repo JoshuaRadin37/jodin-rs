@@ -89,6 +89,15 @@ impl PushToStack for CString {
     }
 }
 
+impl<P : PushToStack> PushToStack for Vec<P> {
+    fn push_to_stack(self, stack: &mut Stack) {
+        self.into_iter().rev()
+            .for_each(
+                |p| p.push_to_stack(stack)
+            );
+    }
+}
+
 
 macro_rules! primitive_push {
     ($ty:ty) => {

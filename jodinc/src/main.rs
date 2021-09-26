@@ -1,14 +1,14 @@
-use jodin_rs::cli::JodinRsApp;
-// use jodin_rs::compilation::compile_c99;
-use jodin_rs::compilation_settings::CompilationSettings;
-use jodin_rs::core::error::{JodinErrorType, JodinResult};
-use jodin_rs::passes::analysis::analyze;
-use jodin_rs::passes::frontend::FilesToJodinNodeTool;
-use jodin_rs::passes::optimize;
+
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
+use jodin_rs::core::error::{JodinResult, JodinErrorType};
+use jodin_rs::cli::JodinRsApp;
+use jodin_rs::compilation_settings::CompilationSettings;
+use jodin_rs::passes::frontend::FilesToJodinNodeTool;
+use jodin_rs::passes::analysis::analyze;
+use jodin_rs::passes::optimize;
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();

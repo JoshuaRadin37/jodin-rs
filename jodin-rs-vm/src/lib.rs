@@ -26,9 +26,13 @@
 #[macro_use]
 extern crate num_derive;
 
+#[macro_use]
+extern crate jodin_rs_vm_derive;
+
 pub mod bytecode;
 pub mod chunk;
 pub mod frame;
 pub mod memory;
 pub mod vm;
 pub mod symbols;
+pub mod compound_types;
