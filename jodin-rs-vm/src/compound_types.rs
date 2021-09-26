@@ -28,7 +28,7 @@ pub struct SizedPointer {
 
 #[derive(Clone, PushToStack)]
 pub struct Array<K : PushToStack> {
-    vector: Vec<K>,
+    pub vector: Vec<K>,
     length: u64,
 }
 
@@ -75,6 +75,14 @@ impl<K : PopFromStack, V : PopFromStack> PopFromStack for Pair<K, V> {
         )
     }
 }
+
+
+#[derive(PushToStack, PopFromStack)]
+pub struct LocalVarsDeclarations {
+    map: Array<Pair<usize, usize>>
+}
+
+
 
 
 

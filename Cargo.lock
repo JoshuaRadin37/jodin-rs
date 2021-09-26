@@ -283,6 +283,7 @@ version = "0.1.0"
 dependencies = [
  "bitfield",
  "byteorder",
+ "itertools",
  "jodin-rs-vm_derive",
  "num",
  "num-derive",

@@ -9,8 +9,15 @@ use std::collections::VecDeque;
 use std::panic::{catch_unwind, UnwindSafe};
 use std::sync::{mpsc, RwLock, Arc};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use crate::compound_types::Pointer;
-use crate::symbols::{SystemCallTable, SystemCall};
+use crate::compound_types::{Pointer, Array};
+use crate::symbols::{SystemCallTable, SystemCall, Symbol};
+use std::ffi::CString;
+use std::str::FromStr;
+
+
+pub const PUSH_SYMBOL_TO_STACK: usize = 0;
+
+
 
 /// The machine that actually runs the bytecode
 pub struct VirtualMachine {
@@ -21,7 +28,10 @@ pub struct VirtualMachine {
 
 impl VirtualMachine {
     pub fn boot_with(chunk: Chunk) -> Self {
-        let sys_calls = SystemCallTable::new();
+        let mut sys_calls = SystemCallTable::new();
+        sys_calls[PUSH_SYMBOL_TO_STACK] = SystemCall::VM(Core::push_current_symbol);
+
+
         let sys_calls = Arc::new(RwLock::new(sys_calls));
         let (interrupt_sender, halt_receiver) = Self::create_core(chunk, sys_calls.clone());
         Self {
@@ -86,6 +96,37 @@ unsafe impl Sync for Core { }
 unsafe impl Send for Core { }
 
 impl Core {
+    pub fn new(heap: Heap, halt: Sender<()>, interrupt_receiver: Receiver<Interrupt>, sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> Self {
+        Core {
+            heap,
+            stack: Stack::new(),
+            halt,
+            interrupt_receiver,
+            frames: vec![],
+            current_frame: 0,
+            interrupt_queue: Default::default(),
+            wait_for_interrupt: false,
+            cont: true,
+            sys_calls: sys_calls.clone()
+        }
+    }
+
+    fn push_current_symbol(&mut self) {
+        let symbol = self.current_frame().within_symbol.clone().unwrap();
+        let string = symbol.to_string();
+        let c_string = CString::new(string).expect("symbol is invalid c_string");
+        self.stack.push(c_string);
+    }
+
+    fn apply_generics(&mut self) {
+        let symbol: CString = self.stack.pop().unwrap();
+        let generics_array: Array<CString> = self.stack.pop().unwrap();
+
+        let symbol = Symbol::from_str(symbol.to_str().unwrap()).unwrap();
+        
+    }
+
+
     fn handle_interrupts(&mut self) {
         while let Ok(next) = self.interrupt_receiver.try_recv() {
             self.interrupt_queue.push_back(next);
@@ -161,7 +202,10 @@ impl Core {
     }
 
     fn call(&mut self, pointer: Pointer) {
-
+        let ip = pointer.0;
+        if ip == 0 {
+            panic!("Function at pointer 0 is invalid!")
+        }
     }
 
     fn run(mut self) {
@@ -206,20 +250,7 @@ impl Core {
         }
     }
 
-    pub fn new(heap: Heap, halt: Sender<()>, interrupt_receiver: Receiver<Interrupt>, sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> Self {
-        Core {
-            heap,
-            stack: Stack::new(),
-            halt,
-            interrupt_receiver,
-            frames: vec![],
-            current_frame: 0,
-            interrupt_queue: Default::default(),
-            wait_for_interrupt: false,
-            cont: true,
-            sys_calls: sys_calls.clone()
-        }
-    }
+
 }
 
 #[cfg(test)]

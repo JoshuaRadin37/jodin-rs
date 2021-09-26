@@ -15,3 +15,4 @@ num-traits = "0.2"
 byteorder = "1.4.3"
 bitfield = "0.13.2"
 jodin-rs-vm_derive = { path="../jodin-rs-vm-derive"}
+itertools = "0.10.1"
