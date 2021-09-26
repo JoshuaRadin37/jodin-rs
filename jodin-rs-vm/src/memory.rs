@@ -24,6 +24,10 @@ impl Stack {
         T::pop_from_stack(self)
     }
 
+    pub fn pop_vec(&mut self, size: usize) -> Vec<u8> {
+        self.memory.drain((self.memory.len()-size)..).collect()
+    }
+
     pub fn len(&self) -> usize {
         self.memory.len()
     }
@@ -52,6 +56,15 @@ impl Heap {
 
     pub fn data_mut(&mut self) -> &mut Vec<u8> {
         &mut self.data
+    }
+
+    pub fn set_data(&mut self, ptr: usize, bytes: Vec<u8>) {
+        let slice = &mut self.data[ptr..(ptr + bytes.len())];
+        slice.copy_from_slice(&*bytes);
+    }
+
+    pub fn get_data(&self, ptr: usize, len: usize) -> &[u8] {
+        &self.data[ptr..(ptr + len)]
     }
 }
 
@@ -105,6 +118,7 @@ macro_rules! primitive_push {
             fn push_to_stack(self, stack: &mut Stack) {
                 self.to_le_bytes().push_to_stack(stack)
             }
+
         }
     };
 }
@@ -113,6 +127,7 @@ primitive_push!(u8);
 primitive_push!(u16);
 primitive_push!(u32);
 primitive_push!(u64);
+primitive_push!(usize);
 primitive_push!(f32);
 primitive_push!(f64);
 
@@ -135,6 +150,7 @@ impl<const N: usize> PopFromStack for [u8; N] {
         Some(buffer)
     }
 }
+
 
 impl PopFromStack for CString {
     fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
@@ -173,6 +189,7 @@ primitive_pop!(u8);
 primitive_pop!(u16);
 primitive_pop!(u32);
 primitive_pop!(u64);
+primitive_pop!(usize);
 primitive_pop!(f32);
 primitive_pop!(f64);
 

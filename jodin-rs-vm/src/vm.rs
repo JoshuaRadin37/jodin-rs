@@ -1,37 +1,43 @@
 //! Contains the virtual machine
 
-use crate::memory::{Heap, Stack};
+use crate::memory::{Heap, Stack, PopFromStack};
 
 use crate::bytecode::ByteCode;
 use crate::chunk::{ByteCodeVector, Chunk};
-use crate::frame::{Frame, FrameHeap, FrameStorage, FrameVarsContext};
+use crate::frame::{Frame};
 use std::collections::VecDeque;
 use std::panic::{catch_unwind, UnwindSafe};
-use std::sync::mpsc;
+use std::sync::{mpsc, RwLock, Arc};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+use crate::compound_types::Pointer;
+use crate::symbols::{SystemCallTable, SystemCall};
 
 /// The machine that actually runs the bytecode
 pub struct VirtualMachine {
     interrupt_sender: Sender<Interrupt>,
     halt_receiver: Receiver<()>,
+    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>
 }
 
 impl VirtualMachine {
     pub fn boot_with(chunk: Chunk) -> Self {
-        let (interrupt_sender, halt_receiver) = Self::create_core(chunk);
+        let sys_calls = SystemCallTable::new();
+        let sys_calls = Arc::new(RwLock::new(sys_calls));
+        let (interrupt_sender, halt_receiver) = Self::create_core(chunk, sys_calls.clone());
         Self {
             interrupt_sender,
             halt_receiver,
+            sys_calls
         }
     }
 
-    fn create_core(base_heap: Chunk) -> (Sender<Interrupt>, Receiver<()>) {
+    fn create_core(base_heap: Chunk, ref sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> (Sender<Interrupt>, Receiver<()>) {
         let (halt_s, halt_r) = mpsc::channel::<()>();
         let (interrupt_s, interrupt_r) = mpsc::channel::<Interrupt>();
 
         let mut heap = Heap::new();
         heap.data_mut().extend(&base_heap.0);
-        let core = Core::new(heap, halt_s, interrupt_r);
+        let core = Core::new(heap, halt_s, interrupt_r, sys_calls);
         std::thread::spawn(move || {
             core.run();
         });
@@ -52,7 +58,10 @@ impl VirtualMachine {
 pub enum Interrupt {
     RunCode(Chunk),
     Halt,
+    SysCall(usize)
 }
+
+pub const SYS_CALLS: usize = 256;
 
 pub struct Core {
     heap: Heap,
@@ -60,16 +69,21 @@ pub struct Core {
     halt: Sender<()>,
     interrupt_receiver: Receiver<Interrupt>,
 
-    frames: FrameHeap,
+    frames: Vec<Frame>,
     current_frame: usize,
 
     interrupt_queue: VecDeque<Interrupt>,
     wait_for_interrupt: bool,
 
     cont: bool,
+
+    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>
 }
 
 impl UnwindSafe for Core {}
+
+unsafe impl Sync for Core { }
+unsafe impl Send for Core { }
 
 impl Core {
     fn handle_interrupts(&mut self) {
@@ -94,19 +108,60 @@ impl Core {
                 self.halt.send(());
                 self.cont = false;
             }
+            Interrupt::SysCall(call) => {
+                let table = self.sys_calls.read().expect("Syscalls poisoned");
+                let sys_call = table[call];
+                drop(table);
+                match sys_call {
+                    SystemCall::VM(vm) => {
+                        (vm)(self);
+                    }
+                    SystemCall::FunctionPointer(pointer) => {
+                        self.call(pointer);
+                    }
+                }
+            }
         }
     }
-
     fn current_frame(&self) -> &Frame {
-        self.frames.get_frame(self.current_frame).unwrap()
+        &self.frames[self.current_frame]
     }
 
     fn current_frame_mut(&mut self) -> &mut Frame {
-        self.frames.get_frame_mut(self.current_frame).unwrap()
+        &mut self.frames[self.current_frame]
     }
 
-    fn vars(&self) -> FrameVarsContext<FrameHeap> {
-        todo!()
+    fn get_var(&mut self, parent_count: usize, variable: usize) {
+        let (size, ptr) = self.variable_pointer(parent_count, &variable);
+        let slice = self.heap.get_data(ptr as usize, size as usize);
+        self.stack.push(slice);
+    }
+
+    fn store_to_var(&mut self, parent_count: usize, variable: usize) {
+        let (size, ptr) = self.variable_pointer(parent_count, &variable);
+
+        // pop the variable and store it
+        let bytes = self.stack.pop_vec(size as usize);
+
+        self.heap.set_data(ptr as usize, bytes);
+    }
+
+    fn variable_pointer(&self, parent_count: usize, variable: &usize) -> (usize, usize) {
+        let mut frame_ptr = self.current_frame();
+        for _ in 0..parent_count {
+            let next_frame = frame_ptr.frame_parent;
+            frame_ptr = &self.frames[next_frame];
+        }
+
+        let heap_pointer = frame_ptr.locals_heap_pointer;
+        let (offset, size) = frame_ptr.locals_offset_size[&variable];
+
+        let ptr = heap_pointer + offset;
+        (size, ptr)
+    }
+
+    fn call(&mut self, pointer: Pointer) {
+
     }
 
     fn run(mut self) {
@@ -139,7 +194,7 @@ impl Core {
                         break;
                     } else {
                         self.frames
-                            .get_frame_mut(self.current_frame)
+                            .get_mut(self.current_frame)
                             .unwrap()
                             .instruction_pointer = next_ip.unwrap();
                     }
@@ -151,17 +206,18 @@ impl Core {
         }
     }
 
-    pub fn new(heap: Heap, halt: Sender<()>, interrupt_receiver: Receiver<Interrupt>) -> Self {
+    pub fn new(heap: Heap, halt: Sender<()>, interrupt_receiver: Receiver<Interrupt>, sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> Self {
         Core {
             heap,
             stack: Stack::new(),
             halt,
             interrupt_receiver,
-            frames: FrameHeap::instance(),
+            frames: vec![],
             current_frame: 0,
             interrupt_queue: Default::default(),
             wait_for_interrupt: false,
             cont: true,
+            sys_calls: sys_calls.clone()
         }
     }
 }

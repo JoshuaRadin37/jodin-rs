@@ -1,24 +1,29 @@
 //! Compound types are any types that can't be directly represented by a primitive type
 
-use crate::memory::{PushToStack, Stack, PopFromStack};
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 
+use crate::memory::{PopFromStack, PushToStack, Stack};
 
 #[derive(PushToStack, PopFromStack)]
-pub struct Pointer(u64);
+#[derive(Default, Clone, Copy)]
+pub struct Pointer(pub usize);
+
+impl Pointer {
+    pub fn nullptr() -> Self {
+        Self(0)
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 
 #[derive(PushToStack, PopFromStack)]
 pub struct SizedPointer {
     ptr: u64,
     size: u64
-}
-
-
-#[derive(PushToStack, PopFromStack)]
-pub struct FunctionPointer {
-    heap_pointer: Pointer,
-    locals_size: u64,
 }
 
 #[derive(Clone, PushToStack)]
@@ -76,9 +81,8 @@ impl<K : PopFromStack, V : PopFromStack> PopFromStack for Pair<K, V> {
 
 #[cfg(test)]
 mod tests {
+    use crate::compound_types::{Array, Pair};
     use crate::memory::Stack;
-    use crate::compound_types::{Pair, Array};
-
 
     #[test]
     fn stack_array() {
