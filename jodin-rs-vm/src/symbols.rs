@@ -49,9 +49,28 @@ impl<const N: usize> IndexMut<usize> for SystemCallTable<N> {
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 pub struct Symbol {
-    base_symbol: String,
+    base_symbol: SymbolBase,
     applied_generics: Vec<String>,
     unapplied_generics: usize,
+}
+
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+pub enum SymbolBase {
+    Str(String),
+    Symbol(Box<Symbol>, String)
+}
+
+impl Display for SymbolBase {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SymbolBase::Str(s) => {
+                write!(f, "{}", s)
+            }
+            SymbolBase::Symbol(symbol, s) => {
+                write!(f, "({})::{}", symbol, s)
+            }
+        }
+    }
 }
 
 impl FromStr for Symbol {
@@ -60,7 +79,7 @@ impl FromStr for Symbol {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use regex::Regex;
         lazy_static::lazy_static! {
-            static ref SYMBOL_PATTERN: Regex = Regex::new(r#"^(\w+)(<(?P<applied>\w+(,\w+)*)>)?(::(?P<unapplied>\d+))?$"#).unwrap();
+            static ref SYMBOL_PATTERN: Regex = Regex::new(r#"^(\w+|\(.+?\))(<(?P<applied>\w+(,\w+)*)>)?(::(?P<unapplied>\d+))?$"#).unwrap();
         }
         let captures: Captures = SYMBOL_PATTERN.captures(s).ok_or(())?;
 
@@ -80,9 +99,14 @@ impl FromStr for Symbol {
                 unapplied.as_str().parse().map_err(|e| ())?
             }
         };
+        let base_symbol = if base.starts_with('(') {
+            todo!()
+        } else {
+            SymbolBase::Str(base.to_string())
+        };
         Ok(
             Self {
-                base_symbol: base.to_string(),
+                base_symbol,
                 applied_generics: applied,
                 unapplied_generics: unnapplied
             }
@@ -99,6 +123,7 @@ impl From<CString> for Symbol {
 
 impl Display for Symbol {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+
         write!(f, "{}", self.base_symbol)?;
         if self.applied_generics.len() > 0 {
             let gens = self.applied_generics.join(",");
@@ -113,7 +138,11 @@ impl Display for Symbol {
 
 impl Symbol {
     pub fn new<S : AsRef<str>>(base_symbol: S, unapplied_generics: usize) -> Self {
-        Symbol { base_symbol: base_symbol.as_ref().to_string(), applied_generics: vec![], unapplied_generics }
+        Symbol { base_symbol: SymbolBase::Str(base_symbol.as_ref().to_string()), applied_generics: vec![], unapplied_generics }
+    }
+
+    pub fn with_parent<S : AsRef<str>>(base_symbol: Symbol, sub: S, unapplied_generics: usize) -> Self {
+        Symbol { base_symbol: SymbolBase::Symbol(Box::new(base_symbol), sub.as_ref().to_string()), applied_generics: vec![], unapplied_generics }
     }
 
     pub fn apply_generics<S : AsRef<str>, I : IntoIterator<Item=S>>(&self, gens: I) -> Self {
@@ -160,6 +189,11 @@ impl Symbol {
     }
 }
 
+impl From<&str> for Symbol {
+    fn from(s: &str) -> Self {
+        Symbol::new(s, 0)
+    }
+}
 
 
 
@@ -247,6 +281,11 @@ mod tests {
                     .apply_generics(["int", "int"])
                     .to_string(),
                 "base<int,int>"
+            );
+            assert_eq!(
+                Symbol::with_parent("base".into(),"construct", 0)
+                    .to_string(),
+                "(base)::construct"
             );
         }
 
