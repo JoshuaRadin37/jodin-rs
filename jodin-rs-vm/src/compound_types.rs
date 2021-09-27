@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 
 use crate::memory::{PopFromStack, PushToStack, Stack};
+use crate::frame::{CalculatedLocalVars, calculate_offsets, UnCalculatedLocalVars};
 
 #[derive(PushToStack, PopFromStack)]
 #[derive(Default, Clone, Copy)]
@@ -53,6 +54,14 @@ impl<K : PushToStack + PopFromStack> PopFromStack for Array<K> {
     }
 }
 
+impl<K : PushToStack> From<Array<K>> for Vec<K>  {
+    fn from(arr: Array<K>) -> Self {
+        let mut vec = Vec::with_capacity(arr.length);
+        vec.extend(arr.vector);
+        vec
+    }
+}
+
 
 pub struct Pair<K, V> {
     pub key: K,
@@ -83,6 +92,13 @@ impl<K : PopFromStack, V : PopFromStack> PopFromStack for Pair<K, V> {
     }
 }
 
+impl<K, V> From<Pair<K, V>> for (K, V) {
+    fn from(p: Pair<K, V>) -> Self {
+        let Pair { key, value } = p;
+        (key, value)
+    }
+}
+
 
 #[derive(PushToStack, PopFromStack)]
 pub struct LocalVarsDeclarations {
@@ -92,6 +108,57 @@ pub struct LocalVarsDeclarations {
 impl LocalVarsDeclarations {
     pub fn new(map: Array<Pair<usize, usize>>) -> Self {
         LocalVarsDeclarations { map }
+    }
+}
+
+impl From<HashMap<usize, (usize, usize)>> for LocalVarsDeclarations {
+    fn from(vars: HashMap<usize, (usize, usize)>) -> Self {
+        let vector: Vec<_> = vars.keys()
+            .map(
+                |key| {
+                    let (_offset, size) = &vars[key];
+                    Pair::new(*key, *size)
+                }
+            ).collect();
+        LocalVarsDeclarations {
+            map: Array::new(vector)
+        }
+    }
+}
+
+impl From<LocalVarsDeclarations> for HashMap<usize, (usize, usize)> {
+    fn from(l: LocalVarsDeclarations) -> Self {
+        let vec: Vec<Pair<_, _>> = l.map.into();
+        let vec: Vec<(_, _)> = vec.into_iter().map(|p| p.into()).collect();
+        calculate_offsets(&vec)
+    }
+}
+
+
+#[derive(Debug)]
+pub struct FunctionInfo {
+    pub instruction_pointer: usize,
+    pub locals_offset_size: HashMap<usize, (usize, usize)>
+}
+
+impl PushToStack for FunctionInfo {
+    fn push_to_stack(self, stack: &mut Stack) {
+        stack.push(LocalVarsDeclarations::from(self.locals_offset_size));
+        stack.push(self.instruction_pointer);
+    }
+}
+
+impl PopFromStack for FunctionInfo {
+    fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
+        let ip: usize = stack.pop()?;
+        let locals: LocalVarsDeclarations = stack.pop()?;
+        let hashmap = HashMap::from(locals);
+        Some(
+            FunctionInfo {
+                instruction_pointer: ip,
+                locals_offset_size: hashmap
+            }
+        )
     }
 }
 

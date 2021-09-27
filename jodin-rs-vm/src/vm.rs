@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 use std::panic::{catch_unwind, UnwindSafe};
 use std::sync::{mpsc, RwLock, Arc};
 use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use crate::compound_types::{Pointer, Array, Pair, LocalVarsDeclarations};
+use crate::compound_types::{Pointer, Array, Pair, LocalVarsDeclarations, FunctionInfo};
 use crate::symbols::{SystemCallTable, SystemCall, Symbol};
 use std::ffi::CString;
 use std::str::FromStr;
@@ -77,7 +77,7 @@ pub const SYS_CALLS: usize = 256;
 
 pub struct Core {
     heap: Heap,
-    stack: Stack,
+    pub stack: Stack,
     halt: Sender<()>,
     interrupt_receiver: Receiver<Interrupt>,
 
@@ -220,6 +220,10 @@ impl Core {
         if ip == 0 {
             panic!("Function at pointer 0 is invalid!")
         }
+    }
+
+    pub fn call_function_info(&mut self, function_info: &FunctionInfo) {
+
     }
 
     fn run(mut self) {

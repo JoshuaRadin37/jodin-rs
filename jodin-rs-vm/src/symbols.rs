@@ -7,12 +7,14 @@ use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 
-use crate::compound_types::Pointer;
+use crate::compound_types::{Pointer, FunctionInfo};
 use crate::symbols::SystemCall::FunctionPointer;
 use crate::vm::{Core, VirtualMachine};
 
 use itertools::Itertools;
 use regex::{Captures, Match};
+use std::collections::hash_map::Entry;
+use crate::memory::PopFromStack;
 
 #[derive(Copy, Clone)]
 pub enum SystemCall {
@@ -126,21 +128,45 @@ impl Symbol {
         ret
     }
 
+    /// Pop applied generics until none left. Returns None if no applied generic
+    pub fn pop_generic(&self) -> Option<Self> {
+        if self.applied_generics.len() == 0 {
+            return None;
+        }
+        let mut applied = self.applied_generics.clone();
+        applied.pop();
+        Some(Self {
+            base_symbol: self.base_symbol.clone(),
+            applied_generics: applied,
+            unapplied_generics: self.unapplied_generics + 1,
+        })
+    }
+
+    /// Pop applied generics until none left. Returns None if no applied generic
+    pub fn pop_generics(&self) -> Option<Self> {
+        if self.applied_generics.len() == 0 {
+            return None;
+        }
+        let applied = self.applied_generics.clone();
+        Some(Self {
+            base_symbol: self.base_symbol.clone(),
+            applied_generics: vec![],
+            unapplied_generics: self.unapplied_generics + applied.len(),
+        })
+    }
+
     fn num_applied(&self) -> usize {
         self.applied_generics.len()
     }
 }
 
 
-#[derive(Debug)]
-pub struct FunctionInfo {
-    pub instruction_pointer: usize,
-    pub locals_offset_size: HashMap<usize, (usize, usize)>
-}
+
 
 #[derive(Debug)]
 pub enum SymbolInfo {
-    Function(FunctionInfo)
+    Function(FunctionInfo),
+    None,
 }
 
 #[derive(Debug)]
@@ -156,6 +182,33 @@ impl SymbolTable {
         }
     }
 
+    pub fn insert_symbol(&mut self, symbol: Symbol) -> &mut SymbolInfo {
+        if self.mapping.contains_key(&symbol) {
+            panic!("{} already exists", symbol);
+        }
+        self.mapping.entry(symbol).or_insert(SymbolInfo::None)
+    }
+
+    pub fn get_symbol(&self, symbol: &Symbol) -> Option<&SymbolInfo> {
+        self.mapping.get(symbol)
+    }
+
+    pub fn symbol(&mut self, symbol: &Symbol, vm_core: &mut Core) -> &SymbolInfo {
+        if !self.mapping
+            .contains_key(symbol) {
+            let parent_symbol = symbol.pop_generics().expect("No parent symbol, using insert_symbol for base symbol");
+            let parent_info = self.symbol(&parent_symbol, vm_core);
+            if let SymbolInfo::Function(info) = parent_info {
+                vm_core.call_function_info(info);
+                let function_info: FunctionInfo = vm_core.stack.pop().expect("Couldn't get function info from the stack");
+                self.mapping.insert( symbol.clone(), SymbolInfo::Function(function_info));
+            } else {
+                panic!("Parent symbol must be a function")
+            }
+        }
+
+        return &self.mapping[symbol];
+    }
 
 }
 
