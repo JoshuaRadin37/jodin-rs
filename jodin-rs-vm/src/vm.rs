@@ -1,49 +1,49 @@
 //! Contains the virtual machine
 
-use crate::memory::{Heap, Stack, PopFromStack};
+use crate::memory::{Heap, PopFromStack, Stack};
 
 use crate::bytecode::ByteCode;
 use crate::chunk::{ByteCodeVector, Chunk};
-use crate::frame::{Frame};
+use crate::compound_types::{Array, FunctionInfo, LocalVarsDeclarations, Pair, Pointer};
+use crate::frame::Frame;
+use crate::symbols::{Symbol, SystemCall, SystemCallTable};
 use std::collections::VecDeque;
-use std::panic::{catch_unwind, UnwindSafe};
-use std::sync::{mpsc, RwLock, Arc};
-use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use crate::compound_types::{Pointer, Array, Pair, LocalVarsDeclarations, FunctionInfo};
-use crate::symbols::{SystemCallTable, SystemCall, Symbol};
 use std::ffi::CString;
+use std::panic::{catch_unwind, UnwindSafe};
 use std::str::FromStr;
-
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+use std::sync::{mpsc, Arc, RwLock};
 
 pub const PUSH_SYMBOL_TO_STACK: usize = 0;
 pub const CREATE_LOCAL_VARS_DECLARATION: usize = 1;
-
-
 
 /// The machine that actually runs the bytecode
 pub struct VirtualMachine {
     interrupt_sender: Sender<Interrupt>,
     halt_receiver: Receiver<()>,
-    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>
+    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
 }
 
 impl VirtualMachine {
     pub fn boot_with(chunk: Chunk) -> Self {
         let mut sys_calls = SystemCallTable::new();
         sys_calls[PUSH_SYMBOL_TO_STACK] = SystemCall::VM(Core::push_current_symbol);
-        sys_calls[CREATE_LOCAL_VARS_DECLARATION] = SystemCall::VM(Core::create_local_vars_declaration);
-
+        sys_calls[CREATE_LOCAL_VARS_DECLARATION] =
+            SystemCall::VM(Core::create_local_vars_declaration);
 
         let sys_calls = Arc::new(RwLock::new(sys_calls));
         let (interrupt_sender, halt_receiver) = Self::create_core(chunk, sys_calls.clone());
         Self {
             interrupt_sender,
             halt_receiver,
-            sys_calls
+            sys_calls,
         }
     }
 
-    fn create_core(base_heap: Chunk, ref sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> (Sender<Interrupt>, Receiver<()>) {
+    fn create_core(
+        base_heap: Chunk,
+        ref sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
+    ) -> (Sender<Interrupt>, Receiver<()>) {
         let (halt_s, halt_r) = mpsc::channel::<()>();
         let (interrupt_s, interrupt_r) = mpsc::channel::<Interrupt>();
 
@@ -70,7 +70,7 @@ impl VirtualMachine {
 pub enum Interrupt {
     RunCode(Chunk),
     Halt,
-    SysCall(usize)
+    SysCall(usize),
 }
 
 pub const SYS_CALLS: usize = 256;
@@ -89,16 +89,21 @@ pub struct Core {
 
     cont: bool,
 
-    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>
+    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
 }
 
 impl UnwindSafe for Core {}
 
-unsafe impl Sync for Core { }
-unsafe impl Send for Core { }
+unsafe impl Sync for Core {}
+unsafe impl Send for Core {}
 
 impl Core {
-    pub fn new(heap: Heap, halt: Sender<()>, interrupt_receiver: Receiver<Interrupt>, sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>) -> Self {
+    pub fn new(
+        heap: Heap,
+        halt: Sender<()>,
+        interrupt_receiver: Receiver<Interrupt>,
+        sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
+    ) -> Self {
         Core {
             heap,
             stack: Stack::new(),
@@ -109,7 +114,7 @@ impl Core {
             interrupt_queue: Default::default(),
             wait_for_interrupt: false,
             cont: true,
-            sys_calls: sys_calls.clone()
+            sys_calls: sys_calls.clone(),
         }
     }
 
@@ -136,10 +141,8 @@ impl Core {
         let symbol: CString = self.stack.pop().unwrap();
         let generics_array: Array<CString> = self.stack.pop().unwrap();
 
-        let symbol = Symbol::from_str(symbol.to_str().unwrap()).unwrap();
-
+        let symbol: Symbol<String> = Symbol::from_str(symbol.to_str().unwrap()).unwrap();
     }
-
 
     fn handle_interrupts(&mut self) {
         while let Ok(next) = self.interrupt_receiver.try_recv() {
@@ -222,9 +225,7 @@ impl Core {
         }
     }
 
-    pub fn call_function_info(&mut self, function_info: &FunctionInfo) {
-
-    }
+    pub fn call_function_info(&mut self, function_info: &FunctionInfo) {}
 
     fn run(mut self) {
         let send = self.halt.clone();
@@ -250,7 +251,8 @@ impl Core {
                         }
                         ByteCode::SysCall => {
                             let sys_call_num: usize = self.stack.pop().unwrap();
-                            self.interrupt_queue.push_back(Interrupt::SysCall(sys_call_num));
+                            self.interrupt_queue
+                                .push_back(Interrupt::SysCall(sys_call_num));
                         }
                         _ => {}
                     }
@@ -271,8 +273,6 @@ impl Core {
             send.send(()).unwrap();
         }
     }
-
-
 }
 
 #[cfg(test)]

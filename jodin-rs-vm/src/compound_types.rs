@@ -3,11 +3,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 
+use crate::frame::{calculate_offsets, CalculatedLocalVars, UnCalculatedLocalVars};
 use crate::memory::{PopFromStack, PushToStack, Stack};
-use crate::frame::{CalculatedLocalVars, calculate_offsets, UnCalculatedLocalVars};
 
-#[derive(PushToStack, PopFromStack)]
-#[derive(Default, Clone, Copy)]
+#[derive(PushToStack, PopFromStack, Default, Clone, Copy)]
 pub struct Pointer(pub usize);
 
 impl Pointer {
@@ -20,15 +19,14 @@ impl Pointer {
     }
 }
 
-
 #[derive(PushToStack, PopFromStack)]
 pub struct SizedPointer {
     ptr: u64,
-    size: u64
+    size: u64,
 }
 
 #[derive(Clone, PushToStack)]
-pub struct Array<K : PushToStack> {
+pub struct Array<K: PushToStack> {
     pub vector: Vec<K>,
     length: usize,
 }
@@ -36,11 +34,14 @@ pub struct Array<K : PushToStack> {
 impl<K: PushToStack> Array<K> {
     pub fn new(vector: Vec<K>) -> Self {
         let len = vector.len();
-        Array { vector, length: len }
+        Array {
+            vector,
+            length: len,
+        }
     }
 }
 
-impl<K : PushToStack + PopFromStack> PopFromStack for Array<K> {
+impl<K: PopFromStack> PopFromStack for Array<K> {
     fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
         let length = usize::pop_from_stack(stack)?;
         let mut bytes = vec![];
@@ -54,7 +55,7 @@ impl<K : PushToStack + PopFromStack> PopFromStack for Array<K> {
     }
 }
 
-impl<K : PushToStack> From<Array<K>> for Vec<K>  {
+impl<K: PushToStack> From<Array<K>> for Vec<K> {
     fn from(arr: Array<K>) -> Self {
         let mut vec = Vec::with_capacity(arr.length);
         vec.extend(arr.vector);
@@ -62,10 +63,9 @@ impl<K : PushToStack> From<Array<K>> for Vec<K>  {
     }
 }
 
-
 pub struct Pair<K, V> {
     pub key: K,
-    pub value: V
+    pub value: V,
 }
 
 impl<K, V> Pair<K, V> {
@@ -74,21 +74,19 @@ impl<K, V> Pair<K, V> {
     }
 }
 
-impl<K : PushToStack, V : PushToStack> PushToStack for Pair<K, V> {
+impl<K: PushToStack, V: PushToStack> PushToStack for Pair<K, V> {
     fn push_to_stack(self, stack: &mut Stack) {
         self.key.push_to_stack(stack);
         self.value.push_to_stack(stack);
     }
 }
 
-impl<K : PopFromStack, V : PopFromStack> PopFromStack for Pair<K, V> {
+impl<K: PopFromStack, V: PopFromStack> PopFromStack for Pair<K, V> {
     fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
-        Some(
-            Self {
-                key: stack.pop()?,
-                value: stack.pop()?
-            }
-        )
+        Some(Self {
+            key: stack.pop()?,
+            value: stack.pop()?,
+        })
     }
 }
 
@@ -99,10 +97,9 @@ impl<K, V> From<Pair<K, V>> for (K, V) {
     }
 }
 
-
 #[derive(PushToStack, PopFromStack)]
 pub struct LocalVarsDeclarations {
-    map: Array<Pair<usize, usize>>
+    map: Array<Pair<usize, usize>>,
 }
 
 impl LocalVarsDeclarations {
@@ -113,15 +110,15 @@ impl LocalVarsDeclarations {
 
 impl From<HashMap<usize, (usize, usize)>> for LocalVarsDeclarations {
     fn from(vars: HashMap<usize, (usize, usize)>) -> Self {
-        let vector: Vec<_> = vars.keys()
-            .map(
-                |key| {
-                    let (_offset, size) = &vars[key];
-                    Pair::new(*key, *size)
-                }
-            ).collect();
+        let vector: Vec<_> = vars
+            .keys()
+            .map(|key| {
+                let (_offset, size) = &vars[key];
+                Pair::new(*key, *size)
+            })
+            .collect();
         LocalVarsDeclarations {
-            map: Array::new(vector)
+            map: Array::new(vector),
         }
     }
 }
@@ -134,11 +131,10 @@ impl From<LocalVarsDeclarations> for HashMap<usize, (usize, usize)> {
     }
 }
 
-
 #[derive(Debug)]
 pub struct FunctionInfo {
     pub instruction_pointer: usize,
-    pub locals_offset_size: HashMap<usize, (usize, usize)>
+    pub locals_offset_size: HashMap<usize, (usize, usize)>,
 }
 
 impl PushToStack for FunctionInfo {
@@ -153,15 +149,12 @@ impl PopFromStack for FunctionInfo {
         let ip: usize = stack.pop()?;
         let locals: LocalVarsDeclarations = stack.pop()?;
         let hashmap = HashMap::from(locals);
-        Some(
-            FunctionInfo {
-                instruction_pointer: ip,
-                locals_offset_size: hashmap
-            }
-        )
+        Some(FunctionInfo {
+            instruction_pointer: ip,
+            locals_offset_size: hashmap,
+        })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -172,12 +165,12 @@ mod tests {
     fn stack_array() {
         let array: Array<u32> = Array {
             length: 8,
-            vector: vec![1, 2, 3, 4, 5, 6, 7, 8]
+            vector: vec![1, 2, 3, 4, 5, 6, 7, 8],
         };
         let mut stack = Stack::new();
         stack.push(array.clone());
         println!("{:?}", stack);
-        let found_array= stack.pop::<Array<u32>>().unwrap();
+        let found_array = stack.pop::<Array<u32>>().unwrap();
         assert_eq!(found_array.vector, array.vector);
     }
 

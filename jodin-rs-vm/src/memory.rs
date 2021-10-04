@@ -1,9 +1,10 @@
 //! The memory of the virtual machine, containing both the heap and the stack
 
+use crate::compound_types::Array;
 use std::ffi::{CStr, CString};
 use std::mem::ManuallyDrop;
-use std::ops::Deref;
 use std::num::NonZeroU8;
+use std::ops::Deref;
 
 /// The stack of the core of the VM
 #[derive(Debug)]
@@ -20,12 +21,18 @@ impl Stack {
         T::push_to_stack(value, self)
     }
 
+    pub fn push_iter<T: PushToStack, I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for element in iter {
+            self.push(element)
+        }
+    }
+
     pub fn pop<T: PopFromStack>(&mut self) -> Option<T> {
         T::pop_from_stack(self)
     }
 
     pub fn pop_vec(&mut self, size: usize) -> Vec<u8> {
-        self.memory.drain((self.memory.len()-size)..).collect()
+        self.memory.drain((self.memory.len() - size)..).collect()
     }
 
     pub fn len(&self) -> usize {
@@ -102,15 +109,12 @@ impl PushToStack for CString {
     }
 }
 
-impl<P : PushToStack> PushToStack for Vec<P> {
+impl<P: PushToStack> PushToStack for Vec<P> {
     fn push_to_stack(self, stack: &mut Stack) {
-        self.into_iter().rev()
-            .for_each(
-                |p| p.push_to_stack(stack)
-            );
+        let array = Array::new(self);
+        stack.push(array);
     }
 }
-
 
 macro_rules! primitive_push {
     ($ty:ty) => {
@@ -118,7 +122,6 @@ macro_rules! primitive_push {
             fn push_to_stack(self, stack: &mut Stack) {
                 self.to_le_bytes().push_to_stack(stack)
             }
-
         }
     };
 }
@@ -151,14 +154,12 @@ impl<const N: usize> PopFromStack for [u8; N] {
     }
 }
 
-
 impl PopFromStack for CString {
     fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
         let mut buffer = vec![];
         let mut zero_found = false;
         while !stack.is_empty() {
             let pop = stack.pop::<u8>().unwrap();
-
 
             if pop == 0 {
                 zero_found = true;
@@ -169,9 +170,15 @@ impl PopFromStack for CString {
         }
 
         match zero_found {
-            true => { Some(CString::from(buffer)) }
-            false => { None }
+            true => Some(CString::from(buffer)),
+            false => None,
         }
+    }
+}
+
+impl<P: PopFromStack> PopFromStack for Vec<P> {
+    fn pop_from_stack(stack: &mut Stack) -> Option<Self> {
+        stack.pop::<Array<P>>().map(|arr| arr.vector)
     }
 }
 
@@ -192,8 +199,6 @@ primitive_pop!(u64);
 primitive_pop!(usize);
 primitive_pop!(f32);
 primitive_pop!(f64);
-
-
 
 #[cfg(test)]
 mod tests {
