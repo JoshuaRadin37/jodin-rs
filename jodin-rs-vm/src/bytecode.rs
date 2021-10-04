@@ -43,6 +43,8 @@ pub enum ByteCode {
     /// Return to the previous frame
     Return,
 
+    /// Marks the start of a constant pool, has a single operand for how large the pool is
+    ConstantPool,
 
     /// Put one byte onto the stack
     Const1,
@@ -88,6 +90,7 @@ impl ByteCode {
             ByteCode::Multiply => 1,
             ByteCode::Divide => 1,
             ByteCode::Remainder => 1,
+            ByteCode::ConstantPool => 1,
             _ => 0,
         }
     }
@@ -98,6 +101,7 @@ impl ByteCode {
             return None;
         }
         match self {
+            ByteCode::ConstantPool => Some(LittleEndian::read_u32(bytes).to_string()),
             ByteCode::Const1 => Some(bytes[0].to_string()),
             ByteCode::Const2 => Some(LittleEndian::read_u16(bytes).to_string()),
             ByteCode::Const4 => Some(LittleEndian::read_u32(bytes).to_string()),

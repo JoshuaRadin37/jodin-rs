@@ -35,6 +35,10 @@ impl Stack {
         self.memory.drain((self.memory.len() - size)..).collect()
     }
 
+    pub fn pop_all(&mut self) -> Vec<u8> {
+        std::mem::replace(&mut self.memory, vec![])
+    }
+
     pub fn len(&self) -> usize {
         self.memory.len()
     }
@@ -199,6 +203,18 @@ primitive_pop!(u64);
 primitive_pop!(usize);
 primitive_pop!(f32);
 primitive_pop!(f64);
+
+pub trait ToBytes {
+    fn to_bytes(self) -> Vec<u8>;
+}
+
+impl<P: PushToStack + PopFromStack> ToBytes for P {
+    fn to_bytes(self) -> Vec<u8> {
+        let mut stack = Stack::new();
+        stack.push(self);
+        stack.pop_all()
+    }
+}
 
 #[cfg(test)]
 mod tests {

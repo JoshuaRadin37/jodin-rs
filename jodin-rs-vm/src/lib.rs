@@ -31,8 +31,9 @@ extern crate jodin_rs_vm_derive;
 
 pub mod bytecode;
 pub mod chunk;
+pub mod compound_types;
+pub mod constant_pool;
 pub mod frame;
 pub mod memory;
-pub mod vm;
 pub mod symbols;
-pub mod compound_types;
+pub mod vm;
