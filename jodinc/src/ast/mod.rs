@@ -11,11 +11,9 @@
 
 pub use crate::ast::jodin_node::JodinNode;
 pub use crate::ast::node_type::JodinNodeType;
-
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 
-pub mod intermediate_type;
 mod jodin_node;
 mod node_type;
 pub mod tags;

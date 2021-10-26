@@ -6,7 +6,8 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use crate::ast::intermediate_type::IntermediateType;
+use intermediate_type::IntermediateType;
+
 use crate::ast::tags::Tag;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
@@ -15,6 +16,7 @@ use crate::core::privacy::Visibility;
 use crate::core::types::arrays::Array;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
+use crate::core::types::traits::{JTrait, JTraitObject};
 
 pub mod arrays;
 pub mod functions;
@@ -23,6 +25,31 @@ pub mod primitives;
 pub mod structure;
 pub mod traits;
 pub mod type_environment;
+pub mod intermediate_type;
+
+pub struct Pointer(Box<JodinType>);
+
+lazy_static! {
+    static ref POINTER_TYPE_ID: u32 = get_type_id();
+}
+
+impl Pointer {
+    /// Create a new type id
+    pub fn new(inner_type: JodinType) -> Self {
+
+        Pointer(Box::new(inner_type))
+    }
+}
+
+impl Type for Pointer {
+    fn type_name(&self) -> Identifier {
+        Identifier::from(format!("ptr<{}>", self.0.type_name()))
+    }
+
+    fn type_id(&self) -> u32 {
+        *POINTER_TYPE_ID
+    }
+}
 
 /// Different types of types within Jodin
 #[derive(Debug)]
@@ -33,6 +60,9 @@ pub enum JodinType {
     Array(Array),
     /// The basic [Structure](crate::core::types::structure::Structure) type.
     Structure(Structure),
+    /// Effectively a Jtrait with more type info
+    JTraitObject(JTraitObject),
+    JTrait(JTrait)
 }
 
 impl JodinType {
@@ -42,6 +72,8 @@ impl JodinType {
             JodinType::Primitive(p) => p,
             JodinType::Structure(s) => s,
             JodinType::Array(a) => a,
+            JodinType::JTraitObject(o) => o,
+            JodinType::JTrait(t) => t
         }
     }
 }
@@ -152,4 +184,13 @@ pub enum StorageModifier {
     Static,
     /// An immutable variable (also global)
     Const,
+}
+
+/// A field in some sort of compound structure
+#[derive(Debug, PartialEq)]
+pub struct Field {
+    /// The type of the field
+    pub jtype: IntermediateType,
+    /// The name of the field
+    pub name: Identifier
 }

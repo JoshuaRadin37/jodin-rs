@@ -6,7 +6,7 @@ use std::cmp::{min, Ordering};
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
-use std::ops::Add;
+use std::ops::{Add, Shl, Shr};
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -320,6 +320,41 @@ impl Add for &Identifier {
     }
 }
 
+impl Shl for &Identifier  {
+    type Output = Identifier;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        self + rhs
+    }
+}
+
+impl Shr for &Identifier  {
+    type Output = Identifier;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        rhs + self
+    }
+}
+
+impl Shl for Identifier  {
+    type Output = Identifier;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        self + rhs
+    }
+}
+
+impl Shr for Identifier  {
+    type Output = Identifier;
+
+    fn shr(self, rhs: Self) -> Self::Output {
+        rhs + self
+    }
+}
+
+
+
+
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
@@ -372,6 +407,15 @@ mod test {
     fn id_from_iter() {
         let id = Identifier::from_iter(&["std", "iter", "FromIterator"]);
         assert_eq!(id.to_string(), "std::iter::FromIterator");
+    }
+
+    #[test]
+    fn id_ops() {
+        let id1 = Identifier::from("hello");
+        let id2 = Identifier::from("world");
+        assert_eq!(&id1 + &id2, Identifier::new_concat("hello", "world"));
+        assert_eq!(&id1 << &id2, Identifier::new_concat("hello", "world"));
+        assert_eq!(&id1 >> &id2, Identifier::new_concat("world", "hello"));
     }
 
     #[test]

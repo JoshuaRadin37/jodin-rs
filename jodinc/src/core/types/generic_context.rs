@@ -1,5 +1,6 @@
 //! Create a generic context for something to exist in
 
+use std::fmt::{Display, Formatter};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::type_environment::TypeEnvironment;
@@ -41,6 +42,7 @@ impl GenericParameter {
     }
 }
 /// Represents an instance of the generic
+#[derive(Debug, PartialEq)]
 pub enum GenericParameterInstance {
     /// exactly this type
     Invariant(Identifier),
@@ -61,6 +63,22 @@ impl GenericParameterInstance {
             (Contravariant(contra), Invariant(inv)) => type_env.is_child_type(contra, inv),
             (Contravariant(contra), Contravariant(inv)) => type_env.is_child_type(contra, inv),
             (_, _) => false,
+        }
+    }
+}
+
+impl Display for GenericParameterInstance  {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GenericParameterInstance::Invariant(p) => {
+                write!(f, "{}", p)
+            }
+            GenericParameterInstance::Covariant(covariant) => {
+                write!(f, "? : {}", covariant)
+            }
+            GenericParameterInstance::Contravariant(contravariant) => {
+                write!(f, "{} : ?", contravariant)
+            }
         }
     }
 }

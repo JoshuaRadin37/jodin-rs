@@ -2,7 +2,7 @@
 //!
 //! Used to determine type checking.
 
-use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;

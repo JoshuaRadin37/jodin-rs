@@ -1,6 +1,6 @@
 //! The array types that exist within Jodin
 
-use crate::ast::intermediate_type::IntermediateType;
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::ast::JodinNode;
 use crate::core::identifier::Identifier;
 use crate::core::types::{get_type_id, Type};

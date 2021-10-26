@@ -11,7 +11,7 @@
 //! A function pointer that takes in two integer pointers as input and an integer as an output would be
 //! defined as `int (int*, int*)` in jodin. This would results in an `IntermediateType` with this value:
 //! ```
-//! use jodin_rs::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+//! use jodin_rs::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 //! use jodin_rs::core::types::primitives::Primitive;
 //! let i_type = IntermediateType {
 //!     is_const: false,
@@ -39,13 +39,13 @@
 //!
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference
 
-use crate::ast::jodin_node::JodinNode;
+use crate::ast::JodinNode;
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
 
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::types::generic_context::GenericParameter;
+use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
 use itertools::Itertools;
 
 /// Contains data to represent types without storing any actual type information.
@@ -300,7 +300,7 @@ pub enum TypeSpecifier {
     /// A built-in data type, such as `float` or `unsigned int`
     Primitive(Primitive),
     /// A generic parameter
-    Generic(GenericParameter),
+    Generic(GenericParameterInstance),
 }
 
 impl Display for TypeSpecifier {
@@ -312,8 +312,8 @@ impl Display for TypeSpecifier {
             TypeSpecifier::Primitive(p) => {
                 write!(f, "{}", p)
             }
-            TypeSpecifier::Generic(_g) => {
-                todo!()
+            TypeSpecifier::Generic(g) => {
+                write!(f, "{}", g)
             }
         }
     }
