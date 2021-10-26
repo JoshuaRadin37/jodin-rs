@@ -4,7 +4,6 @@
 pub mod dependency_graph;
 pub mod error;
 pub mod external;
-pub mod generic_context;
 pub mod identifier;
 pub mod identifier_resolution;
 pub mod import;

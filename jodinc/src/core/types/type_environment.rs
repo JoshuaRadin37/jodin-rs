@@ -3,6 +3,7 @@
 //! Used to determine type checking.
 
 use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::JodinType;
@@ -10,7 +11,16 @@ use std::collections::HashMap;
 
 /// Stores a lot of information about types and related identifier
 pub struct TypeEnvironment {
-    types: HashMap<Identifier, JodinType>,
+    types: HashMap<Identifier, TypeInfo>,
+}
+
+pub struct TypeInfo {
+    /// Direct parent type, should be a structure
+    pub parent_type: Option<Identifier>,
+    /// The inherited traits
+    pub traits: Vec<Identifier>,
+    /// The actual jodin type
+    pub jtype: JodinType,
 }
 
 impl TypeEnvironment {
@@ -62,5 +72,23 @@ impl TypeEnvironment {
             Some(TypeTail::Array(_)) => true,
             _ => false,
         }
+    }
+
+    pub fn base_type(&self) -> &JodinType {
+        todo!()
+    }
+
+    pub fn get_type_from_id(&self, id: &Identifier) -> JodinResult<&JodinType> {
+        self.types
+            .get(id)
+            .as_ref()
+            .map(|info| &info.jtype)
+            .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(
+                id.clone(),
+            )))
+    }
+
+    pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
+        todo!()
     }
 }

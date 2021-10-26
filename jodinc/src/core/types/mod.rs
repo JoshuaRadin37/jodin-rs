@@ -17,8 +17,11 @@ use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
 
 pub mod arrays;
+pub mod functions;
+pub mod generic_context;
 pub mod primitives;
 pub mod structure;
+pub mod traits;
 pub mod type_environment;
 
 /// Different types of types within Jodin

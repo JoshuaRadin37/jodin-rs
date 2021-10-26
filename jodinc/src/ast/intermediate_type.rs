@@ -45,7 +45,7 @@ use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
 
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::generic_context::GenericParameter;
+use crate::core::types::generic_context::GenericParameter;
 use itertools::Itertools;
 
 /// Contains data to represent types without storing any actual type information.
