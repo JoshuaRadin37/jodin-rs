@@ -14,44 +14,25 @@ use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
 use crate::core::types::arrays::Array;
-use crate::core::types::big_object::JObject;
+use crate::core::types::big_object::{JBigObject, JObject};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
 use crate::core::types::traits::{JTrait, JTraitObject};
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::utility::Visitor;
 
 pub mod arrays;
+pub mod big_object;
 pub mod functions;
 pub mod generic_context;
+pub mod intermediate_type;
 pub mod primitives;
 pub mod structure;
 pub mod traits;
 pub mod type_environment;
-pub mod intermediate_type;
-pub mod big_object;
 
 pub struct Pointer(Box<JodinType>);
 
-lazy_static! {
-    static ref POINTER_TYPE_ID: u32 = get_type_id();
-}
-
-impl Pointer {
-    /// Create a new type id
-    pub fn new(inner_type: JodinType) -> Self {
-
-        Pointer(Box::new(inner_type))
-    }
-}
-
-impl Type for Pointer {
-    fn type_name(&self) -> Identifier {
-        Identifier::from(format!("ptr<{}>", self.0.type_name()))
-    }
-
-    fn type_id(&self) -> u32 {
-        *POINTER_TYPE_ID
-    }
-}
 
 /// Different types of types within Jodin
 #[derive(Debug)]
@@ -65,7 +46,7 @@ pub enum JodinType {
     /// Effectively a Jtrait with more type info
     JTraitObject(JTraitObject),
     JTrait(JTrait),
-    JObject(JObject)
+    JObject(JObject),
 }
 
 impl JodinType {
@@ -77,13 +58,13 @@ impl JodinType {
             JodinType::Array(a) => a,
             JodinType::JTraitObject(o) => o,
             JodinType::JTrait(t) => t,
-            JodinType::JObject(o) => o
+            JodinType::JObject(o) => o,
         }
     }
 }
 
 /// Common methods within the different types that make up jodin
-pub trait Type {
+pub trait Type<'n, 't>: Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> {
     /// The name of the type
     fn type_name(&self) -> Identifier;
     /// The unique id for this type
@@ -96,7 +77,7 @@ impl Display for JodinType {
     }
 }
 
-impl Type for JodinType {
+impl Type<'_, '_> for JodinType {
     fn type_name(&self) -> Identifier {
         self.as_inner().type_name()
     }
@@ -118,12 +99,12 @@ pub fn get_type_id() -> u32 {
 }
 
 /// Common methods for compound types in jodin.
-pub trait CompoundType: Type {
+pub trait CompoundType<'n, 't>: Type<'n, 't> {
     /// Gets all the members of the compound type.
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)>;
 }
 
-pub trait Member : Sized {
+pub trait Member: Sized {
     fn jtype(&self) -> &IntermediateType;
     fn id(&self) -> &Identifier;
 }
@@ -137,7 +118,6 @@ impl Member for (IntermediateType, Identifier) {
         &self.1
     }
 }
-
 
 impl Member for (Visibility, IntermediateType, Identifier) {
     fn jtype(&self) -> &IntermediateType {
@@ -159,7 +139,6 @@ impl Member for (&IntermediateType, &Identifier) {
     }
 }
 
-
 impl Member for (&Visibility, &IntermediateType, &Identifier) {
     fn jtype(&self) -> &IntermediateType {
         &self.1
@@ -170,19 +149,16 @@ impl Member for (&Visibility, &IntermediateType, &Identifier) {
     }
 }
 
-trait GetResolvedMember<M : Member> {
+trait GetResolvedMember<M: Member> {
     /// Get's a resolved member
     fn get_member(&self, member_id: &Identifier) -> JodinResult<&M>;
 }
-
-
 
 impl From<JodinType> for JodinTypeReference {
     fn from(t: JodinType) -> Self {
         Rc::new(RefCell::new(t))
     }
 }
-
 
 /// A tag for assigning a type to an AST node
 pub struct TypeTag {
@@ -242,7 +218,7 @@ pub struct Field {
     /// The type of the field
     pub jtype: IntermediateType,
     /// The name of the field
-    pub name: Identifier
+    pub name: Identifier,
 }
 
 impl Field {
@@ -254,7 +230,11 @@ impl Field {
 
     /// Gets this field as a tuple
     pub fn as_tuple(&self) -> (&Visibility, &IntermediateType, &Identifier) {
-        let Field { ref vis, ref jtype, ref name } = self;
+        let Field {
+            ref vis,
+            ref jtype,
+            ref name,
+        } = self;
         (vis, jtype, name)
     }
 }

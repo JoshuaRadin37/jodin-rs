@@ -1,10 +1,10 @@
 //! Create a generic context for something to exist in
 
-use std::fmt::{Display, Formatter};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{JodinType, Type};
+use std::fmt::{Display, Formatter};
 
 /// A single generic parameter in a generic instance declaration
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -67,7 +67,7 @@ impl GenericParameterInstance {
     }
 }
 
-impl Display for GenericParameterInstance  {
+impl Display for GenericParameterInstance {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             GenericParameterInstance::Invariant(p) => {
@@ -83,10 +83,10 @@ impl Display for GenericParameterInstance  {
     }
 }
 
-pub trait Morph {
-    type Morphed : Type;
+pub trait Morph<'n, 't> {
+    type Morphed: Type<'n, 't>;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
     where
-        I : IntoIterator<Item=(Identifier, Identifier)>;
+        I: IntoIterator<Item = (Identifier, Identifier)>;
 }

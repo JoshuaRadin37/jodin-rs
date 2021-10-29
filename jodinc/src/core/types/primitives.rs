@@ -38,7 +38,7 @@ pub enum Primitive {
     VaList,
 }
 
-impl Type for Primitive {
+impl Type<'_, '_> for Primitive {
     fn type_name(&self) -> Identifier {
         let str: &str = match self {
             Primitive::Void => "void",

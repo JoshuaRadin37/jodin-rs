@@ -1,14 +1,14 @@
 //! The standard identifier is used for every declaration within Jodin, from local declarations to
 //! class definitions to modules.
 
+use crate::utility::IntoBox;
+use itertools::Itertools;
 use std::array::IntoIter;
 use std::cmp::{min, Ordering};
 use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Add, Shl, Shr};
-use itertools::Itertools;
-use crate::utility::IntoBox;
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -322,7 +322,7 @@ impl Add for &Identifier {
     }
 }
 
-impl Shl for &Identifier  {
+impl Shl for &Identifier {
     type Output = Identifier;
 
     fn shl(self, rhs: Self) -> Self::Output {
@@ -330,7 +330,7 @@ impl Shl for &Identifier  {
     }
 }
 
-impl Shr for &Identifier  {
+impl Shr for &Identifier {
     type Output = Identifier;
 
     fn shr(self, rhs: Self) -> Self::Output {
@@ -338,7 +338,7 @@ impl Shr for &Identifier  {
     }
 }
 
-impl Shl for Identifier  {
+impl Shl for Identifier {
     type Output = Identifier;
 
     fn shl(self, rhs: Self) -> Self::Output {
@@ -346,16 +346,13 @@ impl Shl for Identifier  {
     }
 }
 
-impl Shr for Identifier  {
+impl Shr for Identifier {
     type Output = Identifier;
 
     fn shr(self, rhs: Self) -> Self::Output {
         rhs + self
     }
 }
-
-
-
 
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
@@ -402,31 +399,29 @@ impl<T> Namespaced for Identifiable<T> {
 #[derive(Debug, Clone)]
 pub struct IdentifierChain {
     this: Identifier,
-    next: Option<Box<IdentifierChain>>
+    next: Option<Box<IdentifierChain>>,
 }
 
 impl IdentifierChain {
-    pub fn new<I : Into<Identifier>>(id: I) -> Self {
+    pub fn new<I: Into<Identifier>>(id: I) -> Self {
         Self {
             this: id.into(),
-            next: None
+            next: None,
         }
     }
 
-    pub fn with_child<I : Into<Identifier>>(mut self, id: I) -> Self {
+    pub fn with_child<I: Into<Identifier>>(mut self, id: I) -> Self {
         self.add_child(id);
         self
     }
 
-    pub fn add_child<I : Into<Identifier>>(&mut self, id: I) {
+    pub fn add_child<I: Into<Identifier>>(&mut self, id: I) {
         self._add_child(&id.into());
     }
 
     fn _add_child(&mut self, id: &Identifier) {
         if self.has_next() {
-            self.next(move |child|
-                child._add_child(id)
-            );
+            self.next(move |child| child._add_child(id));
         } else {
             self.next = Some(IdentifierChain::new(id).boxed());
         }
@@ -436,12 +431,10 @@ impl IdentifierChain {
         self.next.is_some()
     }
 
-    fn next<T, F : Fn(&mut IdentifierChain) -> T>(&mut self, closure: F) -> Option<T> {
+    fn next<T, F: Fn(&mut IdentifierChain) -> T>(&mut self, closure: F) -> Option<T> {
         match self.next.as_deref_mut() {
             None => None,
-            Some(inner) => {
-                Some(closure(inner))
-            }
+            Some(inner) => Some(closure(inner)),
         }
     }
 
@@ -467,7 +460,7 @@ impl Display for IdentifierChain {
 
 #[derive(Debug)]
 pub struct IdentifierChainIterator<'i> {
-    chain: Option<&'i IdentifierChain>
+    chain: Option<&'i IdentifierChain>,
 }
 
 impl<'i> Iterator for IdentifierChainIterator<'i> {
@@ -476,7 +469,7 @@ impl<'i> Iterator for IdentifierChainIterator<'i> {
     fn next(&mut self) -> Option<Self::Item> {
         let prev = std::mem::replace(&mut self.chain, None);
         match prev {
-            None => { None }
+            None => None,
             Some(IdentifierChain { this, next }) => {
                 let next = next.as_deref();
                 let dest = &mut self.chain;
@@ -540,8 +533,9 @@ mod test {
 
     #[test]
     fn id_chain() {
-        let chain = IdentifierChain::new("hello").with_child("world").with_child("goodbye");
+        let chain = IdentifierChain::new("hello")
+            .with_child("world")
+            .with_child("goodbye");
         assert_eq!(chain.to_string(), "hello->world->goodbye");
     }
-
 }

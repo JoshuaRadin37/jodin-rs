@@ -6,8 +6,8 @@ use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 
-use crate::core::types::intermediate_type::IntermediateType;
 use crate::ast::jodin_node::JodinNode;
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::StorageModifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;

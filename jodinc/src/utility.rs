@@ -85,8 +85,21 @@ impl Bytes {
 }
 
 pub trait Visitor<Visited, Output> {
-
     fn accept(&self, environment: &Visited) -> Output;
+}
+
+pub trait Flatten<T, E> {
+    fn flatten(self) -> Result<T, E>;
+}
+
+impl<T, E> Flatten<T, E> for Result<Result<T, E>, E> {
+    fn flatten(self) -> Result<T, E> {
+        match self {
+            Ok(Ok(t)) => Ok(t),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -113,5 +126,11 @@ mod tests {
             Bytes::new(1024 * 1024 * 1024 * 1024).human_readable(),
             "1 TB"
         );
+    }
+
+    #[test]
+    fn flatten() {
+        assert_eq!(Ok(Err(())), Err(()));
+
     }
 }

@@ -2,27 +2,29 @@
 //!
 //! Used to determine type checking.
 
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
+use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
-use crate::core::types::JodinType;
+use crate::core::types::{JodinType, Type};
 use std::collections::HashMap;
 use std::ops::{Deref, Index};
-use crate::ast::JodinNode;
+
+
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug, Default)]
 pub struct TypeEnvironment<'node> {
     types: HashMap<Identifier, TypeInfo<'node>>,
-    impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>
+    impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
 }
 
 pub struct TypeInfo<'node> {
     /// The actual jodin type
     pub jtype: JodinType,
     /// The declaring node (if relevant)
-    pub decl_node: Option<&'node JodinNode>
+    pub decl_node: Option<&'node JodinNode>,
 }
 
 impl TypeEnvironment<'_> {
@@ -91,7 +93,12 @@ impl TypeEnvironment<'_> {
     pub fn chained_get_type(&self, id: &IdentifierChain) -> JodinResult<&JodinType> {
         let mut iter: IdentifierChainIterator = id.into_iter();
         let base = self.get_type(iter.next().unwrap());
-        iter.fold(base, |id| id.map(|inner| inner))
+        iter.fold(base, |acc, next| match acc {
+            Ok(inner) => {
+                inner.accept(self)
+            }
+            e @ Err(_) => e
+        })
     }
 
     pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
@@ -99,7 +106,7 @@ impl TypeEnvironment<'_> {
     }
 }
 
-impl<'type> Index<&Identifier> for TypeEnvironment<'type> {
+impl<'jtype> Index<&Identifier> for TypeEnvironment<'jtype> {
     type Output = JodinType;
 
     fn index(&self, index: &Identifier) -> &Self::Output {
@@ -107,10 +114,10 @@ impl<'type> Index<&Identifier> for TypeEnvironment<'type> {
     }
 }
 
-impl<'type> Index<&IdentifierChain> for TypeEnvironment<'type>  {
+impl<'jtype> Index<&IdentifierChain> for TypeEnvironment<'jtype> {
     type Output = ();
 
-    fn index(&self, index: IdentifierChain) -> &Self::Output {
+    fn index(&self, index: &IdentifierChain) -> &Self::Output {
         todo!()
     }
 }

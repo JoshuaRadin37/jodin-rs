@@ -3,8 +3,8 @@
 use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
 
-use crate::core::types::{get_type_id, CompoundType, JodinType, JodinTypeReference, Type, Field};
 use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
 
 /// Contains a name and its fields
 #[derive(Debug)]
@@ -20,11 +20,13 @@ impl Structure {
         Structure {
             name: Identifier::from(name),
             type_id: get_type_id(),
-            fields: fields.into_iter().map(|(name, ty)| Field {
-                vis: Visibility::Public,
-                jtype: ty,
-                name: Identifier::from(name)
-            })
+            fields: fields
+                .into_iter()
+                .map(|(name, ty)| Field {
+                    vis: Visibility::Public,
+                    jtype: ty,
+                    name: Identifier::from(name),
+                })
                 .collect(),
         }
     }
@@ -36,11 +38,13 @@ impl Structure {
         Structure {
             name: name,
             type_id,
-            fields: fields.into_iter().map(|(name, ty)| Field {
-                vis: Visibility::Public,
-                jtype: ty,
-                name: Identifier::from(name)
-            })
+            fields: fields
+                .into_iter()
+                .map(|(name, ty)| Field {
+                    vis: Visibility::Public,
+                    jtype: ty,
+                    name: Identifier::from(name),
+                })
                 .collect(),
         }
     }
@@ -51,7 +55,7 @@ impl Structure {
     }
 }
 
-impl Type for Structure {
+impl Type<'_, '_> for Structure {
     fn type_name(&self) -> Identifier {
         self.name.clone()
     }
@@ -61,12 +65,9 @@ impl Type for Structure {
     }
 }
 
-impl CompoundType for Structure {
+impl CompoundType<'_, '_> for Structure {
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
-        self.fields
-            .iter()
-            .map(|field| field.as_tuple())
-            .collect()
+        self.fields.iter().map(|field| field.as_tuple()).collect()
     }
 }
 

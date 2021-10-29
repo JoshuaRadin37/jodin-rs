@@ -1,8 +1,8 @@
 //! The array types that exist within Jodin
 
-use crate::core::types::intermediate_type::IntermediateType;
 use crate::ast::JodinNode;
 use crate::core::identifier::Identifier;
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::{get_type_id, Type};
 
 /// An array type
@@ -43,7 +43,7 @@ impl Array {
     }
 }
 
-impl Type for Array {
+impl Type<'_, '_> for Array {
     fn type_name(&self) -> Identifier {
         format!("[{} array]", self.base_type).into()
     }

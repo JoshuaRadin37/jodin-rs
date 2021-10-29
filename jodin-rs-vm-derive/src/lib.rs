@@ -2,10 +2,7 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 
 use quote::{quote, ToTokens};
-use syn::{DeriveInput, ItemStruct, Field, Fields, Index};
-
-
-
+use syn::{DeriveInput, Field, Fields, Index, ItemStruct};
 
 #[proc_macro_derive(PushToStack)]
 pub fn push_to_stack(input: TokenStream) -> TokenStream {
@@ -15,23 +12,24 @@ pub fn push_to_stack(input: TokenStream) -> TokenStream {
     let gens = ast.generics;
 
     let fields = match ast.fields {
-        Fields::Named(named) => {
-            named.named.into_iter()
-                .map(|field: Field| {
-                    let field_name = field.ident.clone().unwrap();
-                    quote! { #field_name }
-                })
-                .collect::<Vec<_>>()
-        }
+        Fields::Named(named) => named
+            .named
+            .into_iter()
+            .map(|field: Field| {
+                let field_name = field.ident.clone().unwrap();
+                quote! { #field_name }
+            })
+            .collect::<Vec<_>>(),
         Fields::Unnamed(unnamed) => {
             let fields = unnamed.unnamed.len();
-            (0..fields).into_iter()
+            (0..fields)
+                .into_iter()
                 .map(|field| {
                     let field = Index::from(field);
                     quote! {
-                    #field
-                }}
-                )
+                        #field
+                    }
+                })
                 .collect::<Vec<_>>()
         }
         Fields::Unit => {
@@ -66,42 +64,47 @@ pub fn pop_from_stack(input: TokenStream) -> TokenStream {
     let gens = ast.generics;
 
     let (fields, types) = match &ast.fields {
-        Fields::Named(named) => {
-            (
-                named.named.iter()
+        Fields::Named(named) => (
+            named
+                .named
+                .iter()
                 .map(|field: &Field| {
                     let field_name = field.ident.clone().unwrap();
                     quote! { #field_name }
                 })
                 .rev()
                 .collect::<Vec<_>>(),
-
-                named.named.iter()
-                    .map(|field: &Field| {
-                        let field_name = field.ty.clone();
-                        quote! { #field_name }
-                    })
-                    .rev()
-                    .collect::<Vec<_>>()
-            )
-
-        }
-        Fields::Unnamed(unnamed) => {
-            let fields = unnamed.unnamed.len();
-            (
-                (0..fields).into_iter()
-                .map(|field| quote! {
-                    #field
+            named
+                .named
+                .iter()
+                .map(|field: &Field| {
+                    let field_name = field.ty.clone();
+                    quote! { #field_name }
                 })
                 .rev()
                 .collect::<Vec<_>>(),
-                unnamed.unnamed.iter()
+        ),
+        Fields::Unnamed(unnamed) => {
+            let fields = unnamed.unnamed.len();
+            (
+                (0..fields)
+                    .into_iter()
+                    .map(|field| {
+                        quote! {
+                            #field
+                        }
+                    })
+                    .rev()
+                    .collect::<Vec<_>>(),
+                unnamed
+                    .unnamed
+                    .iter()
                     .map(|field: &Field| {
                         let field_name = field.ty.clone();
                         quote! { #field_name }
                     })
                     .rev()
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>(),
             )
         }
         Fields::Unit => {

@@ -5,10 +5,10 @@ use crate::core::identifier_resolution::{IdentifierResolver, Registry};
 use crate::ast::JodinNode;
 use crate::ast::JodinNodeType;
 
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::ast::tags::Tag;
 use crate::core::import::{Import, ImportType};
 use crate::core::privacy::{Visibility, VisibilityTag};
+use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use std::any::Any;
 use std::cmp::Ordering;
 
