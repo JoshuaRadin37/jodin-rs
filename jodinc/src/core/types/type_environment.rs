@@ -4,31 +4,31 @@
 
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
-use crate::core::identifier::Identifier;
+use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::JodinType;
 use std::collections::HashMap;
+use std::ops::{Deref, Index};
+use crate::ast::JodinNode;
 
 /// Stores a lot of information about types and related identifier
-pub struct TypeEnvironment {
-    types: HashMap<Identifier, TypeInfo>,
+#[derive(Debug, Default)]
+pub struct TypeEnvironment<'node> {
+    types: HashMap<Identifier, TypeInfo<'node>>,
+    impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>
 }
 
-pub struct TypeInfo {
-    /// Direct parent type, should be a structure
-    pub parent_type: Option<Identifier>,
-    /// The inherited traits
-    pub traits: Vec<Identifier>,
+pub struct TypeInfo<'node> {
     /// The actual jodin type
     pub jtype: JodinType,
+    /// The declaring node (if relevant)
+    pub decl_node: Option<&'node JodinNode>
 }
 
-impl TypeEnvironment {
+impl TypeEnvironment<'_> {
     /// Create a new type environment
     pub fn new() -> Self {
-        Self {
-            types: HashMap::new(),
-        }
+        Self::default()
     }
 
     /// Checks whether the first argument can be considered the second type
@@ -78,7 +78,7 @@ impl TypeEnvironment {
         todo!()
     }
 
-    pub fn get_type_from_id(&self, id: &Identifier) -> JodinResult<&JodinType> {
+    pub fn get_type(&self, id: &Identifier) -> JodinResult<&JodinType> {
         self.types
             .get(id)
             .as_ref()
@@ -88,7 +88,29 @@ impl TypeEnvironment {
             )))
     }
 
+    pub fn chained_get_type(&self, id: &IdentifierChain) -> JodinResult<&JodinType> {
+        let mut iter: IdentifierChainIterator = id.into_iter();
+        let base = self.get_type(iter.next().unwrap());
+        iter.fold(base, |id| id.map(|inner| inner))
+    }
+
     pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
+        todo!()
+    }
+}
+
+impl<'type> Index<&Identifier> for TypeEnvironment<'type> {
+    type Output = JodinType;
+
+    fn index(&self, index: &Identifier) -> &Self::Output {
+        self.get_type(index).unwrap()
+    }
+}
+
+impl<'type> Index<&IdentifierChain> for TypeEnvironment<'type>  {
+    type Output = ();
+
+    fn index(&self, index: IdentifierChain) -> &Self::Output {
         todo!()
     }
 }

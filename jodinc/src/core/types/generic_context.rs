@@ -42,7 +42,7 @@ impl GenericParameter {
     }
 }
 /// Represents an instance of the generic
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum GenericParameterInstance {
     /// exactly this type
     Invariant(Identifier),
@@ -81,4 +81,12 @@ impl Display for GenericParameterInstance  {
             }
         }
     }
+}
+
+pub trait Morph {
+    type Morphed : Type;
+
+    fn apply_generics<I>(&self, generics: I) -> Self::Morphed
+    where
+        I : IntoIterator<Item=(Identifier, Identifier)>;
 }

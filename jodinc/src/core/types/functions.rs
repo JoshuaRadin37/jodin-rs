@@ -9,9 +9,11 @@ use crate::core::types::traits::JTrait;
 
 /// Functions are traits
 pub trait FunctionTrait {
+    /// converts the function into a trait
     fn into_trait(self) -> JTrait;
 }
 
+/// A function type
 pub struct FunctionType {
     name: Identifier,
     generics: Vec<GenericParameter>,

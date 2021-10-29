@@ -28,6 +28,7 @@ impl Type for JTrait {
     }
 }
 
+#[derive(Debug)]
 pub struct JTraitObject {
     owner_type: Identifier,
     jtrait: Arc<JTrait>,

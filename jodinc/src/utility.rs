@@ -84,6 +84,11 @@ impl Bytes {
     }
 }
 
+pub trait Visitor<Visited, Output> {
+
+    fn accept(&self, environment: &Visited) -> Output;
+}
+
 #[cfg(test)]
 mod tests {
     use crate::utility::{Bytes, HumanReadable};

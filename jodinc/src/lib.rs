@@ -26,7 +26,7 @@
 //! ```
 
 #![cfg_attr(feature = "strict", deny(warnings))]
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![warn(
     bad_style,

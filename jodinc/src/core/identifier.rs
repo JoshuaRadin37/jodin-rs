@@ -7,6 +7,8 @@ use std::collections::VecDeque;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Add, Shl, Shr};
+use itertools::Itertools;
+use crate::utility::IntoBox;
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -397,9 +399,97 @@ impl<T> Namespaced for Identifiable<T> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct IdentifierChain {
+    this: Identifier,
+    next: Option<Box<IdentifierChain>>
+}
+
+impl IdentifierChain {
+    pub fn new<I : Into<Identifier>>(id: I) -> Self {
+        Self {
+            this: id.into(),
+            next: None
+        }
+    }
+
+    pub fn with_child<I : Into<Identifier>>(mut self, id: I) -> Self {
+        self.add_child(id);
+        self
+    }
+
+    pub fn add_child<I : Into<Identifier>>(&mut self, id: I) {
+        self._add_child(&id.into());
+    }
+
+    fn _add_child(&mut self, id: &Identifier) {
+        if self.has_next() {
+            self.next(move |child|
+                child._add_child(id)
+            );
+        } else {
+            self.next = Some(IdentifierChain::new(id).boxed());
+        }
+    }
+
+    fn has_next(&self) -> bool {
+        self.next.is_some()
+    }
+
+    fn next<T, F : Fn(&mut IdentifierChain) -> T>(&mut self, closure: F) -> Option<T> {
+        match self.next.as_deref_mut() {
+            None => None,
+            Some(inner) => {
+                Some(closure(inner))
+            }
+        }
+    }
+
+    pub fn iter(&self) -> IdentifierChainIterator {
+        (&self).into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a IdentifierChain {
+    type Item = &'a Identifier;
+    type IntoIter = IdentifierChainIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IdentifierChainIterator { chain: Some(self) }
+    }
+}
+
+impl Display for IdentifierChain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.iter().join("->"))
+    }
+}
+
+#[derive(Debug)]
+pub struct IdentifierChainIterator<'i> {
+    chain: Option<&'i IdentifierChain>
+}
+
+impl<'i> Iterator for IdentifierChainIterator<'i> {
+    type Item = &'i Identifier;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let prev = std::mem::replace(&mut self.chain, None);
+        match prev {
+            None => { None }
+            Some(IdentifierChain { this, next }) => {
+                let next = next.as_deref();
+                let dest = &mut self.chain;
+                std::mem::replace(dest, next);
+                Some(this)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::core::identifier::Identifier;
+    use crate::core::identifier::{Identifier, IdentifierChain};
     use std::cmp::Ordering;
     use std::iter::FromIterator;
 
@@ -447,4 +537,11 @@ mod test {
         None,
         "Although they are both the same length, because neither is a subset of the other they can't be compared")
     }
+
+    #[test]
+    fn id_chain() {
+        let chain = IdentifierChain::new("hello").with_child("world").with_child("goodbye");
+        assert_eq!(chain.to_string(), "hello->world->goodbye");
+    }
+
 }

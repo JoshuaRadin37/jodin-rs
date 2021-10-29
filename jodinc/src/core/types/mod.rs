@@ -14,6 +14,7 @@ use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
 use crate::core::types::arrays::Array;
+use crate::core::types::big_object::JObject;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
 use crate::core::types::traits::{JTrait, JTraitObject};
@@ -26,6 +27,7 @@ pub mod structure;
 pub mod traits;
 pub mod type_environment;
 pub mod intermediate_type;
+pub mod big_object;
 
 pub struct Pointer(Box<JodinType>);
 
@@ -62,7 +64,8 @@ pub enum JodinType {
     Structure(Structure),
     /// Effectively a Jtrait with more type info
     JTraitObject(JTraitObject),
-    JTrait(JTrait)
+    JTrait(JTrait),
+    JObject(JObject)
 }
 
 impl JodinType {
@@ -73,7 +76,8 @@ impl JodinType {
             JodinType::Structure(s) => s,
             JodinType::Array(a) => a,
             JodinType::JTraitObject(o) => o,
-            JodinType::JTrait(t) => t
+            JodinType::JTrait(t) => t,
+            JodinType::JObject(o) => o
         }
     }
 }
@@ -116,8 +120,62 @@ pub fn get_type_id() -> u32 {
 /// Common methods for compound types in jodin.
 pub trait CompoundType: Type {
     /// Gets all the members of the compound type.
-    fn all_members(&self) -> Vec<(Visibility, Identifier, JodinTypeReference)>;
+    fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)>;
 }
+
+pub trait Member : Sized {
+    fn jtype(&self) -> &IntermediateType;
+    fn id(&self) -> &Identifier;
+}
+
+impl Member for (IntermediateType, Identifier) {
+    fn jtype(&self) -> &IntermediateType {
+        &self.0
+    }
+
+    fn id(&self) -> &Identifier {
+        &self.1
+    }
+}
+
+
+impl Member for (Visibility, IntermediateType, Identifier) {
+    fn jtype(&self) -> &IntermediateType {
+        &self.1
+    }
+
+    fn id(&self) -> &Identifier {
+        &self.2
+    }
+}
+
+impl Member for (&IntermediateType, &Identifier) {
+    fn jtype(&self) -> &IntermediateType {
+        &self.0
+    }
+
+    fn id(&self) -> &Identifier {
+        &self.1
+    }
+}
+
+
+impl Member for (&Visibility, &IntermediateType, &Identifier) {
+    fn jtype(&self) -> &IntermediateType {
+        &self.1
+    }
+
+    fn id(&self) -> &Identifier {
+        &self.2
+    }
+}
+
+trait GetResolvedMember<M : Member> {
+    /// Get's a resolved member
+    fn get_member(&self, member_id: &Identifier) -> JodinResult<&M>;
+}
+
+
 
 impl From<JodinType> for JodinTypeReference {
     fn from(t: JodinType) -> Self {
@@ -125,16 +183,6 @@ impl From<JodinType> for JodinTypeReference {
     }
 }
 
-impl<C: CompoundType + Into<JodinType>> Registrable<JodinTypeReference> for C {
-    fn register(self, register: &mut Registry<JodinTypeReference>) -> JodinResult<Identifier> {
-        let this_id = self.type_name();
-        for (_, field, field_type) in self.all_members() {
-            let new_id = Identifier::new_concat(&this_id, field);
-            register.insert_with_identifier(field_type.clone(), new_id)?;
-        }
-        register.insert_with_identifier(self.into().into(), this_id)
-    }
-}
 
 /// A tag for assigning a type to an AST node
 pub struct TypeTag {
@@ -189,8 +237,34 @@ pub enum StorageModifier {
 /// A field in some sort of compound structure
 #[derive(Debug, PartialEq)]
 pub struct Field {
+    /// The visibility of the field
+    pub vis: Visibility,
     /// The type of the field
     pub jtype: IntermediateType,
     /// The name of the field
     pub name: Identifier
+}
+
+impl Field {
+    /// Turns this field into a tuple
+    pub fn into_tuple(self) -> (Visibility, IntermediateType, Identifier) {
+        let Field { vis, jtype, name } = self;
+        (vis, jtype, name)
+    }
+
+    /// Gets this field as a tuple
+    pub fn as_tuple(&self) -> (&Visibility, &IntermediateType, &Identifier) {
+        let Field { ref vis, ref jtype, ref name } = self;
+        (vis, jtype, name)
+    }
+}
+
+impl Member for Field {
+    fn jtype(&self) -> &IntermediateType {
+        &self.jtype
+    }
+
+    fn id(&self) -> &Identifier {
+        &self.name
+    }
 }
