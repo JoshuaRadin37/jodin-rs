@@ -2,7 +2,7 @@
 //!
 //! aka classes
 
-use crate::core::error::JodinResult;
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, Namespaced};
 use crate::core::identifier_resolution::Registry;
 use crate::core::privacy::Visibility;
@@ -14,6 +14,9 @@ use crate::core::types::{
     CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Type,
 };
 use crate::utility::Visitor;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::ops::Deref;
 
 /// The actual, declaration of the JObject
 #[derive(Debug)]
@@ -76,6 +79,72 @@ pub struct JBigObject<'types> {
 
 impl<'t> GetResolvedMember<Field> for JBigObject<'t> {
     fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field> {
+        self.fields
+            .iter()
+            .find(|trt| &trt.name == member_id)
+            .map(|d| d.deref())
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
+    }
+}
+
+impl<'t> GetResolvedMember<JTraitObject> for JBigObject<'t> {
+    fn get_member(&self, member_id: &Identifier) -> JodinResult<&JTraitObject> {
+        self.traits
+            .iter()
+            .find(|trt| &trt.type_name() == member_id)
+            .map(|d| d.deref())
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
+    }
+}
+
+#[derive(Debug)]
+pub struct JTraitObjectWithDistance<'t> {
+    object: &'t JTraitObject,
+    distance: usize,
+}
+
+impl<'t> JTraitObjectWithDistance<'t> {
+    pub fn new(object: &'t JTraitObject, distance: usize) -> Self {
+        JTraitObjectWithDistance { object, distance }
+    }
+}
+
+impl PartialEq for JTraitObjectWithDistance<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.distance == other.distance
+    }
+}
+
+impl Eq for JTraitObjectWithDistance<'_> {}
+
+impl PartialOrd for JTraitObjectWithDistance<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.distance.partial_cmp(&other.distance)
+    }
+}
+
+impl Ord for JTraitObjectWithDistance {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.distance.cmp(&other.distance)
+    }
+}
+
+pub struct JBigObjectBuilder<'nodes, 'types> {
+    base_type: &'types JodinType,
+    parent_object_chain: Vec<JBigObject<'types>>,
+    jtraits: BinaryHeap<JTraitObjectWithDistance<'types>>,
+}
+
+impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
+    pub fn new(base_type: &'types JodinType) -> Self {
+        JBigObjectBuilder {
+            base_type,
+            parent_object_chain: Default::default(),
+            jtraits: Default::default(),
+        }
+    }
+
+    pub fn build(self) -> JBigObject<'types> {
         todo!()
     }
 }
