@@ -4,6 +4,11 @@ use crate::core::identifier::Identifier;
 
 use crate::core::types::{JodinType, Type};
 use std::fmt::{Display, Formatter};
+use crate::core::error::JodinResult;
+use crate::core::types::big_object::JBigObject;
+use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::utility::Visitor;
 
 /// A primitive data type within Jodin
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -36,6 +41,12 @@ pub enum Primitive {
     Double,
     /// Varargs
     VaList,
+}
+
+impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for Primitive {
+    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+        todo!()
+    }
 }
 
 impl Type<'_, '_> for Primitive {
@@ -78,6 +89,10 @@ impl Type<'_, '_> for Primitive {
                 panic!("VA LIST doesn't have a type id")
             }
         }
+    }
+
+    fn as_intermediate(&self) -> IntermediateType {
+        IntermediateType::from(self.clone())
     }
 }
 

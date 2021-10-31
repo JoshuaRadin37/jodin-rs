@@ -69,11 +69,22 @@ pub trait Type<'n, 't>: Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>
     fn type_name(&self) -> Identifier;
     /// The unique id for this type
     fn type_id(&self) -> u32;
+
+    /// Creates an intermediate representation of this type
+    fn as_intermediate(&self) -> IntermediateType {
+        IntermediateType::from(self.type_name())
+    }
 }
 
 impl Display for JodinType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.type_name())
+    }
+}
+
+impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for JodinType {
+    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+        self.as_inner().accept(environment)
     }
 }
 
@@ -84,6 +95,10 @@ impl Type<'_, '_> for JodinType {
 
     fn type_id(&self) -> u32 {
         self.as_inner().type_id()
+    }
+
+    fn as_intermediate(&self) -> IntermediateType {
+        self.as_inner().as_intermediate()
     }
 }
 

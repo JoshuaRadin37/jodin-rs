@@ -10,9 +10,7 @@ use crate::core::types::generic_context::{GenericParameter, Morph};
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::traits::JTraitObject;
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{
-    CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Type,
-};
+use crate::core::types::{CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Member, Type};
 use crate::utility::Visitor;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -31,6 +29,12 @@ pub struct JObject {
 impl Namespaced for JObject {
     fn get_identifier(&self) -> &Identifier {
         &self.id
+    }
+}
+
+impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for JObject {
+    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+        todo!()
     }
 }
 
@@ -97,6 +101,16 @@ impl<'t> GetResolvedMember<JTraitObject> for JBigObject<'t> {
     }
 }
 
+impl Member for JTraitObject {
+    fn jtype(&self) -> &IntermediateType {
+        self.type_name()
+    }
+
+    fn id(&self) -> &Identifier {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct JTraitObjectWithDistance<'t> {
     object: &'t JTraitObject,
@@ -123,7 +137,7 @@ impl PartialOrd for JTraitObjectWithDistance<'_> {
     }
 }
 
-impl Ord for JTraitObjectWithDistance {
+impl Ord for JTraitObjectWithDistance<'_> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.distance.cmp(&other.distance)
     }
@@ -133,16 +147,24 @@ pub struct JBigObjectBuilder<'nodes, 'types> {
     base_type: &'types JodinType,
     parent_object_chain: Vec<JBigObject<'types>>,
     jtraits: BinaryHeap<JTraitObjectWithDistance<'types>>,
+    type_env: &'types TypeEnvironment<'nodes>
 }
 
 impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
-    pub fn new(base_type: &'types JodinType) -> Self {
+    pub(super) fn new(base_type: &'types JodinType, type_env: &'types TypeEnvironment<'nodes>) -> Self {
         JBigObjectBuilder {
             base_type,
             parent_object_chain: Default::default(),
             jtraits: Default::default(),
+            type_env
         }
     }
+
+    pub fn add_parent_type<'n, 't, T : Type<'n, 't>>(&mut self) {
+
+    }
+
+
 
     pub fn build(self) -> JBigObject<'types> {
         todo!()

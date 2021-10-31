@@ -1,10 +1,14 @@
 //! The most basic, complex type that is just a record
 
+use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
 
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
+use crate::core::types::big_object::JBigObject;
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::utility::Visitor;
 
 /// Contains a name and its fields
 #[derive(Debug)]
@@ -52,6 +56,12 @@ impl Structure {
     /// Gets the fields of the structure
     pub fn fields(&self) -> &Vec<Field> {
         &self.fields
+    }
+}
+
+impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for Structure {
+    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+        todo!()
     }
 }
 
