@@ -16,5 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Get Toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
     - name: Check
       run: cargo check --workspace --verbose
