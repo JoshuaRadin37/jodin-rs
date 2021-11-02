@@ -33,7 +33,6 @@ pub mod structure;
 pub mod traits;
 pub mod type_environment;
 
-
 /// Different types of types within Jodin
 #[derive(Debug)]
 pub enum JodinType {
@@ -60,7 +59,7 @@ impl JodinType {
             JodinType::JTraitObject(o) => o,
             JodinType::JTrait(t) => t,
             JodinType::JObject(o) => o,
-            JodinType::Pointer(ptr) => ptr
+            JodinType::Pointer(ptr) => ptr,
         }
     }
 }

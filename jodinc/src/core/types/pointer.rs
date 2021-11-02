@@ -1,30 +1,30 @@
 //! Stores type information for the pointer type
 //!
 
-
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::types::{JodinType, Type};
 use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
 
 use super::get_type_id;
 lazy_static! {
-
     static ref POINTER_TYPE_ID: u32 = get_type_id();
 }
 
 #[derive(Debug)]
 pub struct Pointer {
-    inner_jtype: Box<JodinType>
+    inner_jtype: Box<JodinType>,
 }
 
 impl Pointer {
     /// Create a new pointer from a pointer
     pub fn new(inner_jtype: JodinType) -> Self {
-        Pointer { inner_jtype: Box::new(inner_jtype) }
+        Pointer {
+            inner_jtype: Box::new(inner_jtype),
+        }
     }
 }
 
@@ -47,4 +47,3 @@ impl Type<'_, '_> for Pointer {
         self.inner_jtype.as_intermediate().with_pointer()
     }
 }
-

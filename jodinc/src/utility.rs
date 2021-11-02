@@ -89,12 +89,12 @@ pub trait Visitor<Visited, Output> {
 }
 
 pub trait Flatten<T, E> {
-    fn flatten(self) -> Result<T, E>;
+    fn flatten(this: Self) -> Result<T, E>;
 }
 
 impl<T, E> Flatten<T, E> for Result<Result<T, E>, E> {
-    fn flatten(self) -> Result<T, E> {
-        match self {
+    fn flatten(this: Self) -> Result<T, E> {
+        match this {
             Ok(Ok(t)) => Ok(t),
             Ok(Err(e)) => Err(e),
             Err(e) => Err(e),

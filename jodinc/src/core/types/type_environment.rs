@@ -5,13 +5,13 @@
 use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
+use crate::core::types::big_object::JBigObjectBuilder;
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
 use std::collections::HashMap;
 use std::ops::{Deref, Index};
-use crate::core::types::big_object::JBigObjectBuilder;
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug, Default)]
@@ -90,8 +90,6 @@ impl TypeEnvironment<'_> {
                 id.clone(),
             )))
     }
-
-
 
     pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
         todo!()

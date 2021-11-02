@@ -25,7 +25,7 @@ pub struct SizedPointer {
     size: u64,
 }
 
-#[derive(Clone, PushToStack)]
+#[derive(Clone)]
 pub struct Array<K: PushToStack> {
     pub vector: Vec<K>,
     length: usize,
@@ -38,6 +38,15 @@ impl<K: PushToStack> Array<K> {
             vector,
             length: len,
         }
+    }
+}
+
+impl<K: PushToStack> PushToStack for Array<K> {
+    fn push_to_stack(self, stack: &mut Stack) {
+        let Array { mut vector, length } = self;
+        vector.reverse();
+        stack.push_iter(vector);
+        stack.push(length);
     }
 }
 

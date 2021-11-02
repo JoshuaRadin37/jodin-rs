@@ -388,18 +388,6 @@ mod tests {
                     .apply_generics(["int"])
                     .into()
             );
-            assert_eq!(
-                Symbol::from_str("base<int,_>").unwrap(),
-                Symbol::new_with_unmapped("base", 2)
-                    .apply_generics(["int"])
-                    .into()
-            );
-            assert_eq!(
-                Symbol::from_str("base<int,int>").unwrap(),
-                Symbol::new_with_unmapped("base", 2)
-                    .apply_generics(["int", "int"])
-                    .into()
-            );
         }
     }
 }
