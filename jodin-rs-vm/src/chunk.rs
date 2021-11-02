@@ -2,11 +2,10 @@
 //! constants.
 
 use crate::bytecode::{BinaryOpOperand, ByteCode};
-use std::ops::{Index};
+use std::ops::Index;
 use std::slice::SliceIndex;
 
 use num_traits::FromPrimitive;
-
 
 /// A chunk of code
 pub struct Chunk(pub Vec<u8>);
@@ -106,8 +105,6 @@ impl Chunk {
         self.0.extend(bytes)
     }
 
-
-
     /// Add a ret opcode
     pub fn ret(&mut self) {
         self.append_bytecode(ByteCode::Return);
@@ -180,7 +177,6 @@ impl From<Vec<u8>> for Chunk {
 
 pub struct ByteCodeVector<'a>(&'a [u8]);
 
-
 impl<'a> ByteCodeVector<'a> {
     pub fn new(code: &'a [u8]) -> Self {
         ByteCodeVector(code)
@@ -216,8 +212,12 @@ impl<'a> ByteCodeVector<'a> {
     pub fn disassemble_instruction(&self, index: usize) -> String {
         let mut chunk = Chunk::new_start_at(index);
         match self.next_bytecode(index) {
-            None => {  chunk.append_bytes(self.0.get(index..).unwrap());}
-            Some(end) => { chunk.append_bytes(self.0.get(index..end).unwrap()); }
+            None => {
+                chunk.append_bytes(self.0.get(index..).unwrap());
+            }
+            Some(end) => {
+                chunk.append_bytes(self.0.get(index..end).unwrap());
+            }
         };
 
         chunk.disassemble_single_bytecode(index)

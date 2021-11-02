@@ -1,31 +1,5 @@
-[package]
-name = "jodin-rs"
-version = "0.1.0"
-authors = ["Joshua Radin <jradn16@gmail.com>"]
-edition = "2018"
-build = "build.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["jodin-rs-vm"]
+members = ["jodin-rs-vm", "jodin-rs-vm-derive", "jodinc"]
 
-
-[build-dependencies]
-lalrpop = "0.19.6"
-
-[features]
-strict = []
-
-[dependencies]
-regex = "1.5.4"
-lazy_static = "1.4.0"
-glob = "0.3.0"
-clap = "2.33.3"
-backtrace = "0.3.60"
-itertools = "0.10.1"
-num-traits = "0.2.14"
-either = "1.6.1"
-lalrpop-util = "0.19.6"
-logos = {version = "0.12.0"}
-jodin-rs-vm = { path="jodin-rs-vm" }

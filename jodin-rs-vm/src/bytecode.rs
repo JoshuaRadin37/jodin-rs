@@ -16,8 +16,36 @@ pub enum ByteCode {
     Nop,
     Halt,
     WaitForRunCode,
+
+    /// Calls a system call by popping a usize from the stack
+    SysCall,
+
+    /// Declare a new function within the virtual machine
+    ///
+    /// Takes in a string from the stack
+    StartFunction,
+    /// End a function
+    EndFunction,
+    /// Start a factory
+    StartFactory,
+    /// Set the number of generics within the factory
+    SetGenericQuantity,
+    /// Declare a local variable within the function
+    DeclareLocal,
+    StartData,
+    EndData,
+    /// Should only exist with the StartData and EndData block. Returns the type-id of generic N.
+    GetGenericN,
+    EndFactory,
+
+    GetSize,
+
     /// Return to the previous frame
     Return,
+
+    /// Marks the start of a constant pool, has a single operand for how large the pool is
+    ConstantPool,
+
     /// Put one byte onto the stack
     Const1,
     /// Put two bytes onto the stack
@@ -30,6 +58,7 @@ pub enum ByteCode {
     Float4,
     /// Puts a 64 bite float onto the stack
     Float8,
+
     /// Pop N bytes from the stack
     PopN,
     /// Add two values
@@ -61,6 +90,7 @@ impl ByteCode {
             ByteCode::Multiply => 1,
             ByteCode::Divide => 1,
             ByteCode::Remainder => 1,
+            ByteCode::ConstantPool => 1,
             _ => 0,
         }
     }
@@ -71,6 +101,7 @@ impl ByteCode {
             return None;
         }
         match self {
+            ByteCode::ConstantPool => Some(LittleEndian::read_u32(bytes).to_string()),
             ByteCode::Const1 => Some(bytes[0].to_string()),
             ByteCode::Const2 => Some(LittleEndian::read_u16(bytes).to_string()),
             ByteCode::Const4 => Some(LittleEndian::read_u32(bytes).to_string()),
