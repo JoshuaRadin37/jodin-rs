@@ -3,7 +3,7 @@ use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinErrorType, JodinResult};
 use jodin_rs::passes::analysis::analyze;
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
-use jodin_rs::passes::optimize;
+use jodin_rs::passes::optimization::optimize;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;

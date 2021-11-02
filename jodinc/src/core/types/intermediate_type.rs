@@ -246,6 +246,12 @@ impl IntermediateType {
     }
 }
 
+impl Clone for IntermediateType {
+    fn clone(&self) -> Self {
+        self.lose_info()
+    }
+}
+
 impl From<Primitive> for IntermediateType {
     fn from(p: Primitive) -> Self {
         Self {

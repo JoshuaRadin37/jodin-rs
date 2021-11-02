@@ -4,10 +4,10 @@ use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
 
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
 use crate::core::types::big_object::JBigObject;
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
 use crate::utility::Visitor;
 
 /// Contains a name and its fields
@@ -59,8 +59,8 @@ impl Structure {
     }
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for Structure {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Structure {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }

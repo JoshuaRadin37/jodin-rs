@@ -6,8 +6,3 @@ use crate::core::error::JodinResult;
 pub mod analysis;
 pub mod frontend;
 pub mod optimization;
-
-/// Runs optimizations on a tree
-pub fn optimize(node: JodinNode) -> JodinResult<JodinNode> {
-    Ok(node)
-}

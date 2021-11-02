@@ -8,10 +8,10 @@ use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterat
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::{JodinType, Type};
+use crate::utility::Visitor;
 use std::collections::HashMap;
 use std::ops::{Deref, Index};
-
-
+use crate::core::types::big_object::JBigObjectBuilder;
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug, Default)]
@@ -20,6 +20,7 @@ pub struct TypeEnvironment<'node> {
     impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
 }
 
+#[derive(Debug)]
 pub struct TypeInfo<'node> {
     /// The actual jodin type
     pub jtype: JodinType,
@@ -90,19 +91,14 @@ impl TypeEnvironment<'_> {
             )))
     }
 
-    pub fn chained_get_type(&self, id: &IdentifierChain) -> JodinResult<&JodinType> {
-        let mut iter: IdentifierChainIterator = id.into_iter();
-        let base = self.get_type(iter.next().unwrap());
-        iter.fold(base, |acc, next| match acc {
-            Ok(inner) => {
-                inner.accept(self)
-            }
-            e @ Err(_) => e
-        })
-    }
+
 
     pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
         todo!()
+    }
+
+    pub fn big_object_builder<'t>(&self, jtype: &'t JodinType) -> JBigObjectBuilder<'_, 't> {
+        JBigObjectBuilder::new(jtype, self)
     }
 }
 

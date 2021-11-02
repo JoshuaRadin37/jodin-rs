@@ -3,10 +3,10 @@
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::{get_type_id, Type};
 use crate::core::types::big_object::JBigObject;
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{get_type_id, Type};
 use crate::utility::Visitor;
 
 /// An array type
@@ -47,8 +47,8 @@ impl Array {
     }
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for Array {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Array {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -63,6 +63,6 @@ impl Type<'_, '_> for Array {
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.base_type.with_abstract_array()
+        self.base_type.clone().with_abstract_array()
     }
 }

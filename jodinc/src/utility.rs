@@ -104,7 +104,7 @@ impl<T, E> Flatten<T, E> for Result<Result<T, E>, E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::utility::{Bytes, HumanReadable};
+    use super::*;
 
     #[test]
     fn human_readable_bytes() {
@@ -130,7 +130,9 @@ mod tests {
 
     #[test]
     fn flatten() {
-        assert_eq!(Ok(Err(())), Err(()));
-
+        let mut big_error: Result<Result<(), ()>, ()> = Ok(Err(()));
+        assert_eq!(Flatten::flatten(big_error), Err(()));
+        big_error = Ok(Ok(()));
+        assert_eq!(Flatten::flatten(big_error), Ok(()));
     }
 }

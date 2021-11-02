@@ -1,13 +1,13 @@
 //! Traits are interfaces
 
-use crate::core::identifier::Identifier;
-use crate::core::types::generic_context::GenericParameter;
-use crate::core::types::{Field, Type};
-use std::sync::Arc;
 use crate::core::error::JodinResult;
+use crate::core::identifier::Identifier;
 use crate::core::types::big_object::JBigObject;
+use crate::core::types::generic_context::GenericParameter;
 use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{Field, Type};
 use crate::utility::Visitor;
+use std::sync::Arc;
 
 /// A jodin trait structure
 #[derive(Debug)]
@@ -22,8 +22,8 @@ pub struct JTrait {
     pub entries: Vec<Field>,
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for JTrait {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JTrait {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -46,8 +46,8 @@ pub struct JTraitObject {
     type_id: u32,
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for JTraitObject {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JTraitObject {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }

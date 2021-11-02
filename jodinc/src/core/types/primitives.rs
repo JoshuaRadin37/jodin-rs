@@ -2,13 +2,13 @@
 
 use crate::core::identifier::Identifier;
 
-use crate::core::types::{JodinType, Type};
-use std::fmt::{Display, Formatter};
 use crate::core::error::JodinResult;
 use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
+use std::fmt::{Display, Formatter};
 
 /// A primitive data type within Jodin
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -43,8 +43,8 @@ pub enum Primitive {
     VaList,
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for Primitive {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Primitive {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }

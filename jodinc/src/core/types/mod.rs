@@ -15,6 +15,7 @@ use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
 use crate::core::types::arrays::Array;
 use crate::core::types::big_object::{JBigObject, JObject};
+use crate::core::types::pointer::Pointer;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::structure::Structure;
 use crate::core::types::traits::{JTrait, JTraitObject};
@@ -26,12 +27,11 @@ pub mod big_object;
 pub mod functions;
 pub mod generic_context;
 pub mod intermediate_type;
+pub mod pointer;
 pub mod primitives;
 pub mod structure;
 pub mod traits;
 pub mod type_environment;
-
-pub struct Pointer(Box<JodinType>);
 
 
 /// Different types of types within Jodin
@@ -43,6 +43,7 @@ pub enum JodinType {
     Array(Array),
     /// The basic [Structure](crate::core::types::structure::Structure) type.
     Structure(Structure),
+    Pointer(Pointer),
     /// Effectively a Jtrait with more type info
     JTraitObject(JTraitObject),
     JTrait(JTrait),
@@ -59,6 +60,7 @@ impl JodinType {
             JodinType::JTraitObject(o) => o,
             JodinType::JTrait(t) => t,
             JodinType::JObject(o) => o,
+            JodinType::Pointer(ptr) => ptr
         }
     }
 }
@@ -82,9 +84,9 @@ impl Display for JodinType {
     }
 }
 
-impl Visitor<TypeEnvironment<'_>, JodinResult<JBigObject<'_>>> for JodinType {
-    fn accept(&self, environment: &TypeEnvironment<'_>) -> JodinResult<JBigObject<'_>> {
-        self.as_inner().accept(environment)
+impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JodinType {
+    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+        todo!()
     }
 }
 
