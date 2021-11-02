@@ -147,7 +147,7 @@ impl Ord for JTraitObjectWithDistance<'_> {
 
 pub struct JBigObjectBuilder<'nodes, 'types> {
     base_type: &'types JodinType,
-    parent_object_chain: Vec<JBigObject<'types>>,
+    parent_object: Option<JBigObject<'types>>,
     jtraits: BinaryHeap<JTraitObjectWithDistance<'types>>,
     type_env: &'types TypeEnvironment<'nodes>,
 }
@@ -159,15 +159,31 @@ impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
     ) -> Self {
         JBigObjectBuilder {
             base_type,
-            parent_object_chain: Default::default(),
+            parent_object: Default::default(),
             jtraits: Default::default(),
             type_env,
         }
     }
 
-    pub fn add_parent_type<'n, 't, T: Type<'n, 't>>(&mut self) {}
+    pub fn add_parent_type<'n, 't, T: Type<'n, 't>>(&mut self, parent: &T) {
+        let big_object = parent.accept(self.type_env).expect("Could not set parent type");
+        self.parent_object = Some(big_object);
+    }
 
     pub fn build(self) -> JBigObject<'types> {
-        todo!()
+        let fields: Vec<&Field> = self.parent_object_chain.into_iter()
+            .flat_map(|big_obj| big_obj.fields)
+            .collect();
+        let mut traits : Vec<&JTraitObject> = Vec::new();
+        let mut trait_iter = self.jtraits.into_iter();
+        while let Some(next) = trait_iter.next() {
+            traits.push(next.object);
+        }
+        let base = self.base_type;
+        JBigObject {
+            base_type: base,
+            fields,
+            traits
+        }
     }
 }
