@@ -3,6 +3,8 @@
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 
+mod constant_expressions;
+
 /// Runs optimizations on a tree
 pub fn optimize(node: JodinNode) -> JodinResult<JodinNode> {
     Ok(node)

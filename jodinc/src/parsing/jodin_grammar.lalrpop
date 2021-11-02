@@ -64,6 +64,7 @@ pub CanonicalType: IntermediateType = {
     },
     "[" <ty:CanonicalType> ":" <len:Expression> "]" => {
         ty.with_array(len.expect("This should be a constant expression"))
+        .expect("Given length was invalid constant expression")
     },
 }
 

@@ -11,7 +11,8 @@ use backtrace::Backtrace;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::num::ParseIntError;
+use std::num::{ParseIntError, ParseFloatError};
+use crate::core::literal::Literal;
 
 /// The inner data type for the error that contains specific information required by the error.
 #[derive(Debug)]
@@ -63,6 +64,8 @@ pub enum JodinErrorType {
     InvalidOperatorForConstantExpression,
     /// Attempting to convert a literal into an illegal type
     IncorrectLiteralType,
+    /// Attempting to convert a literal into an illegal type
+    IncorrectLiteralTypeWithLiteral(Literal),
     /// This identifier can not be directly converted into a C-identifier
     InvalidAsDirectCDeclaration(Identifier),
     /// A circular dependency has been detected
@@ -76,6 +79,8 @@ pub enum JodinErrorType {
         /// The originating namespace the import is being made in
         origin_namespace: Identifier,
     },
+    /// This can not be expressed as constant expression
+    NotConstantExpression(String),
     /// Extern functions can only be declared in the Base namespace
     ExternFunctionNotDeclaredInBase,
     /// Illegal node type for compiler
@@ -146,6 +151,7 @@ macro_rules! wrap_error {
 
 wrap_error!(ParseIntError);
 wrap_error!(ParseCharError);
+wrap_error!(ParseFloatError);
 wrap_error!(std::io::Error);
 wrap_error!(std::fmt::Error);
 // wrap_error!(pest::error::Error<crate::parsing::Rule>);

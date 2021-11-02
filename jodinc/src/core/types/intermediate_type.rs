@@ -39,7 +39,8 @@
 //!
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference
 
-use crate::ast::JodinNode;
+use std::collections::HashMap;
+use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::identifier::Identifier;
 use crate::core::types::primitives::Primitive;
 use std::fmt::{Display, Formatter};
@@ -47,6 +48,9 @@ use std::fmt::{Display, Formatter};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
 use itertools::Itertools;
+use crate::core::literal::ConstantCast;
+use crate::core::types::Type;
+use crate::utility::Visitor;
 
 /// Contains data to represent types without storing any actual type information.
 #[derive(Debug, Eq, PartialEq)]
@@ -107,9 +111,12 @@ impl IntermediateType {
     }
 
     /// Adds an array with an index
-    pub fn with_array(mut self, index: JodinNode) -> Self {
-        self.tails.push(TypeTail::Array(Some(index)));
-        self
+    pub fn with_array(mut self, index: JodinNode) -> JodinResult<Self> {
+        let size: u64 = index
+            .accept(&HashMap::new())?
+            .try_constant_cast()?;
+        self.tails.push(TypeTail::Array(Some(size)));
+        Ok(self)
     }
 
     /// Tries to make this type unsigned
@@ -332,7 +339,7 @@ pub enum TypeTail {
     Pointer,
     /// An array is a contiguous block of memory of a type. The size is optional. An array with no
     /// size is equivalent to a pointer.
-    Array(Option<JodinNode>),
+    Array(Option<u64>),
     /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
 }

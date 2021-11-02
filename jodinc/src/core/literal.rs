@@ -15,10 +15,20 @@
 //! 8. `unsigned int`
 //! 9. `unsigned long`
 
+use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use crate::core::identifier::Identifier;
+use crate::core::operator::{NumType, TryConstEvaluation};
+use crate::passes::analysis::ResolvedIdentityTag;
+use crate::utility::Visitor;
+use num_traits::{Num, PrimInt};
 use regex::Regex;
+use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::core::types::intermediate_type::TypeSpecifier;
+use crate::core::types::primitives::Primitive;
 
 /// A single instance of a literal
 #[derive(Debug, PartialOrd, PartialEq, Clone)]
@@ -65,10 +75,31 @@ impl Literal {
     }
 }
 
+impl Display for Literal {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::String(v) => { write!(f, "{}", v)}
+            Literal::Char(v) => {write!(f, "{}", v)}
+            Literal::Boolean(v) => {write!(f, "{}", v)}
+            Literal::Float(v) => {write!(f, "{}", v)}
+            Literal::Double(v) => {write!(f, "{}", v)}
+            Literal::Byte(v) => {write!(f, "{}", v)}
+            Literal::Short(v) => {write!(f, "{}", v)}
+            Literal::Int(v) => {write!(f, "{}", v)}
+            Literal::Long(v) => {write!(f, "{}", v)}
+            Literal::UnsignedByte(v) => {write!(f, "{}", v)}
+            Literal::UnsignedShort(v) => {write!(f, "{}", v)}
+            Literal::UnsignedInt(v) => {write!(f, "{}", v)}
+            Literal::UnsignedLong(v) => {write!(f, "{}", v)}
+        }
+    }
+}
+
 lazy_static! {
-    static ref HEX_LITERAL: Regex = Regex::new(r"0[xX](?P<val>[a-fA-F0-9]+)(?P<ext>[uU]?[lL]?)?")
+    static ref HEX_LITERAL: Regex = Regex::new(r"^0[xX](?P<val>[a-fA-F0-9]+)(?P<ext>[uU]?[lL]?)?$")
         .expect("HEX_LITERAL regular expression string invalid");
-    static ref INTEGER_LITERAL: Regex = Regex::new(r"(?P<val>\d+)(?P<ext>[uU]?[lL]?)?").unwrap();
+    static ref INTEGER_LITERAL: Regex = Regex::new(r"^(?P<val>\d+)(?P<ext>[uU]?[lL]?)?$").unwrap();
+    static ref FLOAT_LITERAL: Regex = Regex::new(r"^(\d+\.\d+)([lL]?)$").unwrap();
 }
 
 impl FromStr for Literal {
@@ -76,7 +107,20 @@ impl FromStr for Literal {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.contains(".") {
-            todo!("floats")
+            if let Some(captures) = FLOAT_LITERAL.captures(s) {
+                let val: &str = captures.get(1).unwrap().as_str();
+                let is_long = !captures.get(2).unwrap().as_str().is_empty();
+                match is_long {
+                    true => {
+                        let inner: f64 = val.parse()?;
+                        return Ok(Literal::Double(inner));
+                    }
+                    false => {
+                        let inner: f32 = val.parse()?;
+                        return Ok(Literal::Float(inner));
+                    }
+                }
+            }
         } else {
             match HEX_LITERAL.captures(s) {
                 Some(captures) if captures.get(0).unwrap().as_str() == s => {
@@ -188,6 +232,9 @@ from_type!(i16, Short);
 from_type!(i32, Int);
 from_type!(i64, Long);
 
+from_type!(f32, Float);
+from_type!(f64, Double);
+
 impl TryFrom<Literal> for String {
     type Error = JodinError;
 
@@ -195,7 +242,7 @@ impl TryFrom<Literal> for String {
         if let Literal::String(str) = value {
             Ok(str)
         } else {
-            Err(JodinErrorType::IncorrectLiteralType.into())
+            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into())
         }
     }
 }
@@ -207,7 +254,7 @@ impl TryFrom<Literal> for char {
         match value {
             Literal::Char(c) => Ok(c),
             Literal::UnsignedByte(b) => Ok(b.into()),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -219,7 +266,7 @@ impl TryFrom<Literal> for bool {
         if let Literal::Boolean(b) = value {
             Ok(b)
         } else {
-            Err(JodinErrorType::IncorrectLiteralType.into())
+            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into())
         }
     }
 }
@@ -234,7 +281,7 @@ impl TryFrom<Literal> for f32 {
             Literal::Short(s) => Ok(s.into()),
             Literal::UnsignedByte(b) => Ok(b.into()),
             Literal::UnsignedShort(s) => Ok(s.into()),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -252,7 +299,7 @@ impl TryFrom<Literal> for f64 {
             Literal::UnsignedByte(u) => Ok(u.into()),
             Literal::UnsignedShort(s) => Ok(s.into()),
             Literal::UnsignedInt(i) => Ok(i.into()),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -264,7 +311,7 @@ impl TryFrom<Literal> for u8 {
         match value {
             Literal::Boolean(b) => Ok(b.into()),
             Literal::UnsignedByte(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -276,7 +323,7 @@ impl TryFrom<Literal> for u16 {
             Literal::Boolean(b) => Ok(b.into()),
             Literal::UnsignedByte(b) => Ok(b.into()),
             Literal::UnsignedShort(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -290,7 +337,7 @@ impl TryFrom<Literal> for u32 {
             Literal::UnsignedByte(b) => Ok(b.into()),
             Literal::UnsignedShort(b) => Ok(b.into()),
             Literal::UnsignedInt(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -305,7 +352,7 @@ impl TryFrom<Literal> for u64 {
             Literal::UnsignedShort(b) => Ok(b.into()),
             Literal::UnsignedInt(b) => Ok(b.into()),
             Literal::UnsignedLong(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -317,7 +364,7 @@ impl TryFrom<Literal> for i8 {
         match value {
             Literal::Boolean(b) => Ok(b.into()),
             Literal::Byte(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -330,7 +377,7 @@ impl TryFrom<Literal> for i16 {
             Literal::Boolean(b) => Ok(b.into()),
             Literal::Byte(b) => Ok(b.into()),
             Literal::Short(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -344,7 +391,7 @@ impl TryFrom<Literal> for i32 {
             Literal::Byte(b) => Ok(b.into()),
             Literal::Short(b) => Ok(b.into()),
             Literal::Int(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
     }
 }
@@ -359,13 +406,174 @@ impl TryFrom<Literal> for i64 {
             Literal::Short(b) => Ok(b.into()),
             Literal::Int(b) => Ok(b.into()),
             Literal::Long(b) => Ok(b),
-            _ => Err(JodinErrorType::IncorrectLiteralType.into()),
+            v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
+        }
+    }
+}
+
+pub trait ConstantCast<T>: Sized {
+    fn try_constant_cast(self) -> JodinResult<T>;
+}
+
+macro_rules! constant_cast {
+    ($dest_type:ty, $($inner_id:ident),+) => {
+        impl ConstantCast<$dest_type> for Literal {
+            fn try_constant_cast(self) -> JodinResult<$dest_type> {
+                use Literal::*;
+                match self {
+                    $($inner_id (v) => Ok(v as $dest_type),)*
+                    e => Err(JodinErrorType::NotConstantExpression(format!("{:?}", e)).into())
+                }
+            }
+        }
+    };
+}
+
+constant_cast!(f32, Float);
+constant_cast!(f64, Float, Double);
+constant_cast!(u8, Char, Boolean, UnsignedByte);
+constant_cast!(char, Char, UnsignedByte);
+constant_cast!(bool, Boolean);
+constant_cast!(u16, Char, UnsignedByte, Int, UnsignedInt);
+constant_cast!(u32, Char, Boolean, UnsignedByte, UnsignedShort, Short);
+constant_cast!(
+    u64,
+    Char,
+    UnsignedByte,
+    Int,
+    UnsignedInt,
+    UnsignedShort,
+    Short,
+    UnsignedLong,
+    Long
+);
+constant_cast!(i8, Char, Boolean, UnsignedByte);
+constant_cast!(i16, Char, UnsignedByte, Int, UnsignedInt);
+constant_cast!(i32, Char, Boolean, UnsignedByte, UnsignedShort, Short);
+constant_cast!(
+    i64,
+    Char,
+    UnsignedByte,
+    Int,
+    UnsignedInt,
+    UnsignedShort,
+    Short,
+    UnsignedLong,
+    Long
+);
+
+impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
+    fn accept(&self, environment: &HashMap<Identifier, Literal>) -> JodinResult<Literal> {
+        match self.inner() {
+            JodinNodeType::Identifier(_) => {
+                let resolved: &ResolvedIdentityTag = self.get_tag()?;
+                let abs_id = resolved.absolute_id();
+                environment
+                    .get(abs_id)
+                    .cloned()
+                    .ok_or(JodinErrorType::NotConstantExpression(abs_id.to_string()).into())
+            }
+            JodinNodeType::Literal(lit) => Ok(lit.clone()),
+            JodinNodeType::Uniop { op, inner } => {
+                let inner = inner.accept(environment)?;
+                match inner {
+                    Literal::String(s) => Err(JodinErrorType::NotConstantExpression(s).into()),
+                    Literal::Char(v) => op.evaluate_uniop(v),
+                    Literal::Boolean(v) => op.evaluate_uniop(v),
+                    Literal::Float(v) => op.evaluate_uniop(v),
+                    Literal::Double(v) => op.evaluate_uniop(v),
+                    Literal::Byte(v) => op.evaluate_uniop(v),
+                    Literal::Short(v) => op.evaluate_uniop(v),
+                    Literal::Int(v) => op.evaluate_uniop(v),
+                    Literal::Long(v) => op.evaluate_uniop(v),
+                    Literal::UnsignedByte(v) => op.evaluate_uniop(v),
+                    Literal::UnsignedShort(v) => op.evaluate_uniop(v),
+                    Literal::UnsignedInt(v) => op.evaluate_uniop(v),
+                    Literal::UnsignedLong(v) => op.evaluate_uniop(v),
+                }
+            }
+            JodinNodeType::Binop {
+                op, lhs, rhs
+            } => {
+                let lhs = lhs.accept(environment)?;
+                let rhs = rhs.accept(environment)?;
+
+                match lhs {
+                    Literal::String(s) => Err(JodinErrorType::NotConstantExpression(s).into()),
+                    Literal::Char(v) => op.evaluate_binop(v, rhs),
+                    Literal::Boolean(v) => op.evaluate_binop(v, rhs),
+                    Literal::Float(v) => op.evaluate_binop(v, rhs),
+                    Literal::Double(v) => op.evaluate_binop(v, rhs),
+                    Literal::Byte(v) => op.evaluate_binop(v, rhs),
+                    Literal::Short(v) => op.evaluate_binop(v, rhs),
+                    Literal::Int(v) => op.evaluate_binop(v, rhs),
+                    Literal::Long(v) => op.evaluate_binop(v, rhs),
+                    Literal::UnsignedByte(v) => op.evaluate_binop(v, rhs),
+                    Literal::UnsignedShort(v) => op.evaluate_binop(v, rhs),
+                    Literal::UnsignedInt(v) => op.evaluate_binop(v, rhs),
+                    Literal::UnsignedLong(v) => op.evaluate_binop(v, rhs),
+                }
+            }
+            JodinNodeType::CastExpression {
+                to_type, factor
+            } => {
+                if let TypeSpecifier::Primitive(prim) = &to_type.type_specifier {
+                    let as_literal = factor.accept(environment)?;
+                    match prim {
+                        Primitive::Boolean => {
+                            ConstantCast::<bool>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Char => {
+                            ConstantCast::<char>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Byte => {
+                            ConstantCast::<i8>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Short => {
+                            ConstantCast::<i16>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Int => {
+                            ConstantCast::<i32>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Long => {
+                            ConstantCast::<i64>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::UnsignedByte => {
+                            ConstantCast::<u8>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::UnsignedShort => {
+                            ConstantCast::<u16>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::UnsignedInt => {
+                            ConstantCast::<u32>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::UnsignedLong => {
+                            ConstantCast::<u64>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Float => {
+                            ConstantCast::<f32>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        Primitive::Double => {
+                            ConstantCast::<f64>::try_constant_cast(as_literal)?.try_into()
+                        }
+                        _ => Err(JodinErrorType::NotConstantExpression(format!("can't cast to {}", prim)))?
+                    }
+                } else {
+                    Err(JodinErrorType::NotConstantExpression(format!("can't cast from {:?}", to_type)))?
+                }
+            }
+            _ => Err(JodinErrorType::NotConstantExpression(
+                "invalid constant expression".to_string(),
+            )
+            .into()),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::parse_identifier;
+    use crate::parsing::parse_expression;
     use super::*;
 
     #[test]
@@ -405,5 +613,34 @@ mod tests {
             Literal::String("Hello\"World!".to_string()),
             "(*\"Hello\"World!\"*)".parse().unwrap()
         );
+    }
+
+    #[test]
+    fn constant_expressions() {
+        let lit_node = parse_expression("(3+2+-2)/3 - 1").expect("This should be parsable as a expression");
+        let as_literal = lit_node.accept(&HashMap::new()).expect("All literals and operations involved are constant");
+        let val: i32 = as_literal.try_into().unwrap();
+        assert_eq!(val, 0i32);
+        let cast_expression = parse_expression("(16 as long)").expect("Couldn't parse a cast expression");
+        let as_literal = cast_expression.accept(&HashMap::new()).expect("Int to Long should be valid");
+        let val: i64 = as_literal.try_into().unwrap();
+        assert_eq!(val, 16i64);
+
+        let floating_point_node = parse_expression("3.2").expect("Floats supported now");
+        let as_float: f32 = floating_point_node.accept(&HashMap::new())
+            .expect("All literals and operations involved are constant")
+            .try_into()
+            .expect("Couldn't treat this as f32");
+
+        assert_eq!(as_float, 3.2f32);
+
+        let floating_point_node = parse_expression("6.4l").expect("Floats supported now");
+        println!("{:?}", floating_point_node);
+        let as_float: f64 = floating_point_node.accept(&HashMap::new())
+            .expect("All literals and operations involved are constant")
+            .try_into()
+            .expect("Couldn't treat this as f64");
+
+        assert_eq!(as_float, 6.4f64);
     }
 }
