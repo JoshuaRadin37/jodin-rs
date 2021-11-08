@@ -28,16 +28,6 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JTrai
     }
 }
 
-impl Type<'_, '_> for JTrait {
-    fn type_name(&self) -> Identifier {
-        self.id.clone()
-    }
-
-    fn type_id(&self) -> u32 {
-        self.type_id
-    }
-}
-
 #[derive(Debug)]
 pub struct JTraitObject {
     owner_type: Identifier,
