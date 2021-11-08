@@ -40,6 +40,12 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JObje
     }
 }
 
+impl Into<JodinType> for JObject {
+    fn into(self) -> JodinType {
+        JodinType::JObject(self)
+    }
+}
+
 impl Type<'_, '_> for JObject {
     fn type_name(&self) -> Identifier {
         self.get_identifier().clone()
@@ -165,16 +171,20 @@ impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
         }
     }
 
-    pub fn add_parent_type<'n, 't, T: Type<'n, 't>>(&mut self, parent: &T) {
-        let big_object = parent.accept(self.type_env).expect("Could not set parent type");
+    pub fn add_parent_type<T: Type<'nodes, 'types>>(&mut self, parent: &T) {
+        let big_object = parent
+            .accept(self.type_env)
+            .expect("Could not set parent type");
         self.parent_object = Some(big_object);
     }
 
     pub fn build(self) -> JBigObject<'types> {
-        let fields: Vec<&Field> = self.parent_object_chain.into_iter()
+        let fields: Vec<&Field> = self
+            .parent_object
+            .into_iter()
             .flat_map(|big_obj| big_obj.fields)
             .collect();
-        let mut traits : Vec<&JTraitObject> = Vec::new();
+        let mut traits: Vec<&JTraitObject> = Vec::new();
         let mut trait_iter = self.jtraits.into_iter();
         while let Some(next) = trait_iter.next() {
             traits.push(next.object);
@@ -183,7 +193,7 @@ impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
         JBigObject {
             base_type: base,
             fields,
-            traits
+            traits,
         }
     }
 }

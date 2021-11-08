@@ -8,10 +8,12 @@ use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterat
 use crate::core::types::big_object::JBigObjectBuilder;
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
+use crate::core::types::traits::JTrait;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
 use std::collections::HashMap;
 use std::ops::{Deref, Index};
+use std::sync::Arc;
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug, Default)]
@@ -23,7 +25,7 @@ pub struct TypeEnvironment<'node> {
 #[derive(Debug)]
 pub struct TypeInfo<'node> {
     /// The actual jodin type
-    pub jtype: JodinType,
+    pub jtype: Arc<JodinType>,
     /// The declaring node (if relevant)
     pub decl_node: Option<&'node JodinNode>,
 }
@@ -85,7 +87,7 @@ impl TypeEnvironment<'_> {
         self.types
             .get(id)
             .as_ref()
-            .map(|info| &info.jtype)
+            .map(|info| info.jtype.deref())
             .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(
                 id.clone(),
             )))
@@ -97,6 +99,11 @@ impl TypeEnvironment<'_> {
 
     pub fn big_object_builder<'t>(&self, jtype: &'t JodinType) -> JBigObjectBuilder<'_, 't> {
         JBigObjectBuilder::new(jtype, self)
+    }
+
+    pub fn add<'n, 't, T: Type<'n, 't>>(&mut self, jty: T) -> JodinResult<()> {
+        let jtype: JodinType = jty.into();
+        todo!()
     }
 }
 

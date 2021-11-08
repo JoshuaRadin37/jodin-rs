@@ -50,22 +50,41 @@ pub enum JodinType {
 }
 
 impl JodinType {
-    /// Gets the type dynamic object
-    pub fn as_inner(&self) -> &dyn Type {
-        match self {
-            JodinType::Primitive(p) => p,
-            JodinType::Structure(s) => s,
-            JodinType::Array(a) => a,
-            JodinType::JTraitObject(o) => o,
-            JodinType::JTrait(t) => t,
-            JodinType::JObject(o) => o,
-            JodinType::Pointer(ptr) => ptr,
+    // /// Gets the type dynamic object
+    // pub fn as_inner(&self) -> Box<Type> {
+    //     match self {
+    //         JodinType::Primitive(p) => p,
+    //         JodinType::Structure(s) => s,
+    //         JodinType::Array(a) => a,
+    //         JodinType::JTraitObject(o) => o,
+    //         JodinType::JTrait(t) => t,
+    //         JodinType::JObject(o) => o,
+    //         JodinType::Pointer(ptr) => ptr,
+    //     }
+    // }
+}
+
+macro_rules! on_inner {
+    ($obj:expr, |$var:ident| $cls:expr, $ret_ty:ty) => {{
+        fn __apply<'n, 't, T: Type<'n, 't>>($var: &T) -> $ret_ty {
+            $cls
         }
-    }
+        match &($obj) {
+            JodinType::Primitive(p) => __apply(p),
+            JodinType::Structure(p) => __apply(p),
+            JodinType::Array(p) => __apply(p),
+            JodinType::JTraitObject(p) => __apply(p),
+            JodinType::JTrait(p) => __apply(p),
+            JodinType::JObject(p) => __apply(p),
+            JodinType::Pointer(p) => __apply(p),
+        }
+    }};
 }
 
 /// Common methods within the different types that make up jodin
-pub trait Type<'n, 't>: Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> {
+pub trait Type<'n, 't>:
+    Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> + Into<JodinType>
+{
     /// The name of the type
     fn type_name(&self) -> Identifier;
     /// The unique id for this type
@@ -91,15 +110,15 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Jodin
 
 impl Type<'_, '_> for JodinType {
     fn type_name(&self) -> Identifier {
-        self.as_inner().type_name()
+        on_inner!(self, |v| v.type_name(), Identifier)
     }
 
     fn type_id(&self) -> u32 {
-        self.as_inner().type_id()
+        on_inner!(self, |v| v.type_id(), u32)
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.as_inner().as_intermediate()
+        on_inner!(self, |v| v.as_intermediate(), IntermediateType)
     }
 }
 

@@ -6,7 +6,7 @@ use crate::core::identifier::Identifier;
 use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{get_type_id, Type};
+use crate::core::types::{get_type_id, JodinType, Type};
 use crate::utility::Visitor;
 
 /// An array type
@@ -50,6 +50,12 @@ impl Array {
 impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Array {
     fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
         todo!()
+    }
+}
+
+impl Into<JodinType> for Array {
+    fn into(self) -> JodinType {
+        JodinType::Array(self)
     }
 }
 
