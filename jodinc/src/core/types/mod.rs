@@ -23,6 +23,7 @@ use crate::core::types::type_environment::TypeEnvironment;
 use crate::utility::Visitor;
 
 pub mod arrays;
+pub mod base_type;
 pub mod big_object;
 pub mod functions;
 pub mod generic_context;
@@ -257,6 +258,11 @@ pub struct Field {
 }
 
 impl Field {
+    /// Create a new field instance
+    pub fn new(vis: Visibility, jtype: IntermediateType, name: Identifier) -> Self {
+        Field { vis, jtype, name }
+    }
+
     /// Turns this field into a tuple
     pub fn into_tuple(self) -> (Visibility, IntermediateType, Identifier) {
         let Field { vis, jtype, name } = self;

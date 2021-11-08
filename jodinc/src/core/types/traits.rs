@@ -5,8 +5,9 @@ use crate::core::identifier::Identifier;
 use crate::core::types::big_object::JBigObject;
 use crate::core::types::generic_context::GenericParameter;
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{Field, JodinType, Type};
+use crate::core::types::{get_type_id, Field, JodinType, Type};
 use crate::utility::Visitor;
+use std::fmt::{DebugStruct, Display, Formatter};
 use std::sync::Arc;
 
 /// A jodin trait structure
@@ -20,6 +21,37 @@ pub struct JTrait {
     /// The super traits of this trait
     pub extends: Vec<Identifier>,
     pub entries: Vec<Field>,
+}
+
+impl Display for JTrait {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct(format!("trait {}", self.id).as_str());
+        debug_struct.field("generics", &self.generics);
+        debug_struct.field("extends", &self.extends);
+        for entry in &self.entries {
+            let name = format!("({:?}) {}", entry.vis, entry.name);
+            debug_struct.field(&name, &entry.jtype.to_string());
+        }
+        debug_struct.finish()
+    }
+}
+
+impl JTrait {
+    /// Create a new jtrait object
+    pub fn new(
+        id: Identifier,
+        generics: Vec<GenericParameter>,
+        extends: Vec<Identifier>,
+        entries: Vec<Field>,
+    ) -> Self {
+        JTrait {
+            id,
+            type_id: get_type_id(),
+            generics,
+            extends,
+            entries,
+        }
+    }
 }
 
 impl Into<JodinType> for JTrait {

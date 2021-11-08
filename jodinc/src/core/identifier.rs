@@ -37,6 +37,16 @@ impl Identifier {
         Self::from_iter(IntoIter::new(array))
     }
 
+    /// Creates an empty identifier, should only ever be used to represent missing data
+    pub fn empty() -> Self {
+        Self::from("")
+    }
+
+    /// Check if this identifier is empty
+    pub fn is_empty(&self) -> bool {
+        self.id.is_empty() && self.parent.is_none()
+    }
+
     /// The parent of the identifier.
     pub fn parent(&self) -> Option<&Identifier> {
         self.parent.as_deref()

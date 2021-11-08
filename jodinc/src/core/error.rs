@@ -8,11 +8,11 @@ use crate::core::identifier::Identifier;
 use crate::parsing::JodinRule;
 use backtrace::Backtrace;
 
+use crate::core::literal::Literal;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::num::{ParseIntError, ParseFloatError};
-use crate::core::literal::Literal;
+use std::num::{ParseFloatError, ParseIntError};
 
 /// The inner data type for the error that contains specific information required by the error.
 #[derive(Debug)]
@@ -89,6 +89,8 @@ pub enum JodinErrorType {
     TypeCantBeDereferenced(String),
     /// There was a lexing error
     LexerError(String),
+    /// The base type can only be generated once.
+    BaseTypeAlreadyGenerated,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

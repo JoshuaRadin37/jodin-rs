@@ -16,9 +16,10 @@ use std::ops::{Deref, Index};
 use std::sync::Arc;
 
 /// Stores a lot of information about types and related identifier
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TypeEnvironment<'node> {
     types: HashMap<Identifier, TypeInfo<'node>>,
+    base_type_id: Identifier,
     impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
 }
 
@@ -30,10 +31,16 @@ pub struct TypeInfo<'node> {
     pub decl_node: Option<&'node JodinNode>,
 }
 
-impl TypeEnvironment<'_> {
+impl<'n> TypeEnvironment<'n> {
     /// Create a new type environment
     pub fn new() -> Self {
-        Self::default()
+        let mut output = Self {
+            types: Default::default(),
+            base_type_id: Identifier::empty(),
+            impl_types_to_trait_obj: Default::default(),
+        };
+
+        todo!("Add base type and primitives")
     }
 
     /// Checks whether the first argument can be considered the second type
@@ -80,7 +87,15 @@ impl TypeEnvironment<'_> {
     }
 
     pub fn base_type(&self) -> &JodinType {
-        todo!()
+        self.get_type(&self.base_type_id)
+            .expect("The base type should always be available")
+    }
+
+    fn set_base_type(&mut self, base_type: JodinType) {
+        let id = base_type.type_name();
+        self.add(base_type, None)
+            .expect("Should not be adding the base type multiple times");
+        self.base_type_id = id;
     }
 
     pub fn get_type(&self, id: &Identifier) -> JodinResult<&JodinType> {
@@ -101,9 +116,22 @@ impl TypeEnvironment<'_> {
         JBigObjectBuilder::new(jtype, self)
     }
 
-    pub fn add<'n, 't, T: Type<'n, 't>>(&mut self, jty: T) -> JodinResult<()> {
+    /// Adds a jodin type declaration into the environment
+    pub fn add<'t, T: Type<'n, 't>>(
+        &mut self,
+        jty: T,
+        node: Option<&'n JodinNode>,
+    ) -> JodinResult<()> {
         let jtype: JodinType = jty.into();
-        todo!()
+        let type_info = TypeInfo {
+            jtype: Arc::new(jtype),
+            decl_node: node,
+        };
+        let id = type_info.jtype.type_name();
+        match self.types.insert(id, type_info) {
+            None => Ok(()),
+            Some(old) => Err(JodinErrorType::IdentifierAlreadyExists(old.jtype.type_name()).into()),
+        }
     }
 }
 
