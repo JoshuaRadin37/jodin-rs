@@ -41,6 +41,29 @@ impl GenericParameter {
         }
     }
 }
+
+impl Display for GenericParameter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GenericParameter::Invariant(i) => {
+                write!(f, "{}", i)
+            }
+            GenericParameter::Covariant {
+                declaration,
+                super_class,
+            } => {
+                write!(f, "{} : {}", declaration, super_class)
+            }
+            GenericParameter::Contravariant {
+                declaration,
+                child_class,
+            } => {
+                write!(f, "{} super {}", declaration, child_class)
+            }
+        }
+    }
+}
+
 /// Represents an instance of the generic
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum GenericParameterInstance {

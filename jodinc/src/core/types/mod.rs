@@ -3,13 +3,14 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::{Display, Formatter};
+use std::ops::Index;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use intermediate_type::IntermediateType;
 
 use crate::ast::tags::Tag;
-use crate::core::error::JodinResult;
+use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
@@ -138,6 +139,18 @@ pub fn get_type_id() -> u32 {
 pub trait CompoundType<'n, 't>: Type<'n, 't> {
     /// Gets all the members of the compound type.
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)>;
+
+    /// Try to get a specific member by name
+    fn get_field<I: Into<Identifier>>(
+        &self,
+        id: I,
+    ) -> JodinResult<(&Visibility, &IntermediateType, &Identifier)> {
+        let id = id.into();
+        self.all_members()
+            .into_iter()
+            .find(|(vis, ty, other_id)| other_id == &id)
+            .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(id)))
+    }
 }
 
 pub trait Member: Sized {

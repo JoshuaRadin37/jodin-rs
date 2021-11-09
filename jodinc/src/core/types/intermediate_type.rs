@@ -39,21 +39,22 @@
 //!
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference
 
-use crate::ast::{JodinNode, JodinNodeType};
-use crate::core::identifier::Identifier;
-use crate::core::types::primitives::Primitive;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 
-use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::literal::ConstantCast;
-use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
-use crate::core::types::Type;
-use crate::utility::Visitor;
 use itertools::Itertools;
 
+use crate::ast::{JodinNode, JodinNodeType};
+use crate::core::error::{JodinErrorType, JodinResult};
+use crate::core::identifier::Identifier;
+use crate::core::literal::ConstantCast;
+use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
+use crate::core::types::primitives::Primitive;
+use crate::core::types::Type;
+use crate::utility::Visitor;
+
 /// Contains data to represent types without storing any actual type information.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub struct IntermediateType {
     /// Whether this type is constant.
     pub is_const: bool,
@@ -249,11 +250,38 @@ impl IntermediateType {
             tails,
         })
     }
-}
 
-impl Clone for IntermediateType {
-    fn clone(&self) -> Self {
-        self.lose_info()
+    fn pop_last_tail(&self) -> (Self, Option<TypeTail>) {
+        let mut clone = self.clone();
+        let tail = clone.tails.pop();
+        (clone, tail)
+    }
+
+    fn _to_string(&self) -> String {
+        let (clone, tail) = self.pop_last_tail();
+        if let Some(tail) = tail {
+            tail.to_string_helper(clone)
+        } else {
+            let mut output = String::new();
+
+            if self.is_const {
+                write!(&mut output, "const ");
+            }
+            write!(&mut output, "{}", self.type_specifier);
+            if !self.generics.is_empty() {
+                write!(
+                    &mut output,
+                    "<{}>",
+                    Itertools::intersperse(
+                        self.generics.iter().map(|gen| gen.to_string()),
+                        ",".to_string()
+                    )
+                    .collect::<String>()
+                );
+            }
+
+            return output;
+        }
     }
 }
 
@@ -279,27 +307,15 @@ impl From<Identifier> for IntermediateType {
     }
 }
 
+impl Debug for IntermediateType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self._to_string())
+    }
+}
+
 impl Display for IntermediateType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_const {
-            write!(f, "const ")?;
-        }
-        write!(f, "{}", self.type_specifier)?;
-        if !self.generics.is_empty() {
-            write!(
-                f,
-                "<{}>",
-                Itertools::intersperse(
-                    self.generics.iter().map(|gen| gen.to_string()),
-                    ",".to_string()
-                )
-                .collect::<String>()
-            )?;
-        }
-        for tail in &self.tails {
-            write!(f, "{}", tail)?;
-        }
-        Ok(())
+        write!(f, "{}", self._to_string())
     }
 }
 
@@ -331,7 +347,7 @@ impl Display for TypeSpecifier {
 }
 
 /// Contains a tail for the type, which are modifiers on a base type that expands the functionality of it
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypeTail {
     /// A pointer is one level of indirection from a data type.
     Pointer,
@@ -340,6 +356,32 @@ pub enum TypeTail {
     Array(Option<u64>),
     /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
+}
+
+impl TypeTail {
+    fn to_string_helper(&self, affected_type: IntermediateType) -> String {
+        match self {
+            TypeTail::Pointer => {
+                format!("*{}", affected_type)
+            }
+            TypeTail::Array(None) => {
+                format!("[{}]", affected_type)
+            }
+            TypeTail::Array(Some(len)) => {
+                format!("[{}: {}]", affected_type, len)
+            }
+            TypeTail::Function(func_params) => {
+                format!(
+                    "fn({}) -> {}",
+                    func_params
+                        .into_iter()
+                        .map(IntermediateType::to_string)
+                        .join(","),
+                    affected_type
+                )
+            }
+        }
+    }
 }
 
 impl PartialEq for TypeTail {
@@ -382,5 +424,21 @@ impl Display for TypeTail {
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parsing::parse_type;
+
+    #[test]
+    fn intermediate_type_as_string() {
+        let expr = "*fn(int) -> [*int: 5]";
+        let intermediate_type = parse_type(expr).expect("This is a valid type");
+        assert_eq!(
+            intermediate_type.to_string(),
+            expr,
+            "Should go back flawlessly"
+        )
     }
 }

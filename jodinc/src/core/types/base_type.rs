@@ -22,14 +22,16 @@ pub fn base_type() -> JodinResult<JTrait> {
 lazy_static! {
     pub static ref BASE_TYPE_ID: Identifier = Identifier::from("Object");
     pub static ref TO_STRING_ID: Identifier = &*BASE_TYPE_ID << &Identifier::from("to_string");
+    pub static ref GET_TYPE_ID: Identifier = &*BASE_TYPE_ID << &Identifier::from("get_type");
 }
 
 fn _base_type() -> JodinResult<JTrait> {
     let name = Identifier::from(&*BASE_TYPE_ID);
 
     let to_string = to_string_field();
+    let get_type = get_type_field();
 
-    let fields = vec![to_string];
+    let fields = vec![to_string, get_type];
 
     Ok(JTrait::new(name, vec![], vec![], fields))
 }
@@ -37,6 +39,14 @@ fn _base_type() -> JodinResult<JTrait> {
 fn to_string_field() -> Field {
     let id = Identifier::from(&*TO_STRING_ID);
     let ty = IntermediateType::from(Identifier::from("String")).with_function_params(vec![]);
+    Field::new(Visibility::Public, ty, id)
+}
+
+fn get_type_field() -> Field {
+    let id = Identifier::from(&*GET_TYPE_ID);
+    let ty = IntermediateType::from(Identifier::from("Type"))
+        .with_pointer()
+        .with_function_params(vec![]);
     Field::new(Visibility::Public, ty, id)
 }
 

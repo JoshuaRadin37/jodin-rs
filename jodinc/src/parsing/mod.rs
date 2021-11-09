@@ -6,6 +6,7 @@ use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 
 use crate::core::operator::Operator;
 
+use crate::core::types::intermediate_type::IntermediateType;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::FromStr;
@@ -346,24 +347,27 @@ macro_rules! parse {
 type ParseResult = JodinResult<JodinNode>;
 
 /// Parse an expression into a parse result
-pub fn parse_expression<S : AsRef<str>>(expr: S) -> ParseResult {
-    use crate::utility::Flatten;
+pub fn parse_expression<S: AsRef<str>>(expr: S) -> ParseResult {
     parse!(jodin_grammar::ExpressionParser, expr.as_ref()).unwrap()
 }
 
+pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
+    parse!(jodin_grammar::CanonicalTypeParser, expr.as_ref())
+        .map_err(|e| JodinError::new(JodinErrorType::LexerError("Couldn't parse".to_string())))
+}
 
 #[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
+    use crate::ast::{JodinNode, JodinNodeType};
     use crate::core::identifier::Identifier;
     use crate::core::literal::Literal;
     use crate::core::operator::Operator;
+    use crate::core::types::primitives::Primitive;
+    use crate::core::types::Type;
     use crate::parsing::{JodinLexer, Tok};
     use std::iter::FromIterator;
     use std::str::FromStr;
-    use crate::ast::{JodinNode, JodinNodeType};
-    use crate::core::types::primitives::Primitive;
-    use crate::core::types::Type;
 
     #[test]
     fn lex_identifiers() {
@@ -418,7 +422,10 @@ mod tests {
         let x = parse!(jodin_grammar::CanonicalTypeParser, "[int: 5]").unwrap();
         assert_eq!(
             x,
-            Primitive::Int.as_intermediate().with_array(JodinNode::from(JodinNodeType::Literal(Literal::Int(5)))).unwrap()
+            Primitive::Int
+                .as_intermediate()
+                .with_array(JodinNode::from(JodinNodeType::Literal(Literal::Int(5))))
+                .unwrap()
         );
     }
 
@@ -540,23 +547,22 @@ mod tests {
         )
         .unwrap();
 
-       //  parse!(
-       //      jodin_grammar::FunctionDefinitionParser,
-       //      r"
-       //  fn fibonacci(n: unsigned int) -> unsigned int {
-       //      static table: *[unsigned int] = new [0u: n+1];
-       //      if (n < 2) {
-       //          return n;
-       //      }
-       //      (*table)[1] = 1;
-       //      for (i: int in range(2, n+1)) {
-       //          (*table)[i] = (*table)[i-1] + (*table)[i-2];
-       //      }
-       //      return (*table)[n];
-       //  }
-       // "
-       //  )
-       //  .unwrap();
+        //  parse!(
+        //      jodin_grammar::FunctionDefinitionParser,
+        //      r"
+        //  fn fibonacci(n: unsigned int) -> unsigned int {
+        //      static table: *[unsigned int] = new [0u: n+1];
+        //      if (n < 2) {
+        //          return n;
+        //      }
+        //      (*table)[1] = 1;
+        //      for (i: int in range(2, n+1)) {
+        //          (*table)[i] = (*table)[i-1] + (*table)[i-2];
+        //      }
+        //      return (*table)[n];
+        //  }
+        // "
+        //  )
+        //  .unwrap();
     }
-
 }

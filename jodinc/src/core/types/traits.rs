@@ -7,6 +7,7 @@ use crate::core::types::generic_context::GenericParameter;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{get_type_id, Field, JodinType, Type};
 use crate::utility::Visitor;
+use itertools::Itertools;
 use std::fmt::{DebugStruct, Display, Formatter};
 use std::sync::Arc;
 
@@ -25,12 +26,22 @@ pub struct JTrait {
 
 impl Display for JTrait {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut debug_struct = f.debug_struct(format!("trait {}", self.id).as_str());
-        debug_struct.field("generics", &self.generics);
+        let title = format!(
+            "trait {}{}",
+            self.id,
+            match self.generics.len() {
+                0 => "".to_string(),
+                _ => format!(
+                    "<{}>",
+                    self.generics.iter().map(|g| g.to_string()).join(",")
+                ),
+            }
+        );
+        let mut debug_struct = f.debug_struct(title.as_str());
         debug_struct.field("extends", &self.extends);
         for entry in &self.entries {
             let name = format!("({:?}) {}", entry.vis, entry.name);
-            debug_struct.field(&name, &entry.jtype.to_string());
+            debug_struct.field(&name, &entry.jtype);
         }
         debug_struct.finish()
     }

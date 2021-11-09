@@ -5,12 +5,14 @@
 use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
+use crate::core::types::base_type::base_type;
 use crate::core::types::big_object::JBigObjectBuilder;
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::traits::JTrait;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
+use std::any::Any;
 use std::collections::HashMap;
 use std::ops::{Deref, Index};
 use std::sync::Arc;
@@ -31,6 +33,12 @@ pub struct TypeInfo<'node> {
     pub decl_node: Option<&'node JodinNode>,
 }
 
+impl<'node> TypeInfo<'node> {
+    pub fn new(jtype: Arc<JodinType>, decl_node: Option<&'node JodinNode>) -> Self {
+        TypeInfo { jtype, decl_node }
+    }
+}
+
 impl<'n> TypeEnvironment<'n> {
     /// Create a new type environment
     pub fn new() -> Self {
@@ -40,7 +48,16 @@ impl<'n> TypeEnvironment<'n> {
             impl_types_to_trait_obj: Default::default(),
         };
 
-        todo!("Add base type and primitives")
+        let base_type = base_type().expect("Creating base type failed");
+        output.set_base_type(base_type);
+
+        output
+    }
+
+    /// Gets the universal type of the environment, meaning that every type should be equivalent to
+    /// this. Currently, this is just the base type trait.
+    pub fn universal_type(&self) -> IntermediateType {
+        self.base_type().as_intermediate()
     }
 
     /// Checks whether the first argument can be considered the second type
@@ -91,7 +108,8 @@ impl<'n> TypeEnvironment<'n> {
             .expect("The base type should always be available")
     }
 
-    fn set_base_type(&mut self, base_type: JodinType) {
+    fn set_base_type<T: Into<JodinType>>(&mut self, base_type: T) {
+        let base_type = base_type.into();
         let id = base_type.type_name();
         self.add(base_type, None)
             .expect("Should not be adding the base type multiple times");
