@@ -288,10 +288,8 @@ pub enum JodinNodeType {
         /// The values in the list
         values: Vec<JodinNode>,
     },
-    /// Implement a function/trait
-    Implement {
-        implementing_type:
-    }
+    // /// Implement a function/trait
+    // Implement { implementing_type: IntermediateType },
 }
 
 impl JodinNodeType {

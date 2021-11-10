@@ -6,14 +6,16 @@ use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
 use crate::core::types::base_type::base_type;
-use crate::core::types::big_object::JBigObjectBuilder;
+use crate::core::types::big_object::{JBigObject, JBigObjectBuilder};
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
 use crate::core::types::traits::JTrait;
-use crate::core::types::{JodinType, Type};
+use crate::core::types::{AsIntermediate, BuildType, JodinType, Type};
+use crate::passes::analysis::ResolvedIdentityTag;
 use crate::utility::Visitor;
 use std::any::Any;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::ops::{Deref, Index};
 use std::sync::Arc;
 
@@ -21,22 +23,30 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct TypeEnvironment<'node> {
     types: HashMap<Identifier, TypeInfo<'node>>,
+    symbol_to_type: HashMap<Identifier, IntermediateType>,
     base_type_id: Identifier,
     impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
+    tlb: HashMap<IdentifierChain, Identifier>,
 }
 
 #[derive(Debug)]
 pub struct TypeInfo<'node> {
     /// The actual jodin type
-    pub jtype: Arc<JodinType>,
+    pub jtype: JodinType,
     /// The declaring node (if relevant)
     pub decl_node: Option<&'node JodinNode>,
 }
 
 impl<'node> TypeInfo<'node> {
-    pub fn new(jtype: Arc<JodinType>, decl_node: Option<&'node JodinNode>) -> Self {
+    pub fn new(jtype: JodinType, decl_node: Option<&'node JodinNode>) -> Self {
         TypeInfo { jtype, decl_node }
     }
+}
+
+/// A trait to define a way of getting a type from some sort of index
+pub trait GetType<Idx: Eq + Hash> {
+    /// Get a type from some type environment
+    fn get_type(&self, index: &Idx) -> JodinResult<IntermediateType>;
 }
 
 impl<'n> TypeEnvironment<'n> {
@@ -44,8 +54,10 @@ impl<'n> TypeEnvironment<'n> {
     pub fn new() -> Self {
         let mut output = Self {
             types: Default::default(),
+            symbol_to_type: Default::default(),
             base_type_id: Identifier::empty(),
             impl_types_to_trait_obj: Default::default(),
+            tlb: Default::default(),
         };
 
         let base_type = base_type().expect("Creating base type failed");
@@ -104,26 +116,23 @@ impl<'n> TypeEnvironment<'n> {
     }
 
     pub fn base_type(&self) -> &JodinType {
-        self.get_type(&self.base_type_id)
+        self.get_type_by_name(&self.base_type_id)
             .expect("The base type should always be available")
+    }
+
+    pub fn get_type_by_name(&self, name: &Identifier) -> JodinResult<&JodinType> {
+        self.types
+            .get(name)
+            .map(|info| &info.jtype)
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(name.clone()).into())
     }
 
     fn set_base_type<T: Into<JodinType>>(&mut self, base_type: T) {
         let base_type = base_type.into();
-        let id = base_type.type_name();
+        let id = base_type.type_identifier();
         self.add(base_type, None)
             .expect("Should not be adding the base type multiple times");
         self.base_type_id = id;
-    }
-
-    pub fn get_type(&self, id: &Identifier) -> JodinResult<&JodinType> {
-        self.types
-            .get(id)
-            .as_ref()
-            .map(|info| info.jtype.deref())
-            .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(
-                id.clone(),
-            )))
     }
 
     pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
@@ -141,30 +150,86 @@ impl<'n> TypeEnvironment<'n> {
         node: Option<&'n JodinNode>,
     ) -> JodinResult<()> {
         let jtype: JodinType = jty.into();
-        let type_info = TypeInfo {
-            jtype: Arc::new(jtype),
-            decl_node: node,
-        };
-        let id = type_info.jtype.type_name();
-        match self.types.insert(id, type_info) {
+        let type_info = TypeInfo::new(jtype, node);
+        match self
+            .types
+            .insert(type_info.jtype.type_identifier(), type_info)
+        {
             None => Ok(()),
-            Some(old) => Err(JodinErrorType::IdentifierAlreadyExists(old.jtype.type_name()).into()),
+            Some(old) => {
+                Err(JodinErrorType::IdentifierAlreadyExists(old.jtype.type_identifier()).into())
+            }
         }
     }
-}
 
-impl<'jtype> Index<&Identifier> for TypeEnvironment<'jtype> {
-    type Output = JodinType;
+    pub fn set_variable_type<T: AsIntermediate, I: Into<Identifier>>(
+        &mut self,
+        var: I,
+        jty: T,
+    ) -> JodinResult<()> {
+        self.symbol_to_type
+            .insert(var.into(), jty.intermediate_type());
+        Ok(())
+    }
 
-    fn index(&self, index: &Identifier) -> &Self::Output {
-        self.get_type(index).unwrap()
+    pub fn variable_type<I: Into<Identifier>>(&self, id: I) -> JodinResult<&IntermediateType> {
+        let identifier = id.into();
+        self.symbol_to_type
+            .get(&identifier)
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(identifier).into())
     }
 }
 
-impl<'jtype> Index<&IdentifierChain> for TypeEnvironment<'jtype> {
-    type Output = ();
+pub struct TypeEnvironmentManager<'n> {
+    env: TypeEnvironment<'n>,
+}
 
-    fn index(&self, index: &IdentifierChain) -> &Self::Output {
+impl<'n> TypeEnvironmentManager<'n> {
+    /// Create a new manager
+    pub fn new() -> Self {
+        TypeEnvironmentManager {
+            env: TypeEnvironment::new(),
+        }
+    }
+
+    /// Create a new manager using a pre-built environment
+    pub fn with_env(env: TypeEnvironment<'n>) -> Self {
+        Self { env }
+    }
+
+    /// Finishes the manager and returns the environment
+    pub fn finish(self) -> TypeEnvironment<'n> {
+        self.env
+    }
+
+    /// Create a type from some jodin node
+    pub fn create_type<'t, T: BuildType<'n, 't>>(&self, node: &JodinNode) -> JodinResult<T> {
+        T::build_type(node, &self.env, None)
+    }
+
+    /// Save the type in the environment
+    pub fn store_type<'t, T: Type<'n, 't>>(
+        &mut self,
+        ty: T,
+        node: Option<&'n JodinNode>,
+    ) -> JodinResult<()> {
+        self.env.add(ty, node)
+    }
+
+    /// Load a type from the environment
+    pub fn load_type(&self, identifier: &Identifier) -> JodinResult<&JodinType> {
+        self.env.get_type_by_name(identifier)
+    }
+
+    /// Set the type for some variable
+    pub fn set_variable_type<T: AsIntermediate>(&mut self, var_id: &Identifier, ty: T) {
+        self._set_variable_type(var_id, ty.intermediate_type())
+    }
+
+    fn _set_variable_type(&mut self, var_id: &Identifier, ty: IntermediateType) {}
+
+    /// Loads the big object version of some variable
+    pub fn load_variable_type(&self, var_id: &Identifier) -> JodinResult<JBigObject> {
         todo!()
     }
 }

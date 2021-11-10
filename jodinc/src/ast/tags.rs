@@ -1,9 +1,15 @@
 //! The tag system allows for a much more modular AST system where more metadata can be added to
 //! individual nodes with fewer restrictions.
 
+use crate::ast::JodinNode;
+use itertools::Itertools;
 use std::any::Any;
+use std::collections::HashMap;
+use std::ops::{Index, IndexMut};
 
 use crate::core::error::{JodinErrorType, JodinResult};
+use crate::core::identifier::Identifier;
+use crate::passes::analysis::ResolvedIdentityTag;
 
 /// An attribute is an addition bit of information that can be attached to
 /// an ast node
@@ -104,6 +110,96 @@ impl LabeledStatementTag {
     /// Create a new labeled statement tag
     pub fn new(label: String) -> Self {
         LabeledStatementTag { label }
+    }
+}
+
+pub struct ExtraProperties {
+    properties: HashMap<String, Box<dyn Any>>,
+}
+
+impl ExtraProperties {
+    pub fn new() -> Self {
+        ExtraProperties {
+            properties: HashMap::new(),
+        }
+    }
+
+    pub fn put<S: AsRef<str>, T: Any>(&mut self, key: S, value: T) -> Option<Box<dyn Any>> {
+        self.properties
+            .insert(key.as_ref().to_string(), Box::new(value))
+    }
+
+    pub fn get<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T> {
+        self.properties
+            .get(&key.as_ref().to_string())
+            .map(|b| b.downcast_ref())
+            .flatten()
+    }
+
+    pub fn take<S: AsRef<str>, T: Any>(&mut self, key: S) -> Option<T> {
+        self.properties
+            .remove(&key.as_ref().to_string())
+            .map(|b| b.downcast::<T>().ok())
+            .flatten()
+            .map(|b| *b)
+    }
+}
+
+impl Tag for ExtraProperties {
+    fn tag_type(&self) -> String {
+        "ExtraProperties".to_string()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl<S: AsRef<str>> Index<S> for ExtraProperties {
+    type Output = dyn Any;
+
+    fn index(&self, index: S) -> &Self::Output {
+        self.properties
+            .get(&index.as_ref().to_string())
+            .map(|b| &**b)
+            .unwrap()
+    }
+}
+
+/// Provides tools that work with common tags to simplify expressions
+pub trait TagTools {
+    /// Gets the resolved id from the ResolvedIdentityTag tag.
+    fn resolved_id(&self) -> JodinResult<&Identifier>;
+    /// Set a property in the ExtraProperties tag
+    fn set_property<S: AsRef<str>, T: Any>(&mut self, key: S, value: T);
+    /// Get a property in the ExtraProperties tag
+    fn property<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T>;
+}
+
+impl TagTools for JodinNode {
+    fn resolved_id(&self) -> JodinResult<&Identifier> {
+        self.get_tag::<ResolvedIdentityTag>()
+            .map(|tag| tag.absolute_id())
+    }
+
+    fn set_property<S: AsRef<str>, T: Any>(&mut self, key: S, value: T) {
+        self.get_tag_mut::<ExtraProperties>()
+            .expect("Every node has this tag")
+            .put(key, value);
+    }
+
+    fn property<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T> {
+        self.get_tag::<ExtraProperties>()
+            .expect("Every node has this tag")
+            .get(key)
     }
 }
 

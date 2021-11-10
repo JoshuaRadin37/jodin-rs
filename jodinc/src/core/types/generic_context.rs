@@ -30,14 +30,14 @@ impl GenericParameter {
     pub fn as_bound(&self, jtype: &JodinType) -> JodinResult<GenericParameterInstance> {
         match self {
             GenericParameter::Invariant(_) => {
-                Ok(GenericParameterInstance::Invariant(jtype.type_name()))
+                Ok(GenericParameterInstance::Invariant(jtype.type_identifier()))
             }
             GenericParameter::Covariant { .. } => {
-                Ok(GenericParameterInstance::Covariant(jtype.type_name()))
+                Ok(GenericParameterInstance::Covariant(jtype.type_identifier()))
             }
-            GenericParameter::Contravariant { .. } => {
-                Ok(GenericParameterInstance::Contravariant(jtype.type_name()))
-            }
+            GenericParameter::Contravariant { .. } => Ok(GenericParameterInstance::Contravariant(
+                jtype.type_identifier(),
+            )),
         }
     }
 }

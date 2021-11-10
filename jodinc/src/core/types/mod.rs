@@ -7,6 +7,7 @@ use std::ops::Index;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use crate::ast::JodinNode;
 use intermediate_type::IntermediateType;
 
 use crate::ast::tags::Tag;
@@ -34,6 +35,37 @@ pub mod primitives;
 pub mod structure;
 pub mod traits;
 pub mod type_environment;
+
+/// Common methods within the different types that make up jodin
+pub trait Type<'n, 't>:
+    Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> + Into<JodinType>
+{
+    /// The name of the type
+    fn type_identifier(&self) -> Identifier;
+    /// The unique id for this type
+    fn type_unique_id(&self) -> u32;
+
+    /// Creates an intermediate representation of this type
+    fn as_intermediate(&self) -> IntermediateType {
+        IntermediateType::from(self.type_identifier())
+    }
+}
+
+pub trait AsIntermediate {
+    fn intermediate_type(&self) -> IntermediateType;
+}
+
+impl AsIntermediate for IntermediateType {
+    fn intermediate_type(&self) -> IntermediateType {
+        self.clone()
+    }
+}
+
+impl<'n, 't, T: Type<'n, 't>> AsIntermediate for T {
+    fn intermediate_type(&self) -> IntermediateType {
+        self.as_intermediate()
+    }
+}
 
 /// Different types of types within Jodin
 #[derive(Debug)]
@@ -83,24 +115,9 @@ macro_rules! on_inner {
     }};
 }
 
-/// Common methods within the different types that make up jodin
-pub trait Type<'n, 't>:
-    Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> + Into<JodinType>
-{
-    /// The name of the type
-    fn type_name(&self) -> Identifier;
-    /// The unique id for this type
-    fn type_id(&self) -> u32;
-
-    /// Creates an intermediate representation of this type
-    fn as_intermediate(&self) -> IntermediateType {
-        IntermediateType::from(self.type_name())
-    }
-}
-
 impl Display for JodinType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.type_name())
+        write!(f, "{}", self.type_identifier())
     }
 }
 
@@ -111,12 +128,12 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Jodin
 }
 
 impl Type<'_, '_> for JodinType {
-    fn type_name(&self) -> Identifier {
-        on_inner!(self, |v| v.type_name(), Identifier)
+    fn type_identifier(&self) -> Identifier {
+        on_inner!(self, |v| v.type_identifier(), Identifier)
     }
 
-    fn type_id(&self) -> u32 {
-        on_inner!(self, |v| v.type_id(), u32)
+    fn type_unique_id(&self) -> u32 {
+        on_inner!(self, |v| v.type_unique_id(), u32)
     }
 
     fn as_intermediate(&self) -> IntermediateType {
@@ -148,7 +165,7 @@ pub trait CompoundType<'n, 't>: Type<'n, 't> {
         let id = id.into();
         self.all_members()
             .into_iter()
-            .find(|(vis, ty, other_id)| other_id == &id)
+            .find(|(vis, ty, other_id)| *other_id == &id)
             .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(id)))
     }
 }
@@ -301,4 +318,14 @@ impl Member for Field {
     fn id(&self) -> &Identifier {
         &self.name
     }
+}
+
+/// Trait to define a way to build a type
+pub trait BuildType<'n, 't>: Sized + Type<'n, 't> {
+    /// The function that builds this type.
+    fn build_type(
+        node: &JodinNode,
+        env: &TypeEnvironment<'n>,
+        target_type: Option<&IntermediateType>,
+    ) -> JodinResult<Self>;
 }

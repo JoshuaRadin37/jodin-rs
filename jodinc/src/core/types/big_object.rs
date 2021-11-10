@@ -47,11 +47,11 @@ impl Into<JodinType> for JObject {
 }
 
 impl Type<'_, '_> for JObject {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         self.get_identifier().clone()
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 }
@@ -103,7 +103,7 @@ impl<'t> GetResolvedMember<JTraitObject> for JBigObject<'t> {
     fn get_member(&self, member_id: &Identifier) -> JodinResult<&JTraitObject> {
         self.traits
             .iter()
-            .find(|trt| &trt.type_name() == member_id)
+            .find(|trt| &trt.type_identifier() == member_id)
             .map(|d| d.deref())
             .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
     }

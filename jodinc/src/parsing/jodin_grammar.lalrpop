@@ -30,6 +30,7 @@ pub SingleIdentifier: Identifier =
 
 pub Identifier: Identifier = Joined<"t_identifier", "::"> => Identifier::from_iter(<>);
 
+IdentifierNode: JodinNode = Identifier => JodinNode::new(JodinNodeType::Identifier(<>));
 
 
 pub String: Literal = {
@@ -398,8 +399,25 @@ TopLevelDeclarationsList: JodinResult<Vec<JodinNode>> = {
 
 pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<VariableDeclaration>,
+    WithVisibility<StructureDefinition>,
+    InNamespace,
     ";" => JodinNodeType::Empty.into_result()
 };
+
+InNamespace: JodinResult<JodinNode> = {
+    "in" <id:Identifier> <dec:TopLevelDeclaration> => {
+        JodinNodeType::InNamespace {
+            namespace: JodinNodeType::Identifier(id).into(),
+            inner: dec?
+        }.into_result()
+    },
+    "in" <id:Identifier> "{" <decs:TopLevelDeclarations> "}" => {
+        JodinNodeType::InNamespace {
+            namespace: JodinNodeType::Identifier(id).into(),
+            inner: decs?
+        }.into_result()
+    }
+}
 
 StorageModifier: StorageModifier ={
     "let" => StorageModifier::Local,
@@ -501,16 +519,18 @@ Parameter: JodinNode = {
     }
 }
 
-
-
-
-// macros
-
-WithGenerics<Inner>: JodinResult<JodinNode> = {
-    "for" "<" ">" <inner:Inner> => {
-        inner
+pub StructureDefinition: ParseResult = {
+    "struct" <id:IdentifierNode> "{"
+        <members:Parameters>
+    "}" => {
+        JodinNodeType::StructureDefinition {
+            name: id,
+            members
+        }.into_result()
     }
 }
+
+// macros
 
 WithVisibility<Inner>: JodinResult<JodinNode> = {
     <vis:Visibility?> <inner:Inner> => {

@@ -41,11 +41,11 @@ impl Into<JodinType> for Pointer {
 }
 
 impl Type<'_, '_> for Pointer {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         Identifier::from("ptr")
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         *POINTER_TYPE_ID
     }
 

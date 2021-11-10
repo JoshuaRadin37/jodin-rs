@@ -2,11 +2,13 @@
 
 use crate::core::identifier::Identifier;
 
-use crate::core::error::JodinResult;
+use crate::ast::{JodinNode, JodinNodeType};
+use crate::core::error::{JodinError, JodinResult};
+use crate::core::literal::Literal;
 use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{JodinType, Type};
+use crate::core::types::{BuildType, JodinType, Type};
 use crate::utility::Visitor;
 use std::fmt::{Display, Formatter};
 
@@ -50,7 +52,7 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Primi
 }
 
 impl Type<'_, '_> for Primitive {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         let str: &str = match self {
             Primitive::Void => "void",
             Primitive::Boolean => "boolean",
@@ -70,7 +72,7 @@ impl Type<'_, '_> for Primitive {
         Identifier::from(str)
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         match self {
             Primitive::Void => 0,
             Primitive::Boolean => 1,
@@ -104,6 +106,34 @@ impl From<Primitive> for JodinType {
 
 impl Display for Primitive {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.type_name())
+        write!(f, "{}", self.type_identifier())
+    }
+}
+
+impl<'n, 't> BuildType<'n, 't> for Primitive {
+    fn build_type(
+        node: &JodinNode,
+        env: &TypeEnvironment<'n>,
+        target_type: Option<&IntermediateType>,
+    ) -> JodinResult<Self> {
+        let s = "<primitive>";
+        match node.inner() {
+            JodinNodeType::Literal(l) => match l {
+                Literal::Char(_) => Ok(Primitive::Char),
+                Literal::Boolean(_) => Ok(Primitive::Boolean),
+                Literal::Float(_) => Ok(Primitive::Float),
+                Literal::Double(_) => Ok(Primitive::Double),
+                Literal::Byte(_) => Ok(Primitive::Byte),
+                Literal::Short(_) => Ok(Primitive::Short),
+                Literal::Int(_) => Ok(Primitive::Int),
+                Literal::Long(_) => Ok(Primitive::Long),
+                Literal::UnsignedByte(_) => Ok(Primitive::UnsignedByte),
+                Literal::UnsignedShort(_) => Ok(Primitive::UnsignedShort),
+                Literal::UnsignedInt(_) => Ok(Primitive::UnsignedInt),
+                Literal::UnsignedLong(_) => Ok(Primitive::UnsignedLong),
+                _ => Err(JodinError::illegal_type_for_node(Identifier::from(s), node)),
+            },
+            _ => Err(JodinError::illegal_type_for_node(Identifier::from(s), node)),
+        }
     }
 }

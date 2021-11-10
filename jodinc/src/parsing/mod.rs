@@ -356,6 +356,10 @@ pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
         .map_err(|e| JodinError::new(JodinErrorType::LexerError("Couldn't parse".to_string())))
 }
 
+pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
+    parse!(jodin_grammar::JodinFileParser, expr.as_ref()).unwrap()
+}
+
 #[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
@@ -564,5 +568,37 @@ mod tests {
         // "
         //  )
         //  .unwrap();
+    }
+
+    #[test]
+    fn parse_structure_definition() {
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+            
+            }
+        "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+                value: int
+            }
+        "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+                value: int,
+                value2: short
+            }
+        "
+        )
+        .unwrap();
     }
 }

@@ -20,18 +20,11 @@ pub struct Structure {
 
 impl Structure {
     /// Creates a new named structure
-    pub fn new(name: String, fields: Vec<(String, IntermediateType)>) -> Self {
+    pub fn new(name: Identifier, fields: Vec<Field>) -> Self {
         Structure {
-            name: Identifier::from(name),
+            name,
             type_id: get_type_id(),
-            fields: fields
-                .into_iter()
-                .map(|(name, ty)| Field {
-                    vis: Visibility::Public,
-                    jtype: ty,
-                    name: Identifier::from(name),
-                })
-                .collect(),
+            fields,
         }
     }
 
@@ -66,11 +59,11 @@ impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Struc
 }
 
 impl Type<'_, '_> for Structure {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         self.name.clone()
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 }

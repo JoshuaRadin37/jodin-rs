@@ -1,7 +1,7 @@
 //! The main building block for the Abstract Syntax Tree
 
 use crate::ast::node_type::JodinNodeType;
-use crate::ast::tags::{Tag, TagUtilities};
+use crate::ast::tags::{ExtraProperties, Tag, TagUtilities};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::utility::Tree;
 
@@ -16,10 +16,12 @@ pub struct JodinNode {
 impl JodinNode {
     /// Create a new `JodinNode` from an inner type.
     pub fn new(jodin_node_type: JodinNodeType) -> Self {
-        JodinNode {
+        let mut node = JodinNode {
             jodin_node_type: Box::new(jodin_node_type),
             tags: vec![],
-        }
+        };
+        node.add_tag(ExtraProperties::new());
+        node
     }
 
     /// Consume the JodinNode to get it's inner type.

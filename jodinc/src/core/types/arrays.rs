@@ -60,11 +60,11 @@ impl Into<JodinType> for Array {
 }
 
 impl Type<'_, '_> for Array {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         format!("[{} array]", self.base_type).into()
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 

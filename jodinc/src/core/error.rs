@@ -3,11 +3,12 @@
 //!
 //! [JodinError]: crate::core::error::JodinError
 
-use crate::core::identifier::Identifier;
+use crate::core::identifier::{Identifier, Namespaced};
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
 use backtrace::Backtrace;
 
+use crate::ast::JodinNode;
 use crate::core::literal::Literal;
 use std::char::ParseCharError;
 use std::error::Error;
@@ -91,6 +92,13 @@ pub enum JodinErrorType {
     LexerError(String),
     /// The base type can only be generated once.
     BaseTypeAlreadyGenerated,
+    /// Attempted to a build some type using an illegal node type
+    IllegalNodeToBuildType {
+        /// The desired type to build
+        type_name: Identifier,
+        /// The debug output
+        node_info: String,
+    },
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
@@ -132,6 +140,13 @@ impl JodinError {
             backtrace,
         } = self;
         (error_type, backtrace)
+    }
+
+    pub fn illegal_type_for_node<I: Namespaced>(id: I, node: &JodinNode) -> Self {
+        Self::new(JodinErrorType::IllegalNodeToBuildType {
+            type_name: id.get_identifier().clone(),
+            node_info: format!("{:?}", node),
+        })
     }
 }
 

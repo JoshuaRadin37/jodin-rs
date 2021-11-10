@@ -72,11 +72,11 @@ impl Into<JodinType> for JTrait {
 }
 
 impl<'n, 't> Type<'n, 't> for JTrait {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         self.id.clone()
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 }
@@ -108,11 +108,11 @@ impl Into<JodinType> for JTraitObject {
 }
 
 impl Type<'_, '_> for JTraitObject {
-    fn type_name(&self) -> Identifier {
+    fn type_identifier(&self) -> Identifier {
         &self.jtrait.id >> &self.owner_type
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 }

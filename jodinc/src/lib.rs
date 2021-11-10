@@ -56,6 +56,12 @@ extern crate lazy_static;
 #[macro_use]
 extern crate lalrpop_util;
 
+use crate::ast::JodinNode;
+use crate::core::error::JodinResult;
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::passes::analysis::analyze;
+use crate::passes::optimization::optimize;
+
 pub mod ast;
 pub mod cli;
 pub mod compilation;
@@ -64,3 +70,10 @@ pub mod core;
 pub mod parsing;
 pub mod passes;
 pub mod utility;
+
+/// processes the jodin node tree
+pub fn process_jodin_node(mut node: JodinNode) -> JodinResult<JodinNode> {
+    let analyzed = analyze(node)?;
+    let optimized = optimize(analyzed)?;
+    Ok(optimized)
+}
