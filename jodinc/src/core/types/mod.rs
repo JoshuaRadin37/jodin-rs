@@ -37,8 +37,8 @@ pub mod traits;
 pub mod type_environment;
 
 /// Common methods within the different types that make up jodin
-pub trait Type<'n, 't>:
-    Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> + Into<JodinType>
+pub trait Type<'t>:
+    Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> + Into<JodinType>
 {
     /// The name of the type
     fn type_identifier(&self) -> Identifier;
@@ -61,7 +61,7 @@ impl AsIntermediate for IntermediateType {
     }
 }
 
-impl<'n, 't, T: Type<'n, 't>> AsIntermediate for T {
+impl<'t, T: Type<'t>> AsIntermediate for T {
     fn intermediate_type(&self) -> IntermediateType {
         self.as_intermediate()
     }
@@ -100,7 +100,7 @@ impl JodinType {
 
 macro_rules! on_inner {
     ($obj:expr, |$var:ident| $cls:expr, $ret_ty:ty) => {{
-        fn __apply<'n, 't, T: Type<'n, 't>>($var: &T) -> $ret_ty {
+        fn __apply<'t, T: Type<'t>>($var: &T) -> $ret_ty {
             $cls
         }
         match &($obj) {
@@ -121,13 +121,13 @@ impl Display for JodinType {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JodinType {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl<'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JodinType {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
 
-impl Type<'_, '_> for JodinType {
+impl Type<'_> for JodinType {
     fn type_identifier(&self) -> Identifier {
         on_inner!(self, |v| v.type_identifier(), Identifier)
     }
@@ -153,7 +153,7 @@ pub fn get_type_id() -> u32 {
 }
 
 /// Common methods for compound types in jodin.
-pub trait CompoundType<'n, 't>: Type<'n, 't> {
+pub trait CompoundType<'t>: Type<'t> {
     /// Gets all the members of the compound type.
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)>;
 
@@ -321,11 +321,11 @@ impl Member for Field {
 }
 
 /// Trait to define a way to build a type
-pub trait BuildType<'n, 't>: Sized + Type<'n, 't> {
+pub trait BuildType<'t>: Sized + Type<'t> {
     /// The function that builds this type.
     fn build_type(
         node: &JodinNode,
-        env: &TypeEnvironment<'n>,
+        env: &TypeEnvironment,
         target_type: Option<&IntermediateType>,
     ) -> JodinResult<Self>;
 }

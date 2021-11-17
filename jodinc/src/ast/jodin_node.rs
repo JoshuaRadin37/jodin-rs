@@ -1,27 +1,90 @@
 //! The main building block for the Abstract Syntax Tree
 
+use std::any::Any;
+use std::cell::{RefCell, RefMut};
 use crate::ast::node_type::JodinNodeType;
 use crate::ast::tags::{ExtraProperties, Tag, TagUtilities};
 use crate::core::error::{JodinErrorType, JodinResult};
-use crate::utility::Tree;
+use crate::utility::{Acceptor, AcceptorMut, Tree, Visitor};
 
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Formatter, Pointer};
+use std::ops::{Deref, Index};
+use std::rc::{Rc, Weak};
+use num_traits::AsPrimitive;
+
+#[derive(Default)]
+struct JodinNodeIndex {
+    value: RefCell<usize>,
+    parent: RefCell<Option<Weak<JodinNodeIndex>>>
+}
+
+impl Debug for JodinNodeIndex {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Index = {}", self.value.borrow())
+    }
+}
+
+impl JodinNodeIndex {
+    fn directions(&self) -> Vec<usize> {
+        let _borrow = self.parent.borrow();
+        let p = _borrow.deref();
+        let index = *self.value.borrow();
+        match p {
+            None => {
+                vec![index]
+            }
+            Some(parent) => {
+                let parent = parent.upgrade().expect("Trying to get jodin node after cleanup");
+                let mut dirs = parent.directions();
+                dirs.push(index);
+                dirs
+            }
+        }
+    }
+
+
+}
 
 /// Contains the inner jodin node type and it's tags
 pub struct JodinNode {
     jodin_node_type: Box<JodinNodeType>,
     tags: Vec<Box<dyn 'static + Tag>>,
+    index: Rc<JodinNodeIndex>,
 }
 
 impl JodinNode {
     /// Create a new `JodinNode` from an inner type.
     pub fn new(jodin_node_type: JodinNodeType) -> Self {
+
         let mut node = JodinNode {
             jodin_node_type: Box::new(jodin_node_type),
             tags: vec![],
+            index: Default::default(),
         };
         node.add_tag(ExtraProperties::new());
+
+        let parent_ptr = node.index.clone();
+
+        let mut index = 0;
+        for child in node.direct_children() {
+            let child_index_ptr = child.index.clone();
+            let parent = Rc::downgrade(&parent_ptr);
+
+            *child_index_ptr.value.borrow_mut() = index;
+            *child_index_ptr.parent.borrow_mut() = Some(parent);
+
+
+            index += 1;
+        }
+
+        let tag = NodeReferenceTag::new(&node);
+        node.add_tag(tag);
+
         node
+    }
+
+    fn get_directions(&self) -> Vec<usize> {
+        self.index.directions()[1..].to_vec()
     }
 
     /// Consume the JodinNode to get it's inner type.
@@ -203,31 +266,86 @@ impl JodinNode {
             Some(self)
         }
     }
+
+    /// Gets a reference to this node.
+    pub fn get_reference(&self) -> NodeReference {
+        let tag: &NodeReferenceTag = self.get_tag().expect("Added at startup, should never fail");
+        let info = tag.info;
+        let directions = self.get_directions();
+        NodeReference { directions, info }
+    }
 }
 
 impl Debug for JodinNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if f.alternate() {
-            write!(
-                f,
-                "JodinNode {{\n\tattributes: {:?}\n\tinner: {:#?}\n}}",
-                self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>(),
-                self.jodin_node_type,
-            )
-        } else {
-            write!(
-                f,
-                "JodinNode {{ attributes: {:?} inner: {:?} }}",
-                self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>(),
-                self.jodin_node_type,
-            )
-        }
+        // if f.alternate() {
+        //     write!(
+        //         f,
+        //         "JodinNode {{\n\tattributes: {:?}\n\tinner: {:#?}\n}}",
+        //         self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>(),
+        //         self.jodin_node_type,
+        //     )
+        // } else {
+        //     write!(
+        //         f,
+        //         "JodinNode {{ attributes: {:?} inner: {:?} }}",
+        //         self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>(),
+        //         self.jodin_node_type,
+        //     )
+        // }
+        f.debug_struct("JodinNode")
+            .field("index", &*self.index.value.borrow())
+            .field("attributes", &self.tags.iter().map(|a| a.tag_info()).collect::<Vec<_>>())
+            .field("inner", &self.jodin_node_type)
+            .finish()
     }
 }
 
 impl Tree for JodinNode {
     fn direct_children(&self) -> Vec<&Self> {
         self.inner().children().into_iter().collect()
+    }
+}
+
+impl Index<usize> for JodinNode {
+    type Output = JodinNode;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.direct_children().get(index).unwrap()
+    }
+}
+
+impl Index<&[usize]> for JodinNode {
+    type Output = JodinNode;
+
+    fn index(&self, index: &[usize]) -> &Self::Output {
+        let mut iter = index.into_iter();
+        let mut ptr = self;
+        while let Some(next) = iter.next() {
+            ptr = ptr.index(*next);
+        }
+        ptr
+    }
+}
+
+impl<const N: usize> Index<&[usize; N]> for JodinNode {
+    type Output = JodinNode;
+
+    fn index(&self, index: &[usize; N]) -> &Self::Output {
+        let mut iter = index.into_iter();
+        let mut ptr = self;
+        while let Some(next) = iter.next() {
+            ptr = ptr.index(*next);
+        }
+        ptr
+    }
+}
+
+impl Index<Vec<usize>> for JodinNode {
+    type Output = JodinNode;
+
+    fn index(&self, index: Vec<usize>) -> &Self::Output {
+        self.index(index.as_slice())
     }
 }
 
@@ -244,6 +362,144 @@ impl<'a> IntoIterator for &'a JodinNode {
     }
 }
 
+
+impl From<JodinNodeType> for JodinNode {
+    fn from(i: JodinNodeType) -> Self {
+        JodinNode::new(i)
+    }
+}
+
+impl Acceptor<'_, NodeReferenceInfo> for JodinNode {
+    type Output = bool;
+
+    fn accept(&self, visitor: NodeReferenceInfo) -> Self::Output {
+        match self.get_tag::<NodeReferenceTag>() {
+            Ok(tag) => {
+                tag.info == visitor
+            }
+            Err(_) => { false }
+        }
+    }
+}
+
+impl<'n> Acceptor<'n, &NodeReference> for JodinNode {
+    type Output = Option<&'n JodinNode>;
+
+    fn accept(&'n self, visitor: &NodeReference) -> Self::Output {
+        let mut ptr = self;
+        for index in &visitor.directions {
+            let children = ptr.direct_children();
+            ptr = children.get(*index)?;
+        }
+        let ptr_info = ptr.get_reference().info;
+        if ptr_info == visitor.info {
+            Some(ptr)
+        } else {
+            None
+        }
+    }
+}
+
+
+impl<'n> Acceptor<'n, NodeReference> for JodinNode {
+    type Output = Option<&'n JodinNode>;
+
+    fn accept(&'n self, visitor: NodeReference) -> Self::Output {
+        self.accept(&visitor)
+    }
+}
+
+
+
+/// Stores a value to help ensure that a reference is correct
+#[derive(Debug)]
+pub struct NodeReferenceTag {
+    info: NodeReferenceInfo
+}
+
+impl NodeReferenceTag {
+
+    fn new(node: &JodinNode) -> Self {
+        let rand_code: u64 = rand::random();
+        let hashcode: u64 =
+        format!("{:?}", node)
+            .char_indices()
+            .map(|(index, ch)|
+                (index as u64 * <char as AsPrimitive<u64>>::as_(ch))
+            )
+            .sum();
+        let info = NodeReferenceInfo {
+            random_code: rand_code,
+            checksum: hashcode
+        };
+        Self { info }
+    }
+
+    fn info(&self) -> &NodeReferenceInfo {
+        &self.info
+    }
+}
+
+impl Tag for NodeReferenceTag {
+    fn tag_type(&self) -> String {
+        format!("[NodeRef]")
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        1
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+struct NodeReferenceInfo {
+    pub random_code: u64,
+    pub checksum: u64
+}
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NodeReference {
+    directions: Vec<usize>,
+    info: NodeReferenceInfo
+}
+
+impl NodeReference {
+    /// Get the node referred to by this reference from a tree
+    pub fn node<'a>(&self, tree: &'a JodinNode) -> Option<&'a JodinNode> {
+        tree.accept(self)
+    }
+}
+
+
+/// Creates a node tree of empty nodes as leaves
+///
+/// # Arguments
+///
+/// * `depth`: The number of levels within the tree
+/// * `children_per`: The amount of children at a tree node
+///
+/// returns: The constructed node
+pub fn node_tree(depth: usize, children_per: usize) -> JodinNode {
+    match depth {
+        0 => panic!("Can't have a node tree of 0 depth"),
+        1 => JodinNode::empty(),
+        _more => {
+            let mut children = Vec::with_capacity(children_per);
+            for _ in 0..children_per {
+                children.push(node_tree(depth - 1, children_per));
+            }
+            JodinNodeType::NodeVector { vec: children }.into()
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use crate::ast::jodin_node::JodinNode;
@@ -258,11 +514,47 @@ mod tests {
         node.add_tag(DummyTag);
         node.add_tag(BlockIdentifierTag::new(5));
         node.add_tag(DummyTag);
-        assert_eq!(node.tags().len(), 3);
         let id_tag = node.get_tag::<BlockIdentifierTag>().unwrap();
         assert_eq!(id_tag.block_num(), 5);
         let dummy_tags = node.get_tags::<DummyTag>();
         assert_eq!(dummy_tags.len(), 2);
         assert!(node.get_tag::<ResolvedIdentityTag>().is_err());
+    }
+
+    mod node_refs {
+        use crate::ast::{JodinNode, JodinNodeType};
+        use crate::ast::jodin_node::node_tree;
+        use crate::utility::{Acceptor, AcceptorMut, node_count, Tree};
+
+        #[test]
+        fn base_node_ref() {
+            let node: JodinNode = JodinNodeType::Empty.into();
+            let reference = node.get_reference();
+            let found = node.accept(&reference).expect("Couldn't get node from node reference");
+            let found_reference = found.get_reference();
+            assert_eq!(found_reference, reference, "The found reference should be equivalent to the original, because they're the same node")
+        }
+
+        #[test]
+        fn get_nodes_with_1_child() {
+            let tree = node_tree(5, 1);
+            let bottom = &tree[&[0usize; 4]];
+            let bottom_ref = bottom.get_reference();
+            println!("ref: {:?}", bottom_ref);
+            let gotten = tree.accept(&bottom_ref).unwrap();
+            assert_eq!(gotten.get_reference(), bottom.get_reference());
+        }
+
+        #[test]
+        fn get_nodes_with_many_children() {
+            let tree = node_tree(5, 2);
+            assert_eq!(node_count(&tree), 31, "Didn't create the correct size tree");
+            println!("{:#?}", tree);
+            let node = &tree[&[0, 1, 1]];
+            let node_ref = node.get_reference();
+            println!("ref: {:?}", node_ref);
+            let gotten = tree.accept(&node_ref).unwrap();
+            assert_eq!(gotten.get_reference(), node.get_reference());
+        }
     }
 }

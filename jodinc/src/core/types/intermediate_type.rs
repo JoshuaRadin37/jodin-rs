@@ -124,7 +124,7 @@ impl IntermediateType {
 
     /// Adds an array with an index
     pub fn with_array(mut self, index: JodinNode) -> JodinResult<Self> {
-        let size: u64 = index.accept(&HashMap::new())?.try_constant_cast()?;
+        let size: u64 = index.visit(&HashMap::new())?.try_constant_cast()?;
         self.tails.push(TypeTail::Array(Some(size)));
         Ok(self)
     }

@@ -1,16 +1,20 @@
 //! The differentiation of jodin nodes in the AST that allow for more complex information to be
 //! stored within the AST.
 
+use std::any::Any;
 use crate::core::identifier::Identifier;
 use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
 
 use crate::ast::jodin_node::JodinNode;
+use crate::ast::tags::Tag;
+use crate::core::error::JodinResult;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::StorageModifier;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
+use crate::utility::{Acceptor, AcceptorMut, Visitor};
 
 /// Contains JodinNode variant information.
 #[derive(Debug)]
@@ -705,10 +709,6 @@ impl JodinNodeType {
         };
         vector
     }
+
 }
 
-impl From<JodinNodeType> for JodinNode {
-    fn from(i: JodinNodeType) -> Self {
-        JodinNode::new(i)
-    }
-}

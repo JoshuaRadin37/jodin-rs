@@ -34,8 +34,8 @@ impl Namespaced for JObject {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JObject {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JObject {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -46,7 +46,7 @@ impl Into<JodinType> for JObject {
     }
 }
 
-impl Type<'_, '_> for JObject {
+impl Type<'_> for JObject {
     fn type_identifier(&self) -> Identifier {
         self.get_identifier().clone()
     }
@@ -56,21 +56,21 @@ impl Type<'_, '_> for JObject {
     }
 }
 
-impl CompoundType<'_, '_> for JObject {
+impl CompoundType<'_> for JObject {
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
         self.fields.iter().map(|field| field.as_tuple()).collect()
     }
 }
 
-impl<'node, 'types: 'node> Visitor<TypeEnvironment<'node>, Option<JBigObject<'types>>> for JObject {
-    fn accept(&self, environment: &TypeEnvironment<'node>) -> Option<JBigObject<'types>> {
+impl<'types> Visitor<TypeEnvironment, Option<JBigObject<'types>>> for JObject {
+    fn visit(&self, environment: &TypeEnvironment) -> Option<JBigObject<'types>> {
         let mut fields = self.fields.iter().collect::<Vec<_>>();
 
         todo!()
     }
 }
 
-impl Morph<'_, '_> for JObject {
+impl Morph<'_> for JObject {
     type Morphed = Self;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
@@ -151,17 +151,17 @@ impl Ord for JTraitObjectWithDistance<'_> {
     }
 }
 
-pub struct JBigObjectBuilder<'nodes, 'types> {
+pub struct JBigObjectBuilder<'types> {
     base_type: &'types JodinType,
     parent_object: Option<JBigObject<'types>>,
     jtraits: BinaryHeap<JTraitObjectWithDistance<'types>>,
-    type_env: &'types TypeEnvironment<'nodes>,
+    type_env: &'types TypeEnvironment,
 }
 
-impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
+impl<'types> JBigObjectBuilder<'types> {
     pub(super) fn new(
         base_type: &'types JodinType,
-        type_env: &'types TypeEnvironment<'nodes>,
+        type_env: &'types TypeEnvironment,
     ) -> Self {
         JBigObjectBuilder {
             base_type,
@@ -171,9 +171,9 @@ impl<'nodes, 'types> JBigObjectBuilder<'nodes, 'types> {
         }
     }
 
-    pub fn add_parent_type<T: Type<'nodes, 'types>>(&mut self, parent: &T) {
+    pub fn add_parent_type<T: Type<'types>>(&mut self, parent: &T) {
         let big_object = parent
-            .accept(self.type_env)
+            .visit(self.type_env)
             .expect("Could not set parent type");
         self.parent_object = Some(big_object);
     }

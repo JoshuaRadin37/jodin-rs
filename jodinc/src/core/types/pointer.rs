@@ -28,8 +28,8 @@ impl Pointer {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Pointer {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -40,7 +40,7 @@ impl Into<JodinType> for Pointer {
     }
 }
 
-impl Type<'_, '_> for Pointer {
+impl Type<'_> for Pointer {
     fn type_identifier(&self) -> Identifier {
         Identifier::from("ptr")
     }

@@ -23,12 +23,12 @@ enum AdvTypeResolutionTarget {
 }
 
 /// The tool that builds and resolves all types
-pub struct TypeResolutionTool<'nodes> {
+pub struct TypeResolutionTool {
     /// The environment that gets adapted
-    env: TypeEnvironmentManager<'nodes>,
+    env: TypeEnvironmentManager,
 }
 
-impl<'nodes> TypeResolutionTool<'nodes> {
+impl<'nodes> TypeResolutionTool {
     /// Create a new type resolution tool
     pub fn new() -> Self {
         Self {
@@ -84,7 +84,7 @@ impl<'nodes> TypeResolutionTool<'nodes> {
     }
 
     /// Finishes the resolution tool, returning the generated type environemnt
-    pub fn finish(self) -> TypeEnvironment<'nodes> {
+    pub fn finish(self) -> TypeEnvironment {
         self.env.finish()
     }
 }

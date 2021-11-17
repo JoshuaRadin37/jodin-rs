@@ -106,8 +106,8 @@ impl Display for GenericParameterInstance {
     }
 }
 
-pub trait Morph<'n, 't> {
-    type Morphed: Type<'n, 't>;
+pub trait Morph<'t> {
+    type Morphed: Type<'t>;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
     where

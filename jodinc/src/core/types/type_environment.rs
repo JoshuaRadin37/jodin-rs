@@ -2,7 +2,7 @@
 //!
 //! Used to determine type checking.
 
-use crate::ast::JodinNode;
+use crate::ast::{JodinNode, NodeReference};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
 use crate::core::types::base_type::base_type;
@@ -21,8 +21,8 @@ use std::sync::Arc;
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug)]
-pub struct TypeEnvironment<'node> {
-    types: HashMap<Identifier, TypeInfo<'node>>,
+pub struct TypeEnvironment {
+    types: HashMap<Identifier, TypeInfo>,
     symbol_to_type: HashMap<Identifier, IntermediateType>,
     base_type_id: Identifier,
     impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
@@ -35,16 +35,16 @@ pub struct MinimalTypeEnvironment {
 }
 
 #[derive(Debug)]
-pub struct TypeInfo<'node> {
+pub struct TypeInfo {
     /// The actual jodin type
     pub jtype: JodinType,
     /// The declaring node (if relevant)
-    pub decl_node: Option<&'node JodinNode>,
+    pub decl_node: Option<NodeReference>,
 }
 
-impl<'node> TypeInfo<'node> {
-    pub fn new(jtype: JodinType, decl_node: Option<&'node JodinNode>) -> Self {
-        TypeInfo { jtype, decl_node }
+impl TypeInfo {
+    pub fn new(jtype: JodinType, decl_node: Option<&JodinNode>) -> Self {
+        TypeInfo { jtype, decl_node: decl_node.map(|node| node.get_reference()) }
     }
 }
 
@@ -54,7 +54,7 @@ pub trait GetType<Idx: Eq + Hash> {
     fn get_type(&self, index: &Idx) -> JodinResult<IntermediateType>;
 }
 
-impl<'n> TypeEnvironment<'n> {
+impl TypeEnvironment {
     /// Create a new type environment
     pub fn new() -> Self {
         let mut output = Self {
@@ -144,15 +144,15 @@ impl<'n> TypeEnvironment<'n> {
         todo!()
     }
 
-    pub fn big_object_builder<'t>(&self, jtype: &'t JodinType) -> JBigObjectBuilder<'_, 't> {
+    pub fn big_object_builder<'t>(&'t self, jtype: &'t JodinType) -> JBigObjectBuilder<'t> {
         JBigObjectBuilder::new(jtype, self)
     }
 
     /// Adds a jodin type declaration into the environment
-    pub fn add<'t, T: Type<'n, 't>>(
+    pub fn add<'t, T: Type<'t>>(
         &mut self,
         jty: T,
-        node: Option<&'n JodinNode>,
+        node: Option<&JodinNode>,
     ) -> JodinResult<()> {
         let jtype: JodinType = jty.into();
         let type_info = TypeInfo::new(jtype, node);
@@ -185,11 +185,11 @@ impl<'n> TypeEnvironment<'n> {
     }
 }
 
-pub struct TypeEnvironmentManager<'n> {
-    env: TypeEnvironment<'n>,
+pub struct TypeEnvironmentManager {
+    env: TypeEnvironment,
 }
 
-impl<'n> TypeEnvironmentManager<'n> {
+impl TypeEnvironmentManager {
     /// Create a new manager
     pub fn new() -> Self {
         TypeEnvironmentManager {
@@ -198,25 +198,25 @@ impl<'n> TypeEnvironmentManager<'n> {
     }
 
     /// Create a new manager using a pre-built environment
-    pub fn with_env(env: TypeEnvironment<'n>) -> Self {
+    pub fn with_env(env: TypeEnvironment) -> Self {
         Self { env }
     }
 
     /// Finishes the manager and returns the environment
-    pub fn finish(self) -> TypeEnvironment<'n> {
+    pub fn finish(self) -> TypeEnvironment {
         self.env
     }
 
     /// Create a type from some jodin node
-    pub fn create_type<'t, T: BuildType<'n, 't>>(&self, node: &JodinNode) -> JodinResult<T> {
+    pub fn create_type<'t, T: BuildType<'t>>(&self, node: &JodinNode) -> JodinResult<T> {
         T::build_type(node, &self.env, None)
     }
 
     /// Save the type in the environment
-    pub fn store_type<'t, T: Type<'n, 't>>(
+    pub fn store_type<'t, T: Type<'t>>(
         &mut self,
         ty: T,
-        node: Option<&'n JodinNode>,
+        node: Option<&JodinNode>,
     ) -> JodinResult<()> {
         self.env.add(ty, node)
     }

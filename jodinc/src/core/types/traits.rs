@@ -71,7 +71,7 @@ impl Into<JodinType> for JTrait {
     }
 }
 
-impl<'n, 't> Type<'n, 't> for JTrait {
+impl<'t> Type<'t> for JTrait {
     fn type_identifier(&self) -> Identifier {
         self.id.clone()
     }
@@ -81,8 +81,8 @@ impl<'n, 't> Type<'n, 't> for JTrait {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JTrait {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JTrait {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -95,8 +95,8 @@ pub struct JTraitObject {
     type_id: u32,
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for JTraitObject {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JTraitObject {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -107,7 +107,7 @@ impl Into<JodinType> for JTraitObject {
     }
 }
 
-impl Type<'_, '_> for JTraitObject {
+impl Type<'_> for JTraitObject {
     fn type_identifier(&self) -> Identifier {
         &self.jtrait.id >> &self.owner_type
     }

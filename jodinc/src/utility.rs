@@ -31,6 +31,15 @@ pub trait Tree {
         ret
     }
 }
+
+pub fn node_count(tree: &impl Tree) -> usize {
+    let mut output = 1;
+    for child in tree.direct_children() {
+        output += node_count(child);
+    }
+    output
+}
+
 /// Box a value
 pub trait IntoBox: Sized {
     /// Put this value into the heap
@@ -85,8 +94,20 @@ impl Bytes {
 }
 
 pub trait Visitor<Visited, Output> {
-    fn accept(&self, environment: &Visited) -> Output;
+    fn visit(&self, environment: &Visited) -> Output;
 }
+
+/// An acceptor takes in an object
+pub trait Acceptor<'a, Visitor> {
+    type Output;
+    fn accept(&'a self, visitor: Visitor) -> Self::Output;
+}
+
+pub trait AcceptorMut<'a, Visitor> : Acceptor<'a, Visitor> {
+    type MutOutput;
+    fn accept_mut(&'a mut self, visitor: Visitor) -> Self::MutOutput;
+}
+
 
 pub trait Flatten<T, E> {
     fn flatten(this: Self) -> Result<T, E>;
@@ -100,6 +121,13 @@ impl<T, E> Flatten<T, E> for Result<Result<T, E>, E> {
             Err(e) => Err(e),
         }
     }
+}
+
+pub fn usum<F : Fn(usize) -> usize>(from: usize, to: usize, f: F) -> usize {
+    (from..=to)
+        .into_iter()
+        .map(|index| f(index))
+        .sum()
 }
 
 #[cfg(test)]

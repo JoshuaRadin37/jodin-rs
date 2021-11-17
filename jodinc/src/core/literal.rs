@@ -463,7 +463,7 @@ constant_cast!(
 );
 
 impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
-    fn accept(&self, environment: &HashMap<Identifier, Literal>) -> JodinResult<Literal> {
+    fn visit(&self, environment: &HashMap<Identifier, Literal>) -> JodinResult<Literal> {
         match self.inner() {
             JodinNodeType::Identifier(_) => {
                 let resolved: &ResolvedIdentityTag = self.get_tag()?;
@@ -475,7 +475,7 @@ impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
             }
             JodinNodeType::Literal(lit) => Ok(lit.clone()),
             JodinNodeType::Uniop { op, inner } => {
-                let inner = inner.accept(environment)?;
+                let inner = inner.visit(environment)?;
                 match inner {
                     Literal::String(s) => Err(JodinErrorType::NotConstantExpression(s).into()),
                     Literal::Char(v) => op.evaluate_uniop(v),
@@ -495,8 +495,8 @@ impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
             JodinNodeType::Binop {
                 op, lhs, rhs
             } => {
-                let lhs = lhs.accept(environment)?;
-                let rhs = rhs.accept(environment)?;
+                let lhs = lhs.visit(environment)?;
+                let rhs = rhs.visit(environment)?;
 
                 match lhs {
                     Literal::String(s) => Err(JodinErrorType::NotConstantExpression(s).into()),
@@ -518,7 +518,7 @@ impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
                 to_type, factor
             } => {
                 if let TypeSpecifier::Primitive(prim) = &to_type.type_specifier {
-                    let as_literal = factor.accept(environment)?;
+                    let as_literal = factor.visit(environment)?;
                     match prim {
                         Primitive::Boolean => {
                             ConstantCast::<bool>::try_constant_cast(as_literal)?.try_into()
@@ -618,16 +618,16 @@ mod tests {
     #[test]
     fn constant_expressions() {
         let lit_node = parse_expression("(3+2+-2)/3 - 1").expect("This should be parsable as a expression");
-        let as_literal = lit_node.accept(&HashMap::new()).expect("All literals and operations involved are constant");
+        let as_literal = lit_node.visit(&HashMap::new()).expect("All literals and operations involved are constant");
         let val: i32 = as_literal.try_into().unwrap();
         assert_eq!(val, 0i32);
         let cast_expression = parse_expression("(16 as long)").expect("Couldn't parse a cast expression");
-        let as_literal = cast_expression.accept(&HashMap::new()).expect("Int to Long should be valid");
+        let as_literal = cast_expression.visit(&HashMap::new()).expect("Int to Long should be valid");
         let val: i64 = as_literal.try_into().unwrap();
         assert_eq!(val, 16i64);
 
         let floating_point_node = parse_expression("3.2").expect("Floats supported now");
-        let as_float: f32 = floating_point_node.accept(&HashMap::new())
+        let as_float: f32 = floating_point_node.visit(&HashMap::new())
             .expect("All literals and operations involved are constant")
             .try_into()
             .expect("Couldn't treat this as f32");
@@ -636,7 +636,7 @@ mod tests {
 
         let floating_point_node = parse_expression("6.4l").expect("Floats supported now");
         println!("{:?}", floating_point_node);
-        let as_float: f64 = floating_point_node.accept(&HashMap::new())
+        let as_float: f64 = floating_point_node.visit(&HashMap::new())
             .expect("All literals and operations involved are constant")
             .try_into()
             .expect("Couldn't treat this as f64");

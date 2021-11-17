@@ -45,13 +45,13 @@ pub enum Primitive {
     VaList,
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Primitive {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Primitive {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
 
-impl Type<'_, '_> for Primitive {
+impl Type<'_> for Primitive {
     fn type_identifier(&self) -> Identifier {
         let str: &str = match self {
             Primitive::Void => "void",
@@ -110,10 +110,10 @@ impl Display for Primitive {
     }
 }
 
-impl<'n, 't> BuildType<'n, 't> for Primitive {
+impl<'t> BuildType<'t> for Primitive {
     fn build_type(
         node: &JodinNode,
-        env: &TypeEnvironment<'n>,
+        env: &TypeEnvironment,
         target_type: Option<&IntermediateType>,
     ) -> JodinResult<Self> {
         let s = "<primitive>";

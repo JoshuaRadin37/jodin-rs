@@ -47,8 +47,8 @@ impl Array {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Array {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl<'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Array {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -59,7 +59,7 @@ impl Into<JodinType> for Array {
     }
 }
 
-impl Type<'_, '_> for Array {
+impl Type<'_> for Array {
     fn type_identifier(&self) -> Identifier {
         format!("[{} array]", self.base_type).into()
     }

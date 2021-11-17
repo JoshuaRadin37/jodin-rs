@@ -52,13 +52,13 @@ impl Structure {
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Structure {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Structure {
+    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
 
-impl Type<'_, '_> for Structure {
+impl Type<'_> for Structure {
     fn type_identifier(&self) -> Identifier {
         self.name.clone()
     }
@@ -68,7 +68,7 @@ impl Type<'_, '_> for Structure {
     }
 }
 
-impl CompoundType<'_, '_> for Structure {
+impl CompoundType<'_> for Structure {
     fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
         self.fields.iter().map(|field| field.as_tuple()).collect()
     }
