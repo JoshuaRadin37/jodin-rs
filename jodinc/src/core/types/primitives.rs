@@ -45,8 +45,8 @@ pub enum Primitive {
     VaList,
 }
 
-impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Primitive {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Primitive {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }

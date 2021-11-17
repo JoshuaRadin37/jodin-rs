@@ -93,8 +93,8 @@ impl Bytes {
     }
 }
 
-pub trait Visitor<Visited, Output> {
-    fn visit(&self, environment: &Visited) -> Output;
+pub trait Visitor<'t, Visited, Output> {
+    fn visit(&'t self, environment: &'t Visited) -> Output;
 }
 
 /// An acceptor takes in an object

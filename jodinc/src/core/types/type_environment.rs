@@ -37,14 +37,14 @@ pub struct MinimalTypeEnvironment {
 #[derive(Debug)]
 pub struct TypeInfo {
     /// The actual jodin type
-    pub jtype: JodinType,
+    pub jtype: Arc<JodinType>,
     /// The declaring node (if relevant)
     pub decl_node: Option<NodeReference>,
 }
 
 impl TypeInfo {
     pub fn new(jtype: JodinType, decl_node: Option<&JodinNode>) -> Self {
-        TypeInfo { jtype, decl_node: decl_node.map(|node| node.get_reference()) }
+        TypeInfo { jtype: Arc::new(jtype), decl_node: decl_node.map(|node| node.get_reference()) }
     }
 }
 
@@ -128,7 +128,7 @@ impl TypeEnvironment {
     pub fn get_type_by_name(&self, name: &Identifier) -> JodinResult<&JodinType> {
         self.types
             .get(name)
-            .map(|info| &info.jtype)
+            .map(|info| &*info.jtype)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(name.clone()).into())
     }
 
@@ -144,8 +144,23 @@ impl TypeEnvironment {
         todo!()
     }
 
-    pub fn big_object_builder<'t>(&'t self, jtype: &'t JodinType) -> JBigObjectBuilder<'t> {
-        JBigObjectBuilder::new(jtype, self)
+    pub fn big_object_builder<'t, T : Type<'t>>(&'t self, jtype: &'t T) -> JBigObjectBuilder<'t> {
+        let ty = self.get_type_by_name(&jtype.type_identifier()).expect("Type not within this environment");
+        JBigObjectBuilder::new(ty, self)
+    }
+
+    pub fn jodin_type_from_intermediate(&self, intermediate: &IntermediateType) -> JodinResult<JodinType> {
+        let mut base_type = match &intermediate.type_specifier {
+            TypeSpecifier::Id(i) => {
+                self.get_type_by_name(i)?.clone()
+            }
+            TypeSpecifier::Primitive(p) => {
+                JodinType::from(p.clone())
+            }
+            _ => unreachable!()
+        };
+
+        todo!()
     }
 
     /// Adds a jodin type declaration into the environment

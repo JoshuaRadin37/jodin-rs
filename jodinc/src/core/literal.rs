@@ -462,7 +462,7 @@ constant_cast!(
     Long
 );
 
-impl Visitor<HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
+impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNode {
     fn visit(&self, environment: &HashMap<Identifier, Literal>) -> JodinResult<Literal> {
         match self.inner() {
             JodinNodeType::Identifier(_) => {

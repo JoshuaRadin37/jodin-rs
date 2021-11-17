@@ -81,8 +81,8 @@ impl<'t> Type<'t> for JTrait {
     }
 }
 
-impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JTrait {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JTrait {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -95,8 +95,8 @@ pub struct JTraitObject {
     type_id: u32,
 }
 
-impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JTraitObject {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JTraitObject {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }

@@ -92,9 +92,9 @@ pub fn default_logging() {
 }
 
 /// processes the jodin node tree
-pub fn process_jodin_node(mut node: JodinNode) -> JodinResult<JodinNode> {
-    let analyzed = analyze(node)?;
+pub fn process_jodin_node(mut node: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
+    let (analyzed, env) = analyze(node)?;
     let optimized = optimize(analyzed)?;
-    Ok(optimized)
+    Ok((optimized, env))
 }
 

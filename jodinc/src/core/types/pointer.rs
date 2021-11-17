@@ -1,6 +1,7 @@
 //! Stores type information for the pointer type
 //!
 
+use std::sync::{Arc, Weak};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::big_object::JBigObject;
@@ -14,22 +15,22 @@ lazy_static! {
     static ref POINTER_TYPE_ID: u32 = get_type_id();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Pointer {
-    inner_jtype: Box<JodinType>,
+    inner_jtype: Weak<JodinType>,
 }
 
 impl Pointer {
     /// Create a new pointer from a pointer
-    pub fn new(inner_jtype: JodinType) -> Self {
+    pub fn new(inner_jtype: &Arc<JodinType>) -> Self {
         Pointer {
-            inner_jtype: Box::new(inner_jtype),
+            inner_jtype: Arc::downgrade(inner_jtype),
         }
     }
 }
 
-impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -50,6 +51,6 @@ impl Type<'_> for Pointer {
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.inner_jtype.as_intermediate().with_pointer()
+        self.inner_jtype.upgrade().unwrap().as_intermediate().with_pointer()
     }
 }

@@ -1,5 +1,7 @@
 //! The array types that exist within Jodin
 
+
+use std::sync::{Arc, Weak};
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
@@ -27,28 +29,28 @@ pub enum ArrayType {
 }
 
 /// An Array type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Array {
     /// The base type of the array
-    pub base_type: IntermediateType,
+    pub base_type: Weak<JodinType>,
     /// How the array is being created
-    pub array_type: ArrayType,
+    pub array_size: usize,
     type_id: u32,
 }
 
 impl Array {
     /// Create a new array type
-    pub fn new(base_type: IntermediateType, array_type: ArrayType) -> Self {
+    pub fn new(base_type: &Arc<JodinType>, array_size: usize) -> Self {
         Array {
-            base_type,
-            array_type,
+            base_type: Arc::downgrade(base_type),
+            array_size,
             type_id: get_type_id(),
         }
     }
 }
 
-impl<'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for Array {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Array {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -61,7 +63,7 @@ impl Into<JodinType> for Array {
 
 impl Type<'_> for Array {
     fn type_identifier(&self) -> Identifier {
-        format!("[{} array]", self.base_type).into()
+        format!("[{} array]", self.base_type.upgrade().unwrap()).into()
     }
 
     fn type_unique_id(&self) -> u32 {
@@ -69,6 +71,6 @@ impl Type<'_> for Array {
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.base_type.clone().with_abstract_array()
+        self.base_type.upgrade().unwrap().as_intermediate()
     }
 }

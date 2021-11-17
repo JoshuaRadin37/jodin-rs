@@ -34,8 +34,8 @@ impl Namespaced for JObject {
     }
 }
 
-impl <'t> Visitor<TypeEnvironment, JodinResult<JBigObject<'t>>> for JObject {
-    fn visit(&self, environment: &TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JObject {
+    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
 }
@@ -62,8 +62,8 @@ impl CompoundType<'_> for JObject {
     }
 }
 
-impl<'types> Visitor<TypeEnvironment, Option<JBigObject<'types>>> for JObject {
-    fn visit(&self, environment: &TypeEnvironment) -> Option<JBigObject<'types>> {
+impl<'types> Visitor<'types, TypeEnvironment, Option<JBigObject<'types>>> for JObject {
+    fn visit(&'types self, environment: &'types TypeEnvironment) -> Option<JBigObject<'types>> {
         let mut fields = self.fields.iter().collect::<Vec<_>>();
 
         todo!()
@@ -74,8 +74,8 @@ impl Morph<'_> for JObject {
     type Morphed = Self;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
-    where
-        I: IntoIterator<Item = (Identifier, Identifier)>,
+        where
+            I: IntoIterator<Item = (Identifier, Identifier)>,
     {
         todo!()
     }
@@ -85,16 +85,16 @@ impl Morph<'_> for JObject {
 #[derive(Debug)]
 pub struct JBigObject<'types> {
     base_type: &'types JodinType,
-    fields: Vec<&'types Field>,
+    fields: Vec<Field<JBigObject<'types>>>,
     traits: Vec<&'types JTraitObject>,
 }
 
-impl<'t> GetResolvedMember<Field> for JBigObject<'t> {
-    fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field> {
+impl<'t> GetResolvedMember<Field<JBigObject<'t>>, JBigObject<'t>> for JBigObject<'t> {
+    fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field<JBigObject<'t>>> {
         self.fields
             .iter()
             .find(|trt| &trt.name == member_id)
-            .map(|d| d.deref())
+            .map(|d| d)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
     }
 }
@@ -163,6 +163,7 @@ impl<'types> JBigObjectBuilder<'types> {
         base_type: &'types JodinType,
         type_env: &'types TypeEnvironment,
     ) -> Self {
+        debug!("Creating BigObject builder for {}", base_type);
         JBigObjectBuilder {
             base_type,
             parent_object: Default::default(),
@@ -171,7 +172,7 @@ impl<'types> JBigObjectBuilder<'types> {
         }
     }
 
-    pub fn add_parent_type<T: Type<'types>>(&mut self, parent: &T) {
+    pub fn add_parent_type<T: Type<'types>>(&mut self, parent: &'types T) {
         let big_object = parent
             .visit(self.type_env)
             .expect("Could not set parent type");
@@ -179,11 +180,29 @@ impl<'types> JBigObjectBuilder<'types> {
     }
 
     pub fn build(self) -> JBigObject<'types> {
-        let fields: Vec<&Field> = self
+        let mut fields: Vec<Field<JBigObject<'types>>> = vec![];
+        let big_o_factory = JBigObjectFactory::new(self.type_env);
+        fields.extend(
+            self.base_type.fields()
+                .into_iter()
+                .map(|(vis, ty, id)|
+                    {
+                        Field::new(
+                            vis.clone(),
+                            big_o_factory.new_instance(
+                                &self.type_env
+                                    .jodin_type_from_intermediate(ty)
+                                    .unwrap()
+                            ).unwrap(),
+                            id.clone())
+                    }
+                )
+        );
+        let parent = self
             .parent_object
             .into_iter()
-            .flat_map(|big_obj| big_obj.fields)
-            .collect();
+            .flat_map(|big_obj| big_obj.fields);
+        fields.extend(parent);
         let mut traits: Vec<&JTraitObject> = Vec::new();
         let mut trait_iter = self.jtraits.into_iter();
         while let Some(next) = trait_iter.next() {
@@ -197,3 +216,24 @@ impl<'types> JBigObjectBuilder<'types> {
         }
     }
 }
+
+/// A factory for building [`JBigObject`]s.
+///
+/// [`JBigObject`]: JBigObject
+pub struct JBigObjectFactory<'types> {
+    env: &'types TypeEnvironment
+}
+
+impl<'types> JBigObjectFactory<'types> {
+    /// Create a new big object factory
+    pub fn new(env: &'types TypeEnvironment) -> Self {
+        JBigObjectFactory { env }
+    }
+
+    /// Create a new instance of a j big object
+    pub fn new_instance<T : Type<'types>>(&self, ty: &'types T) -> JodinResult<JBigObject<'types>> {
+        ty.visit(self.env)
+    }
+}
+
+
