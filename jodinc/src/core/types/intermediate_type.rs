@@ -87,6 +87,17 @@ impl IntermediateType {
         Self::from(Primitive::Void)
     }
 
+    pub fn identifier(&self) -> Option<&Identifier> {
+        match &self.type_specifier {
+            TypeSpecifier::Id(i) => { Some(i) }
+            _ => None
+        }
+    }
+
+    pub fn set_resolved_identifier(&mut self, id: Identifier) {
+
+    }
+
     /// Make this type constant if it isn't already
     pub fn into_const(mut self) -> Self {
         self.is_const = true;

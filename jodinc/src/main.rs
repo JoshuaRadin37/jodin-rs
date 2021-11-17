@@ -1,14 +1,18 @@
+
 use jodin_rs::cli::JodinRsApp;
 use jodin_rs::compilation_settings::CompilationSettings;
-use jodin_rs::core::error::{JodinErrorType, JodinResult};
+use jodin_rs::core::error::{JodinError, JodinErrorType, JodinResult};
 use jodin_rs::passes::analysis::analyze;
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimization::optimize;
-use jodin_rs::process_jodin_node;
+use jodin_rs::{init_logging, process_jodin_node};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
+use std::str::FromStr;
+use log::LevelFilter;
+
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
@@ -27,6 +31,20 @@ fn main() -> JodinResult<()> {
     }
     if matches.is_present("tast") {
         settings.output_tast = true;
+    }
+    if matches.is_present("debug") {
+        let level = match u8::from_str(matches.value_of("debug").unwrap()) {
+            Ok(0) => LevelFilter::Off,
+            Ok(1) => LevelFilter::Error,
+            Ok(2) => LevelFilter::Warn,
+            Ok(3) => LevelFilter::Info,
+            Ok(4) => LevelFilter::Debug,
+            Ok(o) => panic!("No debug level {}", o),
+            Err(_) => panic!("invalid value for debug")
+        };
+        init_logging(level)
+    } else {
+        init_logging(LevelFilter::Info)
     }
 
     let (_command, command_args) = match matches.subcommand() {

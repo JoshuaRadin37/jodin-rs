@@ -6,11 +6,14 @@ use crate::ast::JodinNode;
 use crate::ast::JodinNodeType;
 
 use crate::ast::tags::Tag;
+use crate::ast::tags::TagTools;
 use crate::core::import::{Import, ImportType};
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use crate::utility::Tree;
 use std::any::Any;
 use std::cmp::Ordering;
+use std::process::id;
 
 /// A toolchain that assigns identities to every node that needs to be resolved. For example, the
 /// types must all be resolved.
@@ -35,10 +38,12 @@ impl IdentityResolutionTool {
         &mut self,
         input: JodinNode,
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
+        info!("Creating absolute identifiers...");
         let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
         let base = resolver.base_namespace();
         self.visibility
             .insert_with_identifier(Visibility::Public, base.clone())?;
+        info!("Resolving identifiers...");
         self.setter
             .set_identities(&mut tree, &mut resolver, &self.visibility)
             .map(|_| (tree, resolver))
@@ -68,7 +73,7 @@ impl Tag for ResolvedIdentityTag {
     }
 
     fn tag_info(&self) -> String {
-        format!("[Resolved {}]", self.absolute_id())
+        format!("[Resolved '{}']", self.absolute_id())
     }
 
     fn max_of_this_tag(&self) -> u32 {
@@ -193,7 +198,8 @@ impl IdentifierCreator {
                     _ => {}
                 }
 
-                let abs = id_resolver.create_absolute_path_no_strip(id);
+                let abs = id_resolver.create_absolute_path(id);
+                info!("Created absolute identifier for use: {:?}", abs);
                 visibility_registry.insert_with_identifier(Visibility::Protected, abs.clone())?;
                 if let Ok(tag) = tree.get_tag::<VisibilityTag>() {
                     let vis = tag.visibility().clone();
@@ -208,6 +214,11 @@ impl IdentifierCreator {
                 for name in names {
                     self.create_identities(name, id_resolver, visibility_registry)?;
                 }
+            }
+            JodinNodeType::StoreVariable {
+                storage_type: _, name, ..
+            } => {
+                self.create_identities(name, id_resolver, visibility_registry)?;
             }
             JodinNodeType::FunctionDefinition {
                 name,
@@ -250,15 +261,19 @@ impl IdentifierCreator {
             }
             JodinNodeType::StructureDefinition { name, members } => {
                 self.create_identities(name, id_resolver, visibility_registry)?;
+                debug!("Set structure name to {}", name.resolved_id().unwrap());
 
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 // tags_to_add.push(Box::new(tag.clone()));
                 let name = Identifier::from(tag.absolute_id().this());
-                id_resolver.push_namespace(name);
+                id_resolver.push_namespace(name.clone());
 
+                debug!("Creating identifiers for members of {}", name);
                 for member in members {
                     self.create_identities(member, id_resolver, visibility_registry)?;
+                    debug!("Structure {} member registered: {}", name, member.direct_children()[0].resolved_id().unwrap());
                 }
+
 
                 id_resolver.pop_namespace();
             }
@@ -441,14 +456,14 @@ impl IdentifierSetter {
             }
             JodinNodeType::Identifier(id) => {
                 if !has_id {
-                    println!(
+                    info!(
                         "Attempting to find {} from {}",
                         id,
                         id_resolver.current_namespace_with_base()
                     );
                     let resolved =
                         self.try_get_absolute_identifier(id, id_resolver, visibility_resolver)?;
-                    println!("Found {}", resolved);
+                    info!("Found {}", resolved);
                     let resolved_tag = ResolvedIdentityTag::new(resolved);
 
                     tree.add_tag(resolved_tag)?;
@@ -571,7 +586,7 @@ impl IdentifierSetter {
         visibility: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
         let ref id_with_base = id_resolver.base_namespace() + id;
-        println!("Attempting to find {}", id);
+        debug!("Attempting to find {}", id);
         // first get alias if it exist
         let alias =
             self.aliases
@@ -598,7 +613,7 @@ impl IdentifierSetter {
                     }
                 }
             });
-        println!(
+        debug!(
             "Found {:?} while trying to find identifier {:?}",
             (&alias, &as_normal),
             id
@@ -622,7 +637,7 @@ impl IdentifierSetter {
         id_resolver: &IdentifierResolver,
         visibility: &Registry<Visibility>,
     ) -> JodinResult<Vec<Identifier>> {
-        println!("import base = {}", import.id());
+        trace!("import base = {}", import.id());
         let mut aliases = vec![];
         let resolved = &id_resolver.resolve_path(import.id().clone(), true)?;
         let current = id_resolver.current_namespace_with_base();
@@ -653,7 +668,7 @@ impl IdentifierSetter {
                 ))?;
                 for relevant_object in relevant {
                     let target = relevant_object.clone();
-                    println!(
+                    trace!(
                         "Checking if {} is visible from {} for wildcard",
                         target, current
                     );
@@ -670,7 +685,7 @@ impl IdentifierSetter {
                          */
 
                         let alias = relevant_object.this_as_id();
-                        println!("Found in wildcard: {}", alias);
+                        trace!("Found in wildcard: {}", alias);
                         self.aliases
                             .insert_with_identifier(target.clone(), &current + &alias)?;
                         aliases.push(&current + &alias);
@@ -687,7 +702,7 @@ impl IdentifierSetter {
                 }
             }
         }
-        println!("Imported {:?}", aliases);
+        info!("Imported {:?}", aliases);
         Ok(aliases)
     }
 

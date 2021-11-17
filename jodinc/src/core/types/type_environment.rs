@@ -29,6 +29,11 @@ pub struct TypeEnvironment<'node> {
     tlb: HashMap<IdentifierChain, Identifier>,
 }
 
+/// A type environment with no references
+pub struct MinimalTypeEnvironment {
+
+}
+
 #[derive(Debug)]
 pub struct TypeInfo<'node> {
     /// The actual jodin type

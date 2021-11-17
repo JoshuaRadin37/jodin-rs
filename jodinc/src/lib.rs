@@ -56,6 +56,10 @@ extern crate lazy_static;
 #[macro_use]
 extern crate lalrpop_util;
 
+#[macro_use]
+extern crate log;
+
+
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 use crate::core::types::type_environment::TypeEnvironment;
@@ -71,9 +75,26 @@ pub mod parsing;
 pub mod passes;
 pub mod utility;
 
+use simplelog::*;
+
+/// Initializes logging for the pacakge
+pub fn init_logging(level: LevelFilter) {
+    TermLogger::init(level, Config::default(), TerminalMode::Mixed, ColorChoice::Auto)
+        .expect("Could not create logger");
+}
+
+pub fn default_logging() {
+    if cfg!(debug_assertions) {
+        init_logging(LevelFilter::Trace);
+    } else if cfg!(release) {
+        init_logging(LevelFilter::Info);
+    }
+}
+
 /// processes the jodin node tree
 pub fn process_jodin_node(mut node: JodinNode) -> JodinResult<JodinNode> {
     let analyzed = analyze(node)?;
     let optimized = optimize(analyzed)?;
     Ok(optimized)
 }
+

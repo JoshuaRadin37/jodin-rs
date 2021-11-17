@@ -4,6 +4,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
+use std::process::id;
+
 
 // use ptree::{write_tree, Style, TreeItem};
 
@@ -48,6 +50,7 @@ impl IdentifierResolver {
         let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
         self.tree.add_namespace(full_path.clone());
         self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
+        info!("Current namespace set to {}", self.current_namespace_with_base());
     }
 
     /// Pops the outermost namespace from the current namespace
@@ -96,7 +99,7 @@ impl IdentifierResolver {
         Ok(())
     }
 
-    /// Creates an absolute path based off the current namesapce
+    /// Creates an absolute path based off the current namespace
     pub fn create_absolute_path(&mut self, id: &Identifier) -> Identifier {
         /*
         if self.current_namespace.is_none() {
@@ -108,7 +111,7 @@ impl IdentifierResolver {
 
          */
         let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
-        println!("Created path {}", full_path);
+        trace!("Created abs path {:?}", full_path);
         let parent_path = &**full_path.parent().as_ref().unwrap();
         self.tree.add_namespace(parent_path.clone());
         let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
@@ -130,7 +133,7 @@ impl IdentifierResolver {
 
          */
         let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
-        println!("Created path {}", full_path);
+        trace!("Created abs (no_strip) path {:?}", full_path);
         let parent_path = &**full_path.parent().as_ref().unwrap();
         self.tree.add_namespace(parent_path.clone());
         let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
@@ -154,23 +157,28 @@ impl IdentifierResolver {
         path: Identifier,
         keep_highest_parent: bool,
     ) -> JodinResult<Identifier> {
+        info!("Resolving path {}...", path);
         let mut output = HashSet::new();
 
         let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
-        println!("Absolute path = {}", absolute_path);
-        let relative_path = Identifier::new_concat(self.current_namespace_with_base(), &path);
-        println!("Relative path = {}", relative_path);
+        debug!("As absolute path = {:?}", absolute_path);
         if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
             output.insert(val);
         }
+        if self.current_namespace.is_some() {
+            let relative_path = Identifier::new_concat(&self.current_namespace_with_base(), &path);
+            debug!("As relative to current path = {:?}", relative_path);
 
-        if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
-            output.insert(val);
+            if relative_path != absolute_path {
+                if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
+                    output.insert(val);
+                }
+            }
         }
 
         for using in &self.using_namespaces {
             let using_path = Identifier::new_concat(using, &path);
-            println!("Using path = {}", using_path);
+            debug!("As relative to {:?} path = {:?}", using, using_path);
             if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
                 output.insert(id);
             }
@@ -180,6 +188,7 @@ impl IdentifierResolver {
             0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
             1 => {
                 let identifier = output.into_iter().next().cloned().unwrap();
+                info!("Resolved {:?} -> {:?}", path, identifier);
                 if !keep_highest_parent {
                     Ok(identifier.strip_highest_parent().unwrap())
                 } else {
@@ -292,7 +301,7 @@ impl<T: Namespaced> NamespaceTree<T> {
     /// Creates a new namespace tree that's completely empty
     pub fn new() -> Self {
         Self {
-            head: Node::new(Identifier::from("")),
+            head: Node::new(Identifier::from("{base}")),
         }
     }
 
@@ -507,6 +516,7 @@ impl<T: Namespaced> NamespaceTree<T> {
     pub fn get_from_absolute_identifier(&self, path: &Identifier) -> JodinResult<&T> {
         let mut ptr = &self.head;
         let names: Vec<String> = path.into_iter().collect();
+
         for name in &names[..names.len() - 1] {
             /*
             if ptr.id() != name {
@@ -514,18 +524,22 @@ impl<T: Namespaced> NamespaceTree<T> {
             }
 
              */
+            trace!("At node {} out of {:?}", ptr.id, path);
             let mut found = false;
             for child in ptr.children() {
                 if child.id().this() == name {
                     ptr = child;
+
                     found = true;
                     break;
                 }
             }
             if !found {
+                warn!("Nothing found for {}", path);
                 return Err(IdentifierDoesNotExist(path.clone()).into());
             }
         }
+        trace!("At node {} out of {:?}", ptr.id, path);
         let last_ptr = ptr;
         for value in last_ptr.related_values() {
             let full_id = value.get_identifier();
@@ -533,6 +547,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 return Ok(value);
             }
         }
+        warn!("Nothing found for {}", path);
         Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
