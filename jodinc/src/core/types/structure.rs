@@ -1,14 +1,16 @@
 //! The most basic, complex type that is just a record
 
-use std::sync::{Arc, Weak};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
+use std::sync::{Arc, Weak};
 
 use crate::core::types::big_object::{JBigObject, JBigObjectBuilder};
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
+use crate::core::types::{
+    get_type_id, CompoundType, Field, JField, JodinType, JodinTypeReference, Type,
+};
 use crate::utility::Visitor;
 
 /// Contains a name and its fields
@@ -25,13 +27,9 @@ impl Structure {
         Structure {
             name,
             type_id: get_type_id(),
-            fields: fields.into_iter().map(|Field {
-                vis,
-                jtype,
-                name
-            }| {
-                Field::new(vis, Arc::downgrade(jtype), name)
-            })
+            fields: fields
+                .into_iter()
+                .map(|Field { vis, jtype, name }| Field::new(vis, Arc::downgrade(jtype), name))
                 .collect(),
         }
     }
@@ -60,7 +58,7 @@ impl Structure {
     }
 }
 
-impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Structure {
+impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Structure {
     fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         let mut builder = environment.big_object_builder(self);
         Ok(builder.build())
@@ -78,8 +76,8 @@ impl Type<'_> for Structure {
 }
 
 impl CompoundType<'_> for Structure {
-    fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
-        self.fields.iter().map(|field| field.as_tuple()).collect()
+    fn all_members(&self) -> Vec<&JField> {
+        self.fields.iter().collect()
     }
 }
 

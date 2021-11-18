@@ -216,7 +216,9 @@ impl IdentifierCreator {
                 }
             }
             JodinNodeType::StoreVariable {
-                storage_type: _, name, ..
+                storage_type: _,
+                name,
+                ..
             } => {
                 self.create_identities(name, id_resolver, visibility_registry)?;
             }
@@ -271,9 +273,12 @@ impl IdentifierCreator {
                 debug!("Creating identifiers for members of {}", name);
                 for member in members {
                     self.create_identities(member, id_resolver, visibility_registry)?;
-                    debug!("Structure {} member registered: {}", name, member.direct_children()[0].resolved_id().unwrap());
+                    debug!(
+                        "Structure {} member registered: {}",
+                        name,
+                        member.direct_children()[0].resolved_id().unwrap()
+                    );
                 }
-
 
                 id_resolver.pop_namespace();
             }
@@ -670,7 +675,8 @@ impl IdentifierSetter {
                     let target = relevant_object.clone();
                     trace!(
                         "Checking if {} is visible from {} for wildcard",
-                        target, current
+                        target,
+                        current
                     );
                     if identifier_is_visible_from(&current, &target, visibility)? {
                         /*

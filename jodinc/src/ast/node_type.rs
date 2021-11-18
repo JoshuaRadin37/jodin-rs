@@ -1,11 +1,11 @@
 //! The differentiation of jodin nodes in the AST that allow for more complex information to be
 //! stored within the AST.
 
-use std::any::Any;
 use crate::core::identifier::Identifier;
 use crate::core::import::Import;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
+use std::any::Any;
 
 use crate::ast::jodin_node::JodinNode;
 use crate::ast::tags::Tag;
@@ -709,6 +709,4 @@ impl JodinNodeType {
         };
         vector
     }
-
 }
-

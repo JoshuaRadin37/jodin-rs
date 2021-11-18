@@ -1,4 +1,3 @@
-
 use jodin_rs::cli::JodinRsApp;
 use jodin_rs::compilation_settings::CompilationSettings;
 use jodin_rs::core::error::{JodinError, JodinErrorType, JodinResult};
@@ -6,13 +5,12 @@ use jodin_rs::passes::analysis::analyze;
 use jodin_rs::passes::frontend::FilesToJodinNodeTool;
 use jodin_rs::passes::optimization::optimize;
 use jodin_rs::{init_logging, process_jodin_node};
+use log::LevelFilter;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use log::LevelFilter;
-
 
 fn main() -> JodinResult<()> {
     let cli = JodinRsApp::new();
@@ -40,7 +38,7 @@ fn main() -> JodinResult<()> {
             Ok(3) => LevelFilter::Info,
             Ok(4) => LevelFilter::Debug,
             Ok(o) => panic!("No debug level {}", o),
-            Err(_) => panic!("invalid value for debug")
+            Err(_) => panic!("invalid value for debug"),
         };
         init_logging(level)
     } else {

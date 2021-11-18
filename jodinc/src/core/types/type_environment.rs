@@ -15,9 +15,12 @@ use crate::passes::analysis::ResolvedIdentityTag;
 use crate::utility::Visitor;
 use std::any::Any;
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
 use std::hash::Hash;
+use std::mem::MaybeUninit;
 use std::ops::{Deref, Index};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, LockResult, RwLock, TryLockError, TryLockResult, Weak};
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug)]
@@ -27,11 +30,6 @@ pub struct TypeEnvironment {
     base_type_id: Identifier,
     impl_types_to_trait_obj: HashMap<Vec<Identifier>, Identifier>,
     tlb: HashMap<IdentifierChain, Identifier>,
-}
-
-/// A type environment with no references
-pub struct MinimalTypeEnvironment {
-
 }
 
 #[derive(Debug)]
@@ -44,7 +42,10 @@ pub struct TypeInfo {
 
 impl TypeInfo {
     pub fn new(jtype: JodinType, decl_node: Option<&JodinNode>) -> Self {
-        TypeInfo { jtype: Arc::new(jtype), decl_node: decl_node.map(|node| node.get_reference()) }
+        TypeInfo {
+            jtype: Arc::new(jtype),
+            decl_node: decl_node.map(|node| node.get_reference()),
+        }
     }
 }
 
@@ -144,31 +145,28 @@ impl TypeEnvironment {
         todo!()
     }
 
-    pub fn big_object_builder<'t, T : Type<'t>>(&'t self, jtype: &'t T) -> JBigObjectBuilder<'t> {
-        let ty = self.get_type_by_name(&jtype.type_identifier()).expect("Type not within this environment");
+    pub fn big_object_builder<'t, T: Type<'t>>(&'t self, jtype: &'t T) -> JBigObjectBuilder<'t> {
+        let ty = self
+            .get_type_by_name(&jtype.type_identifier())
+            .expect("Type not within this environment");
         JBigObjectBuilder::new(ty, self)
     }
 
-    pub fn jodin_type_from_intermediate(&self, intermediate: &IntermediateType) -> JodinResult<JodinType> {
+    pub fn jodin_type_from_intermediate(
+        &self,
+        intermediate: &IntermediateType,
+    ) -> JodinResult<JodinType> {
         let mut base_type = match &intermediate.type_specifier {
-            TypeSpecifier::Id(i) => {
-                self.get_type_by_name(i)?.clone()
-            }
-            TypeSpecifier::Primitive(p) => {
-                JodinType::from(p.clone())
-            }
-            _ => unreachable!()
+            TypeSpecifier::Id(i) => self.get_type_by_name(i)?.clone(),
+            TypeSpecifier::Primitive(p) => JodinType::from(p.clone()),
+            _ => unreachable!(),
         };
 
         todo!()
     }
 
     /// Adds a jodin type declaration into the environment
-    pub fn add<'t, T: Type<'t>>(
-        &mut self,
-        jty: T,
-        node: Option<&JodinNode>,
-    ) -> JodinResult<()> {
+    pub fn add<'t, T: Type<'t>>(&mut self, jty: T, node: Option<&JodinNode>) -> JodinResult<()> {
         let jtype: JodinType = jty.into();
         let type_info = TypeInfo::new(jtype, node);
         match self
@@ -198,6 +196,21 @@ impl TypeEnvironment {
             .get(&identifier)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(identifier).into())
     }
+
+    /// Creates a lazy type
+    pub fn lazy_type<I: Into<Identifier>>(&self, ty: I) -> LazyJodinType {
+        let cls = move || {
+            let info = self.types.get(&ty.into()).unwrap();
+            let weak = Arc::downgrade(&info.jtype);
+            weak
+        };
+        let inner = LazyJodinTypeInner::new(cls, self);
+        LazyJodinType {
+            inner: Arc::new(inner),
+        }
+    }
+
+    fn evaluate_lazy_types(&mut self) {}
 }
 
 pub struct TypeEnvironmentManager {
@@ -251,5 +264,79 @@ impl TypeEnvironmentManager {
     /// Loads the big object version of some variable
     pub fn load_variable_type(&self, var_id: &Identifier) -> JodinResult<JBigObject> {
         todo!()
+    }
+}
+
+/// Lazily get a jodin_type
+#[derive(Clone)]
+pub struct LazyJodinType {
+    inner: Arc<LazyJodinTypeInner>,
+}
+
+impl Debug for LazyJodinType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[LazyType]")
+    }
+}
+
+struct LazyJodinTypeInner {
+    stored: RwLock<Option<Weak<JodinType>>>,
+    supplied: AtomicBool,
+    supplier: Box<dyn FnOnce() -> Weak<JodinType>>,
+}
+
+impl LazyJodinTypeInner {
+    pub fn new<'e, F>(supplier: F, env: &'e TypeEnvironment) -> Self
+    where
+        F: 'e + FnOnce() -> Weak<JodinType>,
+    {
+        Self {
+            stored: RwLock::new(None),
+            supplied: AtomicBool::new(false),
+            supplier: Box::new(supplier),
+        }
+    }
+
+    fn lazy_initialize(&self) {
+        if self.supplied.load(Ordering::Acquire) {
+            return;
+        }
+
+        loop {
+            match self.stored.try_write() {
+                Ok(gotten) => {
+                    let mut storage = &mut *gotten;
+
+                    let supplied = (self.supplier)();
+
+                    *storage = Some(supplied);
+
+                    self.supplied.store(true, Ordering::Release);
+                }
+                Err(TryLockError::WouldBlock) => {}
+                Err(TryLockError::Poisoned(poisoned)) => {
+                    panic!("Lazy type poisoned: {:?}", poisoned)
+                }
+            }
+
+            while !self.supplied.load(Ordering::Relaxed) { /* busy loop */ }
+        }
+    }
+}
+
+impl LazyJodinType {
+    pub fn get(&self) -> Weak<JodinType> {
+        self.inner.lazy_initialize();
+        match self.inner.stored.read() {
+            Ok(i) => match &*i {
+                None => {
+                    unreachable!("Should've been initialized")
+                }
+                Some(val) => val.clone(),
+            },
+            Err(poisoned) => {
+                panic!("Lazy type poisoned: {:?}", poisoned)
+            }
+        }
     }
 }

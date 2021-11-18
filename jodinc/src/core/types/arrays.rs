@@ -1,7 +1,5 @@
 //! The array types that exist within Jodin
 
-
-use std::sync::{Arc, Weak};
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
@@ -10,6 +8,7 @@ use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{get_type_id, JodinType, Type};
 use crate::utility::Visitor;
+use std::sync::{Arc, Weak};
 
 /// An array type
 #[derive(Debug)]

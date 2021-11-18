@@ -1,14 +1,14 @@
-use logos::internal::CallbackResult;
 use jodin_rs::ast::tags::TagTools;
 use jodin_rs::core::error::JodinResult;
-use jodin_rs::parsing::parse_program;
-use jodin_rs::{process_jodin_node,default_logging};
 use jodin_rs::core::identifier::Identifier;
 use jodin_rs::core::privacy::Visibility;
 use jodin_rs::core::types::big_object::JBigObjectFactory;
-use jodin_rs::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodin_rs::core::types::primitives::Primitive;
+use jodin_rs::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
+use jodin_rs::parsing::parse_program;
 use jodin_rs::utility::Visitor;
+use jodin_rs::{default_logging, process_jodin_node};
+use logos::internal::CallbackResult;
 
 static JODIN_STRING: &str = r"
 public struct Square {
@@ -39,7 +39,6 @@ fn define_a_structure() -> JodinResult<()> {
 
     assert_eq!(&field.vis, &Visibility::Private);
     assert_eq!(&field.jtype, &Primitive::Int.intermediate_type());
-
 
     Ok(())
 }

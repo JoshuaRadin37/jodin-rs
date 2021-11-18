@@ -1,7 +1,6 @@
 //! Stores type information for the pointer type
 //!
 
-use std::sync::{Arc, Weak};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::big_object::JBigObject;
@@ -9,6 +8,7 @@ use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
+use std::sync::{Arc, Weak};
 
 use super::get_type_id;
 lazy_static! {
@@ -29,7 +29,7 @@ impl Pointer {
     }
 }
 
-impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
+impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
     fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
@@ -51,6 +51,10 @@ impl Type<'_> for Pointer {
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.inner_jtype.upgrade().unwrap().as_intermediate().with_pointer()
+        self.inner_jtype
+            .upgrade()
+            .unwrap()
+            .as_intermediate()
+            .with_pointer()
     }
 }

@@ -11,7 +11,7 @@ use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::traits::JTraitObject;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{
-    CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Member, Type,
+    CompoundType, Field, GetResolvedMember, JField, JodinType, JodinTypeReference, Member, Type,
 };
 use crate::utility::Visitor;
 use std::cmp::Ordering;
@@ -25,7 +25,7 @@ pub struct JObject {
     generics: Vec<GenericParameter>,
     parent_type: Option<Identifier>,
     type_id: u32,
-    fields: Vec<Field>,
+    fields: Vec<JField>,
 }
 
 impl Namespaced for JObject {
@@ -34,7 +34,7 @@ impl Namespaced for JObject {
     }
 }
 
-impl <'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JObject {
+impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JObject {
     fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
         todo!()
     }
@@ -57,8 +57,8 @@ impl Type<'_> for JObject {
 }
 
 impl CompoundType<'_> for JObject {
-    fn all_members(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
-        self.fields.iter().map(|field| field.as_tuple()).collect()
+    fn all_members(&self) -> Vec<&JField> {
+        self.fields.iter().collect()
     }
 }
 
@@ -74,8 +74,8 @@ impl Morph<'_> for JObject {
     type Morphed = Self;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
-        where
-            I: IntoIterator<Item = (Identifier, Identifier)>,
+    where
+        I: IntoIterator<Item = (Identifier, Identifier)>,
     {
         todo!()
     }
@@ -159,10 +159,7 @@ pub struct JBigObjectBuilder<'types> {
 }
 
 impl<'types> JBigObjectBuilder<'types> {
-    pub(super) fn new(
-        base_type: &'types JodinType,
-        type_env: &'types TypeEnvironment,
-    ) -> Self {
+    pub(super) fn new(base_type: &'types JodinType, type_env: &'types TypeEnvironment) -> Self {
         debug!("Creating BigObject builder for {}", base_type);
         JBigObjectBuilder {
             base_type,
@@ -182,22 +179,15 @@ impl<'types> JBigObjectBuilder<'types> {
     pub fn build(self) -> JBigObject<'types> {
         let mut fields: Vec<Field<JBigObject<'types>>> = vec![];
         let big_o_factory = JBigObjectFactory::new(self.type_env);
-        fields.extend(
-            self.base_type.fields()
-                .into_iter()
-                .map(|(vis, ty, id)|
-                    {
-                        Field::new(
-                            vis.clone(),
-                            big_o_factory.new_instance(
-                                &self.type_env
-                                    .jodin_type_from_intermediate(ty)
-                                    .unwrap()
-                            ).unwrap(),
-                            id.clone())
-                    }
-                )
-        );
+        fields.extend(self.base_type.fields().into_iter().map(|(vis, ty, id)| {
+            Field::new(
+                vis.clone(),
+                big_o_factory
+                    .new_instance(&self.type_env.jodin_type_from_intermediate(ty).unwrap())
+                    .unwrap(),
+                id.clone(),
+            )
+        }));
         let parent = self
             .parent_object
             .into_iter()
@@ -221,7 +211,7 @@ impl<'types> JBigObjectBuilder<'types> {
 ///
 /// [`JBigObject`]: JBigObject
 pub struct JBigObjectFactory<'types> {
-    env: &'types TypeEnvironment
+    env: &'types TypeEnvironment,
 }
 
 impl<'types> JBigObjectFactory<'types> {
@@ -231,9 +221,7 @@ impl<'types> JBigObjectFactory<'types> {
     }
 
     /// Create a new instance of a j big object
-    pub fn new_instance<T : Type<'types>>(&self, ty: &'types T) -> JodinResult<JBigObject<'types>> {
+    pub fn new_instance<T: Type<'types>>(&self, ty: &'types T) -> JodinResult<JBigObject<'types>> {
         ty.visit(self.env)
     }
 }
-
-

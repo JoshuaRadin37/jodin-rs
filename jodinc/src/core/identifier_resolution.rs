@@ -6,7 +6,6 @@ use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
 use std::process::id;
 
-
 // use ptree::{write_tree, Style, TreeItem};
 
 use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
@@ -50,7 +49,10 @@ impl IdentifierResolver {
         let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
         self.tree.add_namespace(full_path.clone());
         self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
-        info!("Current namespace set to {}", self.current_namespace_with_base());
+        info!(
+            "Current namespace set to {}",
+            self.current_namespace_with_base()
+        );
     }
 
     /// Pops the outermost namespace from the current namespace

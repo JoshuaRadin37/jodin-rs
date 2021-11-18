@@ -19,6 +19,8 @@ use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::operator::{NumType, TryConstEvaluation};
+use crate::core::types::intermediate_type::TypeSpecifier;
+use crate::core::types::primitives::Primitive;
 use crate::passes::analysis::ResolvedIdentityTag;
 use crate::utility::Visitor;
 use num_traits::{Num, PrimInt};
@@ -27,8 +29,6 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::core::types::intermediate_type::TypeSpecifier;
-use crate::core::types::primitives::Primitive;
 
 /// A single instance of a literal
 #[derive(Debug, PartialOrd, PartialEq, Clone)]
@@ -78,19 +78,45 @@ impl Literal {
 impl Display for Literal {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Literal::String(v) => { write!(f, "{}", v)}
-            Literal::Char(v) => {write!(f, "{}", v)}
-            Literal::Boolean(v) => {write!(f, "{}", v)}
-            Literal::Float(v) => {write!(f, "{}", v)}
-            Literal::Double(v) => {write!(f, "{}", v)}
-            Literal::Byte(v) => {write!(f, "{}", v)}
-            Literal::Short(v) => {write!(f, "{}", v)}
-            Literal::Int(v) => {write!(f, "{}", v)}
-            Literal::Long(v) => {write!(f, "{}", v)}
-            Literal::UnsignedByte(v) => {write!(f, "{}", v)}
-            Literal::UnsignedShort(v) => {write!(f, "{}", v)}
-            Literal::UnsignedInt(v) => {write!(f, "{}", v)}
-            Literal::UnsignedLong(v) => {write!(f, "{}", v)}
+            Literal::String(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Char(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Boolean(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Float(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Double(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Byte(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Short(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Int(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::Long(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::UnsignedByte(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::UnsignedShort(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::UnsignedInt(v) => {
+                write!(f, "{}", v)
+            }
+            Literal::UnsignedLong(v) => {
+                write!(f, "{}", v)
+            }
         }
     }
 }
@@ -242,7 +268,7 @@ impl TryFrom<Literal> for String {
         if let Literal::String(str) = value {
             Ok(str)
         } else {
-            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into())
+            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into());
         }
     }
 }
@@ -266,7 +292,7 @@ impl TryFrom<Literal> for bool {
         if let Literal::Boolean(b) = value {
             Ok(b)
         } else {
-            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into())
+            return Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(value).into());
         }
     }
 }
@@ -492,9 +518,7 @@ impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNo
                     Literal::UnsignedLong(v) => op.evaluate_uniop(v),
                 }
             }
-            JodinNodeType::Binop {
-                op, lhs, rhs
-            } => {
+            JodinNodeType::Binop { op, lhs, rhs } => {
                 let lhs = lhs.visit(environment)?;
                 let rhs = rhs.visit(environment)?;
 
@@ -514,9 +538,7 @@ impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNo
                     Literal::UnsignedLong(v) => op.evaluate_binop(v, rhs),
                 }
             }
-            JodinNodeType::CastExpression {
-                to_type, factor
-            } => {
+            JodinNodeType::CastExpression { to_type, factor } => {
                 if let TypeSpecifier::Primitive(prim) = &to_type.type_specifier {
                     let as_literal = factor.visit(environment)?;
                     match prim {
@@ -556,10 +578,16 @@ impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNo
                         Primitive::Double => {
                             ConstantCast::<f64>::try_constant_cast(as_literal)?.try_into()
                         }
-                        _ => Err(JodinErrorType::NotConstantExpression(format!("can't cast to {}", prim)))?
+                        _ => Err(JodinErrorType::NotConstantExpression(format!(
+                            "can't cast to {}",
+                            prim
+                        )))?,
                     }
                 } else {
-                    Err(JodinErrorType::NotConstantExpression(format!("can't cast from {:?}", to_type)))?
+                    Err(JodinErrorType::NotConstantExpression(format!(
+                        "can't cast from {:?}",
+                        to_type
+                    )))?
                 }
             }
             _ => Err(JodinErrorType::NotConstantExpression(
@@ -572,9 +600,9 @@ impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNo
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::ast::parse_identifier;
     use crate::parsing::parse_expression;
-    use super::*;
 
     #[test]
     fn parse_hex_literals() {
@@ -617,17 +645,24 @@ mod tests {
 
     #[test]
     fn constant_expressions() {
-        let lit_node = parse_expression("(3+2+-2)/3 - 1").expect("This should be parsable as a expression");
-        let as_literal = lit_node.visit(&HashMap::new()).expect("All literals and operations involved are constant");
+        let lit_node =
+            parse_expression("(3+2+-2)/3 - 1").expect("This should be parsable as a expression");
+        let as_literal = lit_node
+            .visit(&HashMap::new())
+            .expect("All literals and operations involved are constant");
         let val: i32 = as_literal.try_into().unwrap();
         assert_eq!(val, 0i32);
-        let cast_expression = parse_expression("(16 as long)").expect("Couldn't parse a cast expression");
-        let as_literal = cast_expression.visit(&HashMap::new()).expect("Int to Long should be valid");
+        let cast_expression =
+            parse_expression("(16 as long)").expect("Couldn't parse a cast expression");
+        let as_literal = cast_expression
+            .visit(&HashMap::new())
+            .expect("Int to Long should be valid");
         let val: i64 = as_literal.try_into().unwrap();
         assert_eq!(val, 16i64);
 
         let floating_point_node = parse_expression("3.2").expect("Floats supported now");
-        let as_float: f32 = floating_point_node.visit(&HashMap::new())
+        let as_float: f32 = floating_point_node
+            .visit(&HashMap::new())
             .expect("All literals and operations involved are constant")
             .try_into()
             .expect("Couldn't treat this as f32");
@@ -636,7 +671,8 @@ mod tests {
 
         let floating_point_node = parse_expression("6.4l").expect("Floats supported now");
         println!("{:?}", floating_point_node);
-        let as_float: f64 = floating_point_node.visit(&HashMap::new())
+        let as_float: f64 = floating_point_node
+            .visit(&HashMap::new())
             .expect("All literals and operations involved are constant")
             .try_into()
             .expect("Couldn't treat this as f64");
