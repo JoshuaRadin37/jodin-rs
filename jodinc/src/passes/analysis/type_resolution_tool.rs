@@ -9,6 +9,7 @@ use crate::ast::JodinNodeType;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::privacy::{Visibility, VisibilityTag};
+use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::structure::Structure;
 use crate::core::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
 use crate::core::types::Field;
@@ -54,7 +55,7 @@ impl<'nodes> TypeResolutionTool {
         Ok(())
     }
 
-    fn build_field(&self, field_node: &'nodes JodinNode) -> JodinResult<Field> {
+    fn build_field(&self, field_node: &'nodes JodinNode) -> JodinResult<Field<IntermediateType>> {
         if let JodinNodeType::NamedValue { name, var_type } = field_node.inner() {
             let name = name.resolved_id()?;
             let visibility = field_node

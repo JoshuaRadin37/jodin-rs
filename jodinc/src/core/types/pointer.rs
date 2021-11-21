@@ -3,8 +3,8 @@
 
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::resolved_type::{ResolveType, ResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
@@ -17,27 +17,25 @@ lazy_static! {
 
 #[derive(Debug, Clone)]
 pub struct Pointer {
-    inner_jtype: Weak<JodinType>,
+    inner_jtype: IntermediateType,
 }
 
 impl Pointer {
     /// Create a new pointer from a pointer
-    pub fn new(inner_jtype: &Arc<JodinType>) -> Self {
-        Pointer {
-            inner_jtype: Arc::downgrade(inner_jtype),
-        }
-    }
-}
-
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Pointer {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
-        todo!()
+    pub fn new(inner_jtype: IntermediateType) -> Self {
+        Pointer { inner_jtype }
     }
 }
 
 impl Into<JodinType> for Pointer {
     fn into(self) -> JodinType {
         JodinType::Pointer(self)
+    }
+}
+
+impl ResolveType for Pointer {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+        todo!()
     }
 }
 
@@ -51,10 +49,6 @@ impl Type<'_> for Pointer {
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.inner_jtype
-            .upgrade()
-            .unwrap()
-            .as_intermediate()
-            .with_pointer()
+        self.inner_jtype.clone().with_pointer()
     }
 }

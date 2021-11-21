@@ -2,8 +2,10 @@ use jodin_rs::ast::tags::TagTools;
 use jodin_rs::core::error::JodinResult;
 use jodin_rs::core::identifier::Identifier;
 use jodin_rs::core::privacy::Visibility;
-use jodin_rs::core::types::big_object::JBigObjectFactory;
 use jodin_rs::core::types::primitives::Primitive;
+use jodin_rs::core::types::resolved_type::{
+    ResolveType, ResolvedType, ResolvedTypeFactory, UpgradedResolvedType,
+};
 use jodin_rs::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodin_rs::parsing::parse_program;
 use jodin_rs::utility::Visitor;
@@ -29,16 +31,19 @@ fn define_a_structure() -> JodinResult<()> {
     let square_ty = env.get_type_by_name(&Identifier::from("Square"))?;
     println!("{:#?}", square_ty);
 
-    let factory = JBigObjectFactory::new(&env);
+    let factory = ResolvedTypeFactory::new(&env);
 
-    let square_ty_o = factory.new_instance(square_ty)?;
+    let square_ty_o = factory.new_instance(square_ty).upgrade()?;
 
     println!("{:#?}", square_ty_o);
 
-    let field: &Field = square_ty_o.get_member(&Identifier::from("sides"))?;
+    let field: &Field<UpgradedResolvedType> = square_ty_o.get_member(&Identifier::from("sides"))?;
 
     assert_eq!(&field.vis, &Visibility::Private);
-    assert_eq!(&field.jtype, &Primitive::Int.intermediate_type());
+    assert_eq!(
+        &field.jtype.intermediate_type(),
+        &Primitive::Int.intermediate_type()
+    );
 
     Ok(())
 }

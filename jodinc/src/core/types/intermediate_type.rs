@@ -48,9 +48,15 @@ use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::literal::ConstantCast;
+use crate::core::types::arrays::Array;
 use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
+use crate::core::types::pointer::Pointer;
 use crate::core::types::primitives::Primitive;
-use crate::core::types::Type;
+use crate::core::types::resolved_type::{
+    BuildResolvedType, ResolveType, ResolvedType, ResolvedTypeBuilder,
+};
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{AsIntermediate, Type};
 use crate::utility::Visitor;
 
 /// Contains data to represent types without storing any actual type information.
@@ -123,8 +129,14 @@ impl IntermediateType {
     /// Adds an array with an index
     pub fn with_array(mut self, index: JodinNode) -> JodinResult<Self> {
         let size: u64 = index.visit(&HashMap::new())?.try_constant_cast()?;
-        self.tails.push(TypeTail::Array(Some(size)));
+        self.tails.push(TypeTail::Array(Some(size as usize)));
         Ok(self)
+    }
+
+    /// Adds an array with an index
+    pub fn with_presized_array(mut self, size: usize) -> Self {
+        self.tails.push(TypeTail::Array(Some(size)));
+        self
     }
 
     /// Tries to make this type unsigned
@@ -328,6 +340,47 @@ impl Display for IntermediateType {
     }
 }
 
+impl ResolveType for IntermediateType {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+        let mut resolved = match &self.type_specifier {
+            TypeSpecifier::Id(id) => environment.get_type_by_name(id).unwrap().clone(),
+            TypeSpecifier::Primitive(prim) => {
+                let id = prim.type_identifier();
+                environment
+                    .get_type_by_name(&id)
+                    .expect("primitives should be within the type system")
+                    .clone()
+            }
+            TypeSpecifier::Generic(_) => {
+                unimplemented!("Generics in intermediate types haven't been implemented yet")
+            }
+        };
+        for tail in &self.tails {
+            match tail {
+                TypeTail::Pointer => {
+                    let as_ptr = Pointer::new(resolved.as_intermediate());
+                    resolved = environment.save_type(as_ptr)
+                }
+                TypeTail::Array(arr) => {
+                    let as_arr = Array::new(resolved.as_intermediate(), arr.clone());
+                    resolved = environment.save_type(as_arr);
+                }
+                TypeTail::Function(func) => {
+                    todo!("Create funciton types")
+                }
+            }
+        }
+
+        resolved.resolve(environment)
+    }
+}
+
+impl AsIntermediate for IntermediateType {
+    fn intermediate_type(&self) -> IntermediateType {
+        self.clone()
+    }
+}
+
 /// A type specifier can either be a built in primitive, or an identifier
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum TypeSpecifier {
@@ -362,7 +415,7 @@ pub enum TypeTail {
     Pointer,
     /// An array is a contiguous block of memory of a type. The size is optional. An array with no
     /// size is equivalent to a pointer.
-    Array(Option<u64>),
+    Array(Option<usize>),
     /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
 }

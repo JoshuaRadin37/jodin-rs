@@ -36,13 +36,13 @@ fn _base_type() -> JodinResult<JTrait> {
     Ok(JTrait::new(name, vec![], vec![], fields))
 }
 
-fn to_string_field() -> Field {
+fn to_string_field() -> Field<IntermediateType> {
     let id = Identifier::from(&*TO_STRING_ID);
     let ty = IntermediateType::from(Identifier::from("String")).with_function_params(vec![]);
     Field::new(Visibility::Public, ty, id)
 }
 
-fn get_type_field() -> Field {
+fn get_type_field() -> Field<IntermediateType> {
     let id = Identifier::from(&*GET_TYPE_ID);
     let ty = IntermediateType::from(Identifier::from("Type"))
         .with_pointer()

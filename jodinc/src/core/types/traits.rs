@@ -2,8 +2,9 @@
 
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::types::big_object::JBigObject;
 use crate::core::types::generic_context::GenericParameter;
+use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::resolved_type::{ResolveType, ResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{get_type_id, Field, JodinType, Type};
 use crate::utility::Visitor;
@@ -12,7 +13,7 @@ use std::fmt::{DebugStruct, Display, Formatter};
 use std::sync::Arc;
 
 /// A jodin trait structure
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JTrait {
     /// the identifier of the trait
     pub id: Identifier,
@@ -21,7 +22,7 @@ pub struct JTrait {
     pub generics: Vec<GenericParameter>,
     /// The super traits of this trait
     pub extends: Vec<Identifier>,
-    pub entries: Vec<Field>,
+    pub entries: Vec<Field<IntermediateType>>,
 }
 
 impl Display for JTrait {
@@ -53,7 +54,7 @@ impl JTrait {
         id: Identifier,
         generics: Vec<GenericParameter>,
         extends: Vec<Identifier>,
-        entries: Vec<Field>,
+        entries: Vec<Field<IntermediateType>>,
     ) -> Self {
         JTrait {
             id,
@@ -71,6 +72,12 @@ impl Into<JodinType> for JTrait {
     }
 }
 
+impl ResolveType for JTrait {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+        todo!()
+    }
+}
+
 impl<'t> Type<'t> for JTrait {
     fn type_identifier(&self) -> Identifier {
         self.id.clone()
@@ -81,24 +88,12 @@ impl<'t> Type<'t> for JTrait {
     }
 }
 
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JTrait {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
-        todo!()
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JTraitObject {
     owner_type: Identifier,
-    jtrait: Arc<JTrait>,
-    entries: Vec<Field>,
+    jtrait: IntermediateType,
+    entries: Vec<Field<IntermediateType>>,
     type_id: u32,
-}
-
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JTraitObject {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
-        todo!()
-    }
 }
 
 impl Into<JodinType> for JTraitObject {
@@ -107,9 +102,15 @@ impl Into<JodinType> for JTraitObject {
     }
 }
 
+impl ResolveType for JTraitObject {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+        todo!()
+    }
+}
+
 impl Type<'_> for JTraitObject {
     fn type_identifier(&self) -> Identifier {
-        &self.jtrait.id >> &self.owner_type
+        self.jtrait.identifier().unwrap() >> &self.owner_type
     }
 
     fn type_unique_id(&self) -> u32 {

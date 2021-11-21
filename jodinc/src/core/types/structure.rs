@@ -5,12 +5,12 @@ use crate::core::identifier::Identifier;
 use crate::core::privacy::Visibility;
 use std::sync::{Arc, Weak};
 
-use crate::core::types::big_object::{JBigObject, JBigObjectBuilder};
 use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{
-    get_type_id, CompoundType, Field, JField, JodinType, JodinTypeReference, Type,
+use crate::core::types::resolved_type::{
+    BuildResolvedType, ResolveType, ResolvedType, ResolvedTypeBuilder,
 };
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
 use crate::utility::Visitor;
 
 /// Contains a name and its fields
@@ -18,19 +18,23 @@ use crate::utility::Visitor;
 pub struct Structure {
     name: Identifier,
     type_id: u32,
-    fields: Vec<Field<Weak<JodinType>>>,
+    fields: Vec<Field<IntermediateType>>,
+}
+
+impl BuildResolvedType<'_> for Structure {
+    fn build_resolved_type(&self, builder: &mut ResolvedTypeBuilder) {
+        let arc = builder.env().get_type_by_name(&self.name).unwrap();
+        builder.set_base_type(arc);
+    }
 }
 
 impl Structure {
     /// Creates a new named structure
-    pub fn new(name: Identifier, fields: Vec<Field<&Arc<JodinType>>>) -> Self {
+    pub fn new(name: Identifier, fields: Vec<Field<IntermediateType>>) -> Self {
         Structure {
             name,
             type_id: get_type_id(),
-            fields: fields
-                .into_iter()
-                .map(|Field { vis, jtype, name }| Field::new(vis, Arc::downgrade(jtype), name))
-                .collect(),
+            fields,
         }
     }
 
@@ -53,15 +57,8 @@ impl Structure {
     // }
 
     /// Gets the fields of the structure
-    pub fn fields(&self) -> &Vec<Field<Weak<JodinType>>> {
-        &self.fields
-    }
-}
-
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Structure {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
-        let mut builder = environment.big_object_builder(self);
-        Ok(builder.build())
+    pub fn fields(&self) -> Vec<&Field<IntermediateType>> {
+        self.fields.iter().collect()
     }
 }
 
@@ -76,7 +73,7 @@ impl Type<'_> for Structure {
 }
 
 impl CompoundType<'_> for Structure {
-    fn all_members(&self) -> Vec<&JField> {
+    fn all_members(&self) -> Vec<&Field<IntermediateType>> {
         self.fields.iter().collect()
     }
 }

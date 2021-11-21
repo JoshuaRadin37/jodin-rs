@@ -99,6 +99,8 @@ pub enum JodinErrorType {
         /// The debug output
         node_info: String,
     },
+    /// The type environment is no longer available
+    TypeEnvironmentUnavailable,
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

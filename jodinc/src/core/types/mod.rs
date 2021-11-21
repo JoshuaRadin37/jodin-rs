@@ -2,7 +2,7 @@
 
 use std::any::Any;
 use std::cell::RefCell;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::Index;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -10,6 +10,7 @@ use std::sync::Weak;
 
 use crate::ast::JodinNode;
 use intermediate_type::IntermediateType;
+use resolved_type::ResolvedType;
 
 use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
@@ -17,32 +18,30 @@ use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{Registrable, Registry};
 use crate::core::privacy::Visibility;
 use crate::core::types::arrays::Array;
-use crate::core::types::big_object::{JBigObject, JObject};
+use crate::core::types::jobject::JObject;
 use crate::core::types::pointer::Pointer;
 use crate::core::types::primitives::Primitive;
+use crate::core::types::resolved_type::{ResolveType, UpgradedResolvedType};
 use crate::core::types::structure::Structure;
 use crate::core::types::traits::{JTrait, JTraitObject};
-use crate::core::types::type_environment::{LazyJodinType, TypeEnvironment};
+use crate::core::types::type_environment::TypeEnvironment;
 use crate::utility::Visitor;
 
 pub mod arrays;
 pub mod base_type;
-pub mod big_object;
 pub mod functions;
 pub mod generic_context;
 pub mod intermediate_type;
+pub mod jobject;
 pub mod pointer;
 pub mod primitives;
+pub mod resolved_type;
 pub mod structure;
 pub mod traits;
 pub mod type_environment;
 
-pub type JField = Field<Weak<JodinType>>;
-
 /// Common methods within the different types that make up jodin
-pub trait Type<'t>:
-    Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> + Into<JodinType>
-{
+pub trait Type<'t>: ResolveType + Into<JodinType> {
     /// The name of the type
     fn type_identifier(&self) -> Identifier;
     /// The unique id for this type
@@ -56,12 +55,6 @@ pub trait Type<'t>:
 
 pub trait AsIntermediate {
     fn intermediate_type(&self) -> IntermediateType;
-}
-
-impl AsIntermediate for IntermediateType {
-    fn intermediate_type(&self) -> IntermediateType {
-        self.clone()
-    }
 }
 
 impl<'t, T: Type<'t>> AsIntermediate for T {
@@ -84,14 +77,10 @@ pub enum JodinType {
     JTraitObject(JTraitObject),
     JTrait(JTrait),
     JObject(JObject),
-    LazyType(LazyJodinType),
 }
 impl JodinType {
     /// Tries to get a field. If the base type isn't a compound type a `None` value is returned.
-    pub fn get_field<I: Into<Identifier>>(
-        &self,
-        id: I,
-    ) -> Option<(&Visibility, &IntermediateType, &Identifier)> {
+    pub fn get_field<I: Into<Identifier>>(&self, id: I) -> Option<&Field<IntermediateType>> {
         match self {
             JodinType::Structure(s) => s.get_field(id).ok(),
             // JodinType::JTraitObject(o) => o.get_field(id).ok(),
@@ -101,7 +90,7 @@ impl JodinType {
         }
     }
 
-    pub fn fields(&self) -> Vec<(&Visibility, &IntermediateType, &Identifier)> {
+    pub fn fields(&self) -> Vec<&Field<IntermediateType>> {
         match self {
             JodinType::Structure(s) => s.all_members(),
             // JodinType::JTraitObject(o) => o.get_field(id).ok(),
@@ -135,16 +124,16 @@ impl Display for JodinType {
     }
 }
 
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for JodinType {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
+impl ResolveType for JodinType {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
         match self {
-            JodinType::Primitive(v) => v.visit(environment),
-            JodinType::Array(v) => v.visit(environment),
-            JodinType::Structure(v) => v.visit(environment),
-            JodinType::Pointer(v) => v.visit(environment),
-            JodinType::JTraitObject(v) => v.visit(environment),
-            JodinType::JTrait(v) => v.visit(environment),
-            JodinType::JObject(v) => v.visit(environment),
+            JodinType::Primitive(v) => environment.resolve_type(v),
+            JodinType::Array(v) => environment.resolve_type(v),
+            JodinType::Structure(v) => environment.resolve_type(v),
+            JodinType::Pointer(v) => environment.resolve_type(v),
+            JodinType::JTraitObject(v) => environment.resolve_type(v),
+            JodinType::JTrait(v) => environment.resolve_type(v),
+            JodinType::JObject(v) => environment.resolve_type(v),
         }
     }
 }
@@ -177,10 +166,10 @@ pub fn get_type_id() -> u32 {
 /// Common methods for compound types in jodin.
 pub trait CompoundType<'t>: Type<'t> {
     /// Gets all the members of the compound type.
-    fn all_members(&self) -> Vec<&JField>;
+    fn all_members(&self) -> Vec<&Field<IntermediateType>>;
 
     /// Try to get a specific member by name
-    fn get_field<I: Into<Identifier>>(&self, id: I) -> JodinResult<&JField> {
+    fn get_field<I: Into<Identifier>>(&self, id: I) -> JodinResult<&Field<IntermediateType>> {
         let id = id.into();
         self.all_members()
             .into_iter()
@@ -189,18 +178,18 @@ pub trait CompoundType<'t>: Type<'t> {
                      vis: _,
                      jtype: _,
                      name: other_id,
-                 }| *other_id == &id,
+                 }| other_id == &id,
             )
             .ok_or(JodinError::new(JodinErrorType::IdentifierDoesNotExist(id)))
     }
 }
 
-pub trait Member<T = IntermediateType>: Sized {
+pub trait Member<T>: Sized {
     fn jtype(&self) -> &T;
     fn id(&self) -> &Identifier;
 }
 
-impl Member for (IntermediateType, Identifier) {
+impl Member<IntermediateType> for (IntermediateType, Identifier) {
     fn jtype(&self) -> &IntermediateType {
         &self.0
     }
@@ -210,7 +199,7 @@ impl Member for (IntermediateType, Identifier) {
     }
 }
 
-impl Member for (Visibility, IntermediateType, Identifier) {
+impl Member<IntermediateType> for (Visibility, IntermediateType, Identifier) {
     fn jtype(&self) -> &IntermediateType {
         &self.1
     }
@@ -220,7 +209,7 @@ impl Member for (Visibility, IntermediateType, Identifier) {
     }
 }
 
-impl Member for (&IntermediateType, &Identifier) {
+impl Member<IntermediateType> for (&IntermediateType, &Identifier) {
     fn jtype(&self) -> &IntermediateType {
         &self.0
     }
@@ -230,7 +219,7 @@ impl Member for (&IntermediateType, &Identifier) {
     }
 }
 
-impl Member for (&Visibility, &IntermediateType, &Identifier) {
+impl Member<IntermediateType> for (&Visibility, &IntermediateType, &Identifier) {
     fn jtype(&self) -> &IntermediateType {
         &self.1
     }
@@ -240,7 +229,7 @@ impl Member for (&Visibility, &IntermediateType, &Identifier) {
     }
 }
 
-pub trait GetResolvedMember<M, T = IntermediateType>
+pub trait GetResolvedMember<M, T>
 where
     M: Member<T>,
 {
@@ -306,7 +295,7 @@ pub enum StorageModifier {
 
 /// A field in some sort of compound structure
 #[derive(Debug, PartialEq, Clone)]
-pub struct Field<T = IntermediateType> {
+pub struct Field<T> {
     /// The visibility of the field
     pub vis: Visibility,
     /// The type of the field
@@ -335,6 +324,17 @@ impl<T> Field<T> {
             ref name,
         } = self;
         (vis, jtype, name)
+    }
+}
+
+impl Field<ResolvedType> {
+    pub fn upgrade(&self) -> JodinResult<Field<UpgradedResolvedType>> {
+        let upgraded = self.jtype.upgrade()?;
+        Ok(Field {
+            vis: self.vis.clone(),
+            jtype: upgraded,
+            name: self.name.clone(),
+        })
     }
 }
 

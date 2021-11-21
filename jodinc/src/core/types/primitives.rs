@@ -5,15 +5,16 @@ use crate::core::identifier::Identifier;
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinResult};
 use crate::core::literal::Literal;
-use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::resolved_type::{ResolveType, ResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{BuildType, JodinType, Type};
 use crate::utility::Visitor;
 use std::fmt::{Display, Formatter};
+use strum_macros::EnumIter;
 
 /// A primitive data type within Jodin
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, EnumIter)]
 pub enum Primitive {
     /// An empty type, can not be used as an explicit canonical type
     Void,
@@ -45,9 +46,12 @@ pub enum Primitive {
     VaList,
 }
 
-impl<'t> Visitor<'t, TypeEnvironment, JodinResult<JBigObject<'t>>> for Primitive {
-    fn visit(&'t self, environment: &'t TypeEnvironment) -> JodinResult<JBigObject<'t>> {
-        todo!()
+impl ResolveType for Primitive {
+    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+        let result = environment
+            .get_type_by_name(&self.type_identifier())
+            .expect("Primitives should be in the type environment");
+        ResolvedType::new(result, vec![])
     }
 }
 

@@ -18,6 +18,12 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    /// Create a new identifier from any type that can be converted into an identifier
+    #[inline]
+    pub fn new<I: Into<Identifier>>(into: I) -> Self {
+        into.into()
+    }
+
     /// Creates an identifier from an array.
     ///
     /// # Arguments

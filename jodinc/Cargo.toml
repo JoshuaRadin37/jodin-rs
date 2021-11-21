@@ -27,3 +27,5 @@ jodin-rs-vm = { path="../jodin-rs-vm", version="0.1.0" }
 simplelog = { version = "0.11.0", features=["paris"] }
 log = "0.4.14"
 rand = "0.8.4"
+strum = "0.23"
+strum_macros = "0.23"
