@@ -4,7 +4,7 @@ use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::generic_context::GenericParameter;
 use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, ResolvedType};
+use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{get_type_id, Field, JodinType, Type};
 use crate::utility::Visitor;
@@ -73,7 +73,7 @@ impl Into<JodinType> for JTrait {
 }
 
 impl ResolveType for JTrait {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }
@@ -103,7 +103,7 @@ impl Into<JodinType> for JTraitObject {
 }
 
 impl ResolveType for JTraitObject {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }

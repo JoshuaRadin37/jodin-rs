@@ -6,7 +6,7 @@ use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinResult};
 use crate::core::literal::Literal;
 use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, ResolvedType};
+use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{BuildType, JodinType, Type};
 use crate::utility::Visitor;
@@ -47,11 +47,11 @@ pub enum Primitive {
 }
 
 impl ResolveType for Primitive {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         let result = environment
             .get_type_by_name(&self.type_identifier())
             .expect("Primitives should be in the type environment");
-        ResolvedType::new(result, vec![])
+        WeakResolvedType::new(result, vec![])
     }
 }
 

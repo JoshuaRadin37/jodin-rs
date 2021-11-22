@@ -4,7 +4,7 @@ use jodin_rs::core::identifier::Identifier;
 use jodin_rs::core::privacy::Visibility;
 use jodin_rs::core::types::primitives::Primitive;
 use jodin_rs::core::types::resolved_type::{
-    ResolveType, ResolvedType, ResolvedTypeFactory, UpgradedResolvedType,
+    ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
 };
 use jodin_rs::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodin_rs::parsing::parse_program;
@@ -13,12 +13,15 @@ use jodin_rs::{default_logging, process_jodin_node};
 use logos::internal::CallbackResult;
 
 static JODIN_STRING: &str = r"
-public struct Square {
+struct Square {
     sides: int
 }
 
-let square: Square;
-
+struct TripleSquare {
+    sq1: Square,
+    sq2: Square,
+    sq3: Square
+}
 ";
 
 #[test]
@@ -37,9 +40,9 @@ fn define_a_structure() -> JodinResult<()> {
 
     println!("{:#?}", square_ty_o);
 
-    let field: &Field<UpgradedResolvedType> = square_ty_o.get_member(&Identifier::from("sides"))?;
+    let field: &Field<ResolvedType> = square_ty_o.get_member(&Identifier::from("sides"))?;
 
-    assert_eq!(&field.vis, &Visibility::Private);
+    assert_eq!(&field.vis, &Visibility::Public);
     assert_eq!(
         &field.jtype.intermediate_type(),
         &Primitive::Int.intermediate_type()

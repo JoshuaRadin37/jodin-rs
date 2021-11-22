@@ -53,7 +53,7 @@ use crate::core::types::generic_context::{GenericParameter, GenericParameterInst
 use crate::core::types::pointer::Pointer;
 use crate::core::types::primitives::Primitive;
 use crate::core::types::resolved_type::{
-    BuildResolvedType, ResolveType, ResolvedType, ResolvedTypeBuilder,
+    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
 };
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{AsIntermediate, Type};
@@ -341,7 +341,7 @@ impl Display for IntermediateType {
 }
 
 impl ResolveType for IntermediateType {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         let mut resolved = match &self.type_specifier {
             TypeSpecifier::Id(id) => environment.get_type_by_name(id).unwrap().clone(),
             TypeSpecifier::Primitive(prim) => {

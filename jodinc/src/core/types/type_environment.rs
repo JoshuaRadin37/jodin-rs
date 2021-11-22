@@ -20,7 +20,7 @@ use crate::core::identifier::{Identifier, IdentifierChain, IdentifierChainIterat
 use crate::core::types::base_type::base_type;
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::core::types::primitives::Primitive;
-use crate::core::types::resolved_type::{ResolveType, ResolvedType, ResolvedTypeBuilder};
+use crate::core::types::resolved_type::{ResolveType, ResolvedTypeBuilder, WeakResolvedType};
 use crate::core::types::traits::JTrait;
 use crate::core::types::{AsIntermediate, BuildType, JodinType, Type};
 use crate::passes::analysis::ResolvedIdentityTag;
@@ -185,7 +185,7 @@ impl TypeEnvironment {
             .ok_or(JodinErrorType::IdentifierDoesNotExist(identifier).into())
     }
 
-    pub fn resolve_type<R: ResolveType>(&self, ty: &R) -> ResolvedType {
+    pub fn resolve_type<R: ResolveType>(&self, ty: &R) -> WeakResolvedType {
         ty.resolve(self)
     }
 
@@ -251,11 +251,11 @@ impl TypeEnvironmentManager {
     fn _set_variable_type(&mut self, var_id: &Identifier, ty: IntermediateType) {}
 
     /// Loads the big object version of some variable
-    pub fn load_variable_type(&self, var_id: &Identifier) -> JodinResult<ResolvedType> {
+    pub fn load_variable_type(&self, var_id: &Identifier) -> JodinResult<WeakResolvedType> {
         todo!()
     }
 
-    pub fn resolve_type<R: ResolveType>(&self, ty: &R) -> ResolvedType {
+    pub fn resolve_type<R: ResolveType>(&self, ty: &R) -> WeakResolvedType {
         self.env.resolve_type(ty)
     }
 }

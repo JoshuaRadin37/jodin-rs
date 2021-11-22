@@ -4,7 +4,7 @@
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, ResolvedType};
+use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{JodinType, Type};
 use crate::utility::Visitor;
@@ -34,7 +34,7 @@ impl Into<JodinType> for Pointer {
 }
 
 impl ResolveType for Pointer {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }

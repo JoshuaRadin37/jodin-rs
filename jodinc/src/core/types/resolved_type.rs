@@ -16,7 +16,7 @@ use std::sync::{Arc, Weak};
 /// A trait that should be implemented to take some jodin type and create a fully resolved type out of it
 pub trait ResolveType {
     /// Resolve a type within a type environment.
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType;
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType;
 }
 
 /// A helper trait to build a resolve type. Implementing this trait also implements [ResolveType](ResolveType)
@@ -25,7 +25,7 @@ pub trait BuildResolvedType<'types> {
 }
 
 impl<'types, T: BuildResolvedType<'types>> ResolveType for T {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         let mut builder = ResolvedTypeBuilder::new(environment);
         self.build_resolved_type(&mut builder);
         builder.build()
@@ -34,27 +34,27 @@ impl<'types, T: BuildResolvedType<'types>> ResolveType for T {
 
 /// A JBigObject is a type formed using references
 #[derive(Debug)]
-pub struct ResolvedType {
+pub struct WeakResolvedType {
     base_type: Weak<JodinType>,
-    fields: Vec<Field<ResolvedType>>,
+    fields: Vec<Field<WeakResolvedType>>,
 }
 
-impl ResolvedType {
+impl WeakResolvedType {
     /// Creates a new resolved type
-    pub fn new(base_type: &Arc<JodinType>, fields: Vec<Field<ResolvedType>>) -> Self {
-        ResolvedType {
+    pub fn new(base_type: &Arc<JodinType>, fields: Vec<Field<WeakResolvedType>>) -> Self {
+        WeakResolvedType {
             base_type: Arc::downgrade(base_type),
             fields,
         }
     }
 
     /// Upgrade a resolved type into a strongly associated type
-    pub fn upgrade(&self) -> JodinResult<UpgradedResolvedType> {
+    pub fn upgrade(&self) -> JodinResult<ResolvedType> {
         let mut fields = vec![];
         for field in &self.fields {
             fields.push(field.upgrade()?);
         }
-        Ok(UpgradedResolvedType {
+        Ok(ResolvedType {
             base_type: self
                 .base_type
                 .upgrade()
@@ -64,35 +64,36 @@ impl ResolvedType {
     }
 }
 
-impl AsIntermediate for ResolvedType {
+impl AsIntermediate for WeakResolvedType {
     fn intermediate_type(&self) -> IntermediateType {
         self.base_type.upgrade().unwrap().as_intermediate()
     }
 }
 
 #[derive(Debug)]
-pub struct UpgradedResolvedType {
+pub struct ResolvedType {
     base_type: Arc<JodinType>,
-    fields: Vec<Field<UpgradedResolvedType>>,
+    fields: Vec<Field<ResolvedType>>,
 }
 
-impl GetResolvedMember<Field<UpgradedResolvedType>, UpgradedResolvedType> for UpgradedResolvedType {
-    fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field<UpgradedResolvedType>> {
-        todo!()
+impl GetResolvedMember<Field<ResolvedType>, ResolvedType> for ResolvedType {
+    fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field<ResolvedType>> {
+        self.fields
+            .iter()
+            .find(|field| &field.name.clone().strip_highest_parent().unwrap() == member_id)
+            .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
     }
 }
 
-impl AsIntermediate for UpgradedResolvedType {
+impl AsIntermediate for ResolvedType {
     fn intermediate_type(&self) -> IntermediateType {
         self.base_type.as_intermediate()
     }
 }
 
-pub struct FieldResolver {}
-
 pub struct ResolvedTypeBuilder<'types> {
     base_type: Option<Arc<JodinType>>,
-    parent_object: Option<ResolvedType>,
+    parent_object: Option<WeakResolvedType>,
     // jtraits: BinaryHeap<JTraitObjectWithDistance<'types>>,
     env: &'types TypeEnvironment,
 }
@@ -116,11 +117,11 @@ impl<'t> ResolvedTypeBuilder<'t> {
         self.parent_object = Some(big_object);
     }
 
-    pub fn build(self) -> ResolvedType {
+    pub fn build(self) -> WeakResolvedType {
         if self.base_type.is_none() {
             panic!("Base Type should be set by now.")
         }
-        let mut fields: Vec<Field<ResolvedType>> = vec![];
+        let mut fields: Vec<Field<WeakResolvedType>> = vec![];
         let big_o_factory = ResolvedTypeFactory::new(self.env);
         fields.extend(self.base_type.as_ref().unwrap().fields().into_iter().map(
             |Field {
@@ -140,7 +141,7 @@ impl<'t> ResolvedTypeBuilder<'t> {
         //     traits.push(next.object);
         // }
         let base = self.base_type.as_ref().unwrap();
-        ResolvedType {
+        WeakResolvedType {
             base_type: Arc::downgrade(base),
             fields,
         }
@@ -164,7 +165,7 @@ impl<'types> ResolvedTypeFactory<'types> {
     }
 
     /// Create a new instance of a j big object
-    pub fn new_instance(&self, ty: &Arc<JodinType>) -> ResolvedType {
+    pub fn new_instance(&self, ty: &Arc<JodinType>) -> WeakResolvedType {
         ty.resolve(&self.env)
     }
 }
@@ -205,14 +206,14 @@ impl Ord for JTraitObjectWithDistance<'_> {
 mod tests {
     use crate::core::error::{JodinError, JodinErrorType, JodinResult};
     use crate::core::types::primitives::Primitive;
-    use crate::core::types::resolved_type::ResolvedType;
+    use crate::core::types::resolved_type::WeakResolvedType;
     use crate::core::types::type_environment::TypeEnvironment;
     use crate::core::types::Type;
 
     #[test]
     fn upgrade_can_fail() {
         let env = TypeEnvironment::new();
-        let jtype: ResolvedType = env.resolve_type(&Primitive::Int);
+        let jtype: WeakResolvedType = env.resolve_type(&Primitive::Int);
         println!("{:#?}", jtype);
         drop(env);
 

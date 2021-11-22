@@ -7,7 +7,7 @@ use std::sync::{Arc, Weak};
 
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::resolved_type::{
-    BuildResolvedType, ResolveType, ResolvedType, ResolvedTypeBuilder,
+    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
 };
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};

@@ -10,7 +10,7 @@ use std::sync::Weak;
 
 use crate::ast::JodinNode;
 use intermediate_type::IntermediateType;
-use resolved_type::ResolvedType;
+use resolved_type::WeakResolvedType;
 
 use crate::ast::tags::Tag;
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
@@ -21,7 +21,7 @@ use crate::core::types::arrays::Array;
 use crate::core::types::jobject::JObject;
 use crate::core::types::pointer::Pointer;
 use crate::core::types::primitives::Primitive;
-use crate::core::types::resolved_type::{ResolveType, UpgradedResolvedType};
+use crate::core::types::resolved_type::{ResolveType, ResolvedType};
 use crate::core::types::structure::Structure;
 use crate::core::types::traits::{JTrait, JTraitObject};
 use crate::core::types::type_environment::TypeEnvironment;
@@ -125,7 +125,7 @@ impl Display for JodinType {
 }
 
 impl ResolveType for JodinType {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         match self {
             JodinType::Primitive(v) => environment.resolve_type(v),
             JodinType::Array(v) => environment.resolve_type(v),
@@ -327,8 +327,8 @@ impl<T> Field<T> {
     }
 }
 
-impl Field<ResolvedType> {
-    pub fn upgrade(&self) -> JodinResult<Field<UpgradedResolvedType>> {
+impl Field<WeakResolvedType> {
+    pub fn upgrade(&self) -> JodinResult<Field<ResolvedType>> {
         let upgraded = self.jtype.upgrade()?;
         Ok(Field {
             vis: self.vis.clone(),

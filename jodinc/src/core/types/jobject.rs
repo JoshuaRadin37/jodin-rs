@@ -8,7 +8,7 @@ use crate::core::identifier_resolution::Registry;
 use crate::core::privacy::Visibility;
 use crate::core::types::generic_context::{GenericParameter, Morph};
 use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, ResolvedType};
+use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::core::types::traits::JTraitObject;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::core::types::{
@@ -42,7 +42,7 @@ impl Into<JodinType> for JObject {
 }
 
 impl ResolveType for JObject {
-    fn resolve(&self, environment: &TypeEnvironment) -> ResolvedType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         let mut fields = self.fields.iter().collect::<Vec<_>>();
         todo!()
     }
