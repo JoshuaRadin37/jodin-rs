@@ -65,6 +65,25 @@ use crate::core::types::type_environment::TypeEnvironment;
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
 
+#[macro_export]
+macro_rules! id {
+    ($first:ident $($sep:tt $next:ident)*) => {
+        $crate::core::identifier::Identifier::from_iter([stringify!($first), $(stringify!($next)),*])
+    };
+    ($first:literal $($sep:tt $next:literal)*) => {
+        {
+            use $crate::core::identifier::Identifier;
+            Identifier::from_iter(&[Identifier::from($first), $(Identifier::from($next)),*])
+        }
+    };
+    ($first:expr $(,$next:expr)*) => {
+        {
+            use $crate::core::identifier::Identifier;
+            Identifier::from_iter([Identifier::from($first), $(Identifier::from($next)),*])
+        }
+    };
+}
+
 pub mod ast;
 pub mod cli;
 pub mod compilation;

@@ -204,9 +204,16 @@ impl From<&Identifier> for Identifier {
     }
 }
 
-impl<S: AsRef<str>> FromIterator<S> for Identifier {
-    fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
-        let mut vec = Vec::from_iter(iter);
+// impl<S: AsRef<str>> FromIterator<S> for Identifier {
+//     fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
+//         let mut vec = Vec::from_iter(iter);
+//         vec.reverse();
+//         Identifier::from_iterator_backwards(vec).unwrap()
+//     }
+// }
+impl<I: Into<Identifier>> FromIterator<I> for Identifier {
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+        let mut vec: Vec<String> = iter.into_iter().flat_map(|i| i.into().iter()).collect();
         vec.reverse();
         Identifier::from_iterator_backwards(vec).unwrap()
     }
@@ -506,6 +513,12 @@ mod test {
     fn id_from_iter() {
         let id = Identifier::from_iter(&["std", "iter", "FromIterator"]);
         assert_eq!(id.to_string(), "std::iter::FromIterator");
+        assert_eq!(id!(std::iter::FromIterator), id);
+        assert_eq!(id!(std::iter::FromIterator), id!(std, iter, FromIterator));
+        assert_eq!(
+            id!(std::iter::FromIterator),
+            id!(id!("std"::"iter"), "FromIterator")
+        );
     }
 
     #[test]
