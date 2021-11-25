@@ -268,9 +268,10 @@ impl IdentifierCreator {
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 // tags_to_add.push(Box::new(tag.clone()));
                 let name = Identifier::from(tag.absolute_id().this());
-                id_resolver.push_namespace(name.clone());
 
-                debug!("Creating identifiers for members of {}", name);
+                // id_resolver.push_namespace(name.clone());
+                debug!("Using semi-push for {}", name);
+                id_resolver.semi_push(name.clone());
                 for member in members {
                     self.create_identities(member, id_resolver, visibility_registry)?;
                     debug!(
@@ -279,8 +280,7 @@ impl IdentifierCreator {
                         member.direct_children()[0].resolved_id().unwrap()
                     );
                 }
-
-                id_resolver.pop_namespace();
+                id_resolver.semi_pop();
             }
             JodinNodeType::NamedValue { name, .. } => {
                 self.create_identities(name, id_resolver, visibility_registry)?
@@ -382,6 +382,31 @@ impl IdentifierCreator {
         self.block_num.pop();
         let current = id_resolver.current_namespace_with_base();
         id_resolver.stop_use_namespace(&current).unwrap();
+    }
+
+    /// Pushes a namespace as the current namespace, while saving the current namespace
+    /// as a used namespace, for the duration of the closure.
+    pub fn semi_push_namespace<F, R>(
+        &mut self,
+        id: Identifier,
+        resolver: &mut IdentifierResolver,
+        mut closure: F,
+    ) -> R
+    where
+        F: Fn(&mut IdentifierResolver) -> R,
+    {
+        let original_current = resolver.current_namespace().clone();
+        if let Some(current) = &original_current {
+            resolver.use_namespace(current.clone());
+        }
+        resolver.push_namespace(id);
+        let output = closure(resolver);
+        resolver.pop_namespace();
+        if let Some(current) = &original_current {
+            resolver.stop_use_namespace(current);
+        }
+
+        output
     }
 
     fn start(

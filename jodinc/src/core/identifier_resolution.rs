@@ -23,6 +23,7 @@ pub struct IdentifierResolver {
     current_namespace: Option<Identifier>,
     using_namespaces: Vec<Identifier>,
     base_namespace: Identifier,
+    namespace_stash: Vec<Identifier>,
 }
 
 impl IdentifierResolver {
@@ -41,6 +42,7 @@ impl IdentifierResolver {
             current_namespace: None,
             using_namespaces: vec![],
             base_namespace: base_namespace.as_ref().to_string().into(),
+            namespace_stash: vec![],
         }
     }
 
@@ -228,6 +230,42 @@ impl IdentifierResolver {
     pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
         let path = Identifier::new_concat(&self.base_namespace, path);
         self.tree.get_from_absolute_identifier(&path).is_ok()
+    }
+
+    pub fn semi_push(&mut self, id: Identifier) {
+        let original_current = self.current_namespace.clone();
+        if let Some(current) = &original_current {
+            self.use_namespace(current.clone());
+        }
+        self.push_namespace(id);
+    }
+
+    pub fn semi_pop(&mut self) {
+        self.pop_namespace();
+        let original_current = self.current_namespace.clone();
+        if let Some(current) = &original_current {
+            self.stop_use_namespace(current);
+        }
+    }
+
+    /// Pushes a namespace as the current namespace, while saving the current namespace
+    /// as a used namespace, for the duration of the closure.
+    pub fn semi_push_namespace<F, R>(&mut self, id: Identifier, mut closure: F) -> R
+    where
+        F: FnMut() -> R,
+    {
+        let original_current = self.current_namespace.clone();
+        if let Some(current) = &original_current {
+            self.use_namespace(current.clone());
+        }
+        self.push_namespace(id);
+        let output = closure();
+        self.pop_namespace();
+        if let Some(current) = &original_current {
+            self.stop_use_namespace(current);
+        }
+
+        output
     }
 
     /// Add an alias

@@ -13,14 +13,16 @@ use jodinc::{default_logging, process_jodin_node};
 use logos::internal::CallbackResult;
 
 static JODIN_STRING: &str = r"
-struct Square {
-    sides: int
-}
-
-struct TripleSquare {
-    sq1: Square,
-    sq2: Square,
-    sq3: Square
+in base {
+    struct Square {
+        sides: int
+    }
+    
+    struct TripleSquare {
+        sq1: Square,
+        sq2: Square,
+        sq3: Square
+    }
 }
 ";
 
