@@ -1,7 +1,15 @@
 [package]
 name = "jodinc"
-version = "0.1.0"
 edition = "2021"
+version = "0.1.0"
+authors = ["joshradin"]
+description = "The compiler for the in-development language jodin."
+readme = false
+repository = "https://github.com/joshradin/jodin-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["language", "compilers"]
+categories = ["compilers"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

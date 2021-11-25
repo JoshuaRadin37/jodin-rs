@@ -1,15 +1,15 @@
-use jodin_rs::ast::tags::TagTools;
-use jodin_rs::core::error::JodinResult;
-use jodin_rs::core::identifier::Identifier;
-use jodin_rs::core::privacy::Visibility;
-use jodin_rs::core::types::primitives::Primitive;
-use jodin_rs::core::types::resolved_type::{
+use jodinc::ast::tags::TagTools;
+use jodinc::core::error::JodinResult;
+use jodinc::core::identifier::Identifier;
+use jodinc::core::privacy::Visibility;
+use jodinc::core::types::primitives::Primitive;
+use jodinc::core::types::resolved_type::{
     ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
 };
-use jodin_rs::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
-use jodin_rs::parsing::parse_program;
-use jodin_rs::utility::Visitor;
-use jodin_rs::{default_logging, process_jodin_node};
+use jodinc::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
+use jodinc::parsing::parse_program;
+use jodinc::utility::Visitor;
+use jodinc::{default_logging, process_jodin_node};
 use logos::internal::CallbackResult;
 
 static JODIN_STRING: &str = r"

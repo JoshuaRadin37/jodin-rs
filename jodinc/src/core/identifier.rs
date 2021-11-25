@@ -35,7 +35,7 @@ impl Identifier {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// let id = Identifier::from_array(["hello", "world"]);
     /// ```
     #[deprecated = "No longer necessary, as arrays not directly implement IntoIterator"]
@@ -66,7 +66,7 @@ impl Identifier {
     ///
     /// # Example
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["hello", "world"]);
     /// assert_eq!(id, "hello::world");
@@ -79,7 +79,7 @@ impl Identifier {
     ///
     /// # Example
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["hello", "world"]);
     /// assert_eq!(id, "hello::world");
@@ -92,7 +92,7 @@ impl Identifier {
     ///
     /// # Examples
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["lvl1", "lvl2", "lvl3"]);
     /// assert_eq!(id, "lvl1::lvl2::lvl3");
@@ -129,7 +129,7 @@ impl Identifier {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// let example1 = Identifier::new_concat(Identifier::from("hello"), Identifier::from("world"));
     /// let example2 = Identifier::new_concat("hello", "world");
     ///
@@ -167,7 +167,7 @@ impl Identifier {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
     /// let new_id = id.strip_highest_parent().unwrap();
     /// assert_eq!(new_id, Identifier::from_array(["lvl2", "lvl3"]));
@@ -289,14 +289,14 @@ impl PartialOrd for Identifier {
     /// # Examples
     /// None => Neither this or the other identifier represents subsets of each other
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = Identifier::from("Goodbye");
     /// assert_eq!(id1.partial_cmp(&id2), None);
     /// ```
     /// Some(Greater) => The `self` identifier is a super set of `other`
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::cmp::Ordering::Greater;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = Identifier::new_concat("Hello", "World");
@@ -304,7 +304,7 @@ impl PartialOrd for Identifier {
     /// ```
     /// Some(Equal) => The `self` identifier and the `other` identifier represent the same set
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::cmp::Ordering::Equal;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = id1.clone();
@@ -312,7 +312,7 @@ impl PartialOrd for Identifier {
     /// ```
     /// Some(Less) => The `self` identifier is a sub set of `other`
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc:core::identifier::Identifier;
     /// use std::cmp::Ordering::Less;
     /// let id1 = Identifier::new_concat("Hello", "World");
     /// let id2 = Identifier::from("Hello");

@@ -1,10 +1,10 @@
-use jodin_rs::cli::JodinRsApp;
-use jodin_rs::compilation_settings::CompilationSettings;
-use jodin_rs::core::error::{JodinError, JodinErrorType, JodinResult};
-use jodin_rs::passes::analysis::analyze;
-use jodin_rs::passes::frontend::FilesToJodinNodeTool;
-use jodin_rs::passes::optimization::optimize;
-use jodin_rs::{init_logging, process_jodin_node};
+use jodinc::cli::JodinRsApp;
+use jodinc::compilation_settings::CompilationSettings;
+use jodinc::core::error::{JodinError, JodinErrorType, JodinResult};
+use jodinc::passes::analysis::analyze;
+use jodinc::passes::frontend::FilesToJodinNodeTool;
+use jodinc::passes::optimization::optimize;
+use jodinc::{init_logging, process_jodin_node};
 use log::LevelFilter;
 use std::fs::File;
 use std::io::Write;

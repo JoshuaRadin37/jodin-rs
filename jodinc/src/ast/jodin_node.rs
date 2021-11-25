@@ -115,10 +115,10 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::passes::analysis::ResolvedIdentityTag;
+    /// use jodinc:ast::JodinNode;
+    /// use jodinc:ast::JodinNodeType;
+    /// use jodinc:core::identifier::Identifier;
+    /// use jodinc:passes::analysis::ResolvedIdentityTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(ResolvedIdentityTag::new(Identifier::from_array(["namespace", "id"]))).unwrap();
     /// ```
@@ -170,10 +170,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::ast::tags::DummyTag;
+    /// use jodinc:ast::JodinNode;
+    /// use jodinc:ast::JodinNodeType;
+    /// use jodinc:core::identifier::Identifier;
+    /// use jodinc:ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -196,10 +196,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::ast::tags::DummyTag;
+    /// use jodinc:ast::JodinNode;
+    /// use jodinc:ast::JodinNodeType;
+    /// use jodinc:core::identifier::Identifier;
+    /// use jodinc:ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -216,10 +216,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::ast::tags::DummyTag;
+    /// use jodinc:ast::JodinNode;
+    /// use jodinc:ast::JodinNodeType;
+    /// use jodinc:core::identifier::Identifier;
+    /// use jodinc:ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -234,10 +234,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::ast::JodinNode;
-    /// use jodin_rs::ast::JodinNodeType;
-    /// use jodin_rs::core::identifier::Identifier;
-    /// use jodin_rs::ast::tags::DummyTag;
+    /// use jodinc:ast::JodinNode;
+    /// use jodinc:ast::JodinNodeType;
+    /// use jodinc:core::identifier::Identifier;
+    /// use jodinc:ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
