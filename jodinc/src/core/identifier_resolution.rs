@@ -1,7 +1,7 @@
 //! The main method for tracking, then resolving identifiers.
 
 use std::collections::{HashMap, HashSet};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
 use std::process::id;
@@ -24,13 +24,13 @@ mod _hidden {
     ///
     /// The base namespace should **never** escape the resolver once it's been created. It's only used for
     /// bookkeeping.
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct IdentifierResolver {
-        tree: NamespaceTree<Identifier>,
         current_namespace: Option<Identifier>,
         using_namespaces: Vec<Identifier>,
         base_namespace: Identifier,
         namespace_stash: Vec<Identifier>,
+        tree: NamespaceTree<Identifier>,
     }
 
     impl IdentifierResolver {
@@ -45,11 +45,11 @@ mod _hidden {
             let mut tree = NamespaceTree::new();
             tree.add_namespace(Identifier::from(&base_namespace));
             Self {
-                tree,
                 current_namespace: None,
                 using_namespaces: vec![],
                 base_namespace: base_namespace.as_ref().to_string().into(),
                 namespace_stash: vec![],
+                tree,
             }
         }
 
@@ -80,10 +80,12 @@ mod _hidden {
         }
 
         /// Adds a namespace to search from relatively
+        #[must_use]
         pub fn use_namespace(&mut self, namespace: Identifier) -> JodinResult<()> {
-            let resolved_set = self
-                .tree
-                .get_namespaces(self.current_namespace.as_ref(), &namespace);
+            let resolved_set = self.tree.get_namespaces(
+                Some(&self.current_namespace_with_base()),
+                &Identifier::new_concat(&self.base_namespace, &namespace),
+            );
             if resolved_set.is_empty() {
                 return Err(JodinErrorType::IdentifierDoesNotExist(namespace))?;
             } else if resolved_set.len() >= 2 {
@@ -93,6 +95,7 @@ mod _hidden {
                 })?;
             }
             let resolved = resolved_set.into_iter().next().cloned().unwrap();
+            info!("Added used namespace: {:?}", resolved);
             self.using_namespaces.push(resolved);
             Ok(())
         }
@@ -148,6 +151,7 @@ mod _hidden {
             let mut output = HashSet::new();
 
             let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
+            trace!("Checking path as absolute path: {:?}", absolute_path);
             if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
                 info!("Found absolute path: {}", absolute_path);
                 output.insert(val);
@@ -155,7 +159,7 @@ mod _hidden {
             if self.current_namespace.is_some() {
                 let relative_path =
                     Identifier::new_concat(&self.current_namespace_with_base(), &path);
-
+                trace!("Checking path as relative path: {:?}", relative_path);
                 if relative_path != absolute_path {
                     if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
                         info!(
@@ -170,7 +174,7 @@ mod _hidden {
 
             for using in &self.using_namespaces {
                 let using_path = Identifier::new_concat(using, &path);
-                debug!("As relative to {:?} path = {:?}", using, using_path);
+                trace!("Checking path as relative path: {:?}", using_path);
                 if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
                     info!(
                         "Found relative path from {current}: {relative:?}",
@@ -221,7 +225,13 @@ mod _hidden {
         pub fn semi_push(&mut self, id: Identifier) {
             let original_current = self.current_namespace.clone();
             if let Some(current) = &original_current {
-                self.use_namespace(current.clone());
+                self.use_namespace(current.clone()).expect(
+                    format!(
+                        "Couldn't set current namespace {:?} as used namespace",
+                        current
+                    )
+                    .as_str(),
+                );
             }
             self.push_namespace(id);
         }
@@ -260,6 +270,7 @@ mod _hidden {
 
 pub use _hidden::IdentifierResolver;
 
+#[derive(Clone)]
 struct Node<T: Namespaced> {
     id: Identifier,
     children: Vec<Node<T>>,
@@ -302,6 +313,7 @@ impl<T: Namespaced> Node<T> {
 }
 
 /// Creates a tree of namespaces that allow for resolution by searching
+#[derive(Clone)]
 pub struct NamespaceTree<T: Namespaced> {
     head: Node<T>,
 }
@@ -381,16 +393,21 @@ impl<T: Namespaced> NamespaceTree<T> {
         path: &Identifier,
     ) -> HashSet<&Identifier> {
         //println!("Attempting to find namespace {}", path);
+        trace!(
+            "Trying to find possible namespaces with id {:?} (from: {:?})",
+            path,
+            current_namespace
+        );
         if let Some(_current) = current_namespace {
             //println!("Using {} as current namespace", current);
         }
         let mut output = HashSet::new();
-        //println!("Searching for absolute namespace {}...", path);
+        trace!("Searching for absolute namespace {}...", path);
         if let Some(abs) = self.get_namespace_absolute(path) {
-            //println!("Absolute found.");
+            trace!("Absolute found.");
             output.insert(abs.id());
         }
-        //println!("Searching for a relative path...");
+        trace!("Searching for a relative path...");
         if let Some(current) = current_namespace {
             if let Some(current_node) = self.get_namespace_absolute(current) {
                 let mut iter: IdentifierIterator = path.into_iter();
@@ -407,11 +424,12 @@ impl<T: Namespaced> NamespaceTree<T> {
                     break;
                 }
                 if found && iter.next().is_none() {
-                    //println!("Found {}.", ptr.id());
+                    trace!("Found {}.", ptr.id());
                     output.insert(ptr.id());
                 }
             }
         }
+        trace!("Found possible namespaces: {:?}", output);
         output
     }
 
@@ -526,26 +544,40 @@ impl<T: Namespaced> NamespaceTree<T> {
         let mut ptr = &self.head;
         let names: Vec<String> = path.into_iter().collect();
 
-        for name in &names[..names.len() - 1] {
+        let namespaces = &names[..names.len() - 1];
+        trace!("Searching through namespaces {:?}", namespaces);
+        for name in namespaces {
             /*
             if ptr.id() != name {
                 return Err(IdentifierDoesNotExist(path.clone()));
             }
 
              */
-            trace!("At node {} out of {:?}", ptr.id, path);
             let mut found = false;
+            trace!("At node {:?} out of {:?}", NodeInfo::from(ptr), path);
             for child in ptr.children() {
+                {
+                    let node = NodeInfo::from(child);
+                    trace!(
+                        "Checking {node:?}.id.this() = {this} is equal to {name}",
+                        node = node.id,
+                        this = node.id.this(),
+                        name = name
+                    );
+                }
                 if child.id().this() == name {
+                    trace!("found!, setting ptr to {:?}", NodeInfo::from(child));
                     ptr = child;
-
                     found = true;
                     break;
                 }
             }
             if !found {
-                warn!("Nothing found for {}", path);
-                return Err(IdentifierDoesNotExist(path.clone()).into());
+                warn!(
+                    "Couldn't find identifier with namespace path: {:?}",
+                    Identifier::from_iter(namespaces)
+                );
+                return Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into());
             }
         }
         trace!("At node {} out of {:?}", ptr.id, path);
@@ -592,7 +624,7 @@ impl<T: Namespaced> Tree for Node<T> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct NodeInfo {
     id: Identifier,
     children: Vec<NodeInfo>,
@@ -622,49 +654,25 @@ impl<T: Namespaced> From<&Node<T>> for NodeInfo {
         }
     }
 }
-/*
-impl TreeItem for NodeInfo {
-    type Child = Self;
 
-    fn write_self<W: std::io::Write>(&self, f: &mut W, style: &Style) -> std::io::Result<()> {
-        if self.is_namespace {
-            write!(f, "{}", style.paint(&self.id.this()),)
-        } else {
-            write!(f, "<{}>", style.paint(&self.id),)
+impl Debug for NodeInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut map = f.debug_map();
+        // map.entry(&"id", &self.id);
+        for child in &self.children {
+            map.entry(&child.id, &child);
         }
-    }
-
-    fn children(&self) -> Cow<[Self::Child]> {
-        let mut objects = vec![];
-        objects.extend(self.relevant.iter().map(|id| NodeInfo {
-            id: match &id.1 {
-                None => id.0.clone(),
-                Some(alias) => alias.clone(),
-            },
-            children: vec![],
-            relevant: vec![],
-            is_namespace: false,
-        }));
-        objects.extend(self.children.iter().cloned());
-        Cow::from(objects)
+        map.entry(
+            &"relevant",
+            &self.relevant.iter().map(|(a, b)| a).collect::<Vec<_>>(),
+        );
+        map.finish()
     }
 }
 
-
 impl<T: Namespaced> Debug for NamespaceTree<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let tree = NodeInfo::from(&self.head);
-        let mut vec = vec![];
-        write_tree(&tree, &mut vec).map_err(|_e| std::fmt::Error::default())?;
-        let string = String::from_utf8(vec).map_err(|_e| std::fmt::Error::default())?;
-        write!(f, "{}", string)
-    }
-}
-*/
-impl<T: Namespaced> Debug for NamespaceTree<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let tree = NodeInfo::from(&self.head);
-        write!(f, "{:#?}", tree)
+        NodeInfo::from(&self.head).fmt(f)
     }
 }
 /// Contains an identifier resolver and a mapping between full identifiers and it's associated value.

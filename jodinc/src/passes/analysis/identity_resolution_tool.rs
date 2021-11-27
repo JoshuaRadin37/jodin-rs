@@ -42,9 +42,20 @@ impl IdentityResolutionTool {
         let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
         //println!("Visibilities: {:#?}", self.visibility);
         info!("Resolving identifiers...");
-        self.setter
+        match self
+            .setter
             .set_identities(&mut tree, &mut resolver, &self.visibility)
-            .map(|_| (tree, resolver))
+        {
+            Err(e) => {
+                error!("Id resolver:\n{:#?}", resolver);
+                tree.set_property("id_resolver", resolver);
+                Err(e)
+            }
+            Ok(()) => {
+                tree.set_property("id_resolver", resolver.clone());
+                Ok((tree, resolver))
+            }
+        }
     }
 }
 
@@ -618,8 +629,8 @@ impl IdentifierSetter {
         id_resolver: &IdentifierResolver,
         visibility: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
-        let ref id_with_base = id_resolver.base_namespace() + id;
-        debug!("Attempting to find {}", id);
+        let ref id_with_base = *id;
+        info!("Attempting to find absolute path {:?}", id);
         // first get alias if it exist
         let alias = self
             .aliases
@@ -627,10 +638,24 @@ impl IdentifierSetter {
             .ok()
             .filter(|&alias_id| {
                 let visibility = visibility.get(alias_id).ok();
+                info!(
+                    "Found alias {:?} with visibility {:?}",
+                    alias_id, visibility
+                );
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        visibility.is_visible(alias_id, &id_resolver.current_namespace())
+                        if visibility.is_visible(alias_id, &id_resolver.current_namespace()) {
+                            true
+                        } else {
+                            warn!(
+                                "Path {:?} ({:?}) is not visible from {:?}",
+                                alias_id,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
+                            false
+                        }
                     }
                 }
             })
@@ -640,10 +665,21 @@ impl IdentifierSetter {
             .ok()
             .filter(|resolved| {
                 let visibility = visibility.get(resolved).ok();
+                info!("Found path {:?} with visibility {:?}", resolved, visibility);
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        visibility.is_visible(resolved, &id_resolver.current_namespace())
+                        if visibility.is_visible(resolved, &id_resolver.current_namespace()) {
+                            true
+                        } else {
+                            warn!(
+                                "Path {:?} ({:?}) is not visible from {:?}",
+                                resolved,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
+                            false
+                        }
                     }
                 }
             });
@@ -660,7 +696,13 @@ impl IdentifierSetter {
                 found: vec![a, n],
             }
             .into()),
-            (None, None) => Err(JodinErrorType::IdentifierDoesNotExist(id.clone()).into()),
+            (None, None) => {
+                error!(
+                    "{id} does not exist as either an alias or as a direct path",
+                    id = id
+                );
+                Err(JodinErrorType::IdentifierDoesNotExist(id.clone()).into())
+            }
         }
     }
 

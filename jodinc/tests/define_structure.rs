@@ -3,6 +3,7 @@ use jodinc::core::error::JodinResult;
 use jodinc::core::identifier::Identifier;
 use jodinc::core::identifier_resolution::IdentifierResolver;
 use jodinc::core::privacy::Visibility;
+use jodinc::core::types::intermediate_type::IntermediateType;
 use jodinc::core::types::primitives::Primitive;
 use jodinc::core::types::resolved_type::{
     ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
@@ -10,29 +11,34 @@ use jodinc::core::types::resolved_type::{
 use jodinc::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodinc::parsing::parse_program;
 use jodinc::utility::Visitor;
-use jodinc::{default_logging, process_jodin_node};
+use jodinc::{default_logging, init_logging, process_jodin_node};
+use log::LevelFilter;
 use logos::internal::CallbackResult;
 use std::error::Error;
 
 static JODIN_STRING: &str = r#"
-in base {
-    public struct Square {
-        sides: int
-    }
-    
-    struct TripleSquare {
-        sq1: Square,
-        sq2: Square,
-        sq3: Square
-    }
+public struct Square {
+    sides: int
 }
+
+struct TripleSquare {
+    sq1: Square,
+    sq2: Square,
+    sq3: Square
+}
+
 "#;
 
 #[test]
 fn define_a_structure() -> Result<(), Box<dyn Error>> {
-    default_logging();
+    init_logging(LevelFilter::Trace);
     let declaration = parse_program(JODIN_STRING)?;
-    let (processed, env) = process_jodin_node(declaration)?;
+    let (processed, env) = match process_jodin_node(declaration) {
+        Err(e) => {
+            return Err(Box::new(e));
+        }
+        Ok(v) => v,
+    };
 
     println!("{:#?}", processed);
 
@@ -42,22 +48,27 @@ fn define_a_structure() -> Result<(), Box<dyn Error>> {
 
     println!("id resolver: {:#?}", id_resolver);
 
-    let square_ty = env.get_type_by_name(&Identifier::from("Square"))?;
-    println!("{:#?}", square_ty);
+    let tri_square_ty = env.get_type_by_name(&Identifier::from("TripleSquare"))?;
+    println!("{:#?}", tri_square_ty);
 
     let factory = ResolvedTypeFactory::new(&env);
 
-    let square_ty_o = factory.new_instance(square_ty).upgrade()?;
+    let tri_square_ty_o = factory.new_instance(tri_square_ty).upgrade()?;
 
-    println!("{:#?}", square_ty_o);
+    println!("{:#?}", tri_square_ty_o);
 
-    let field: &Field<ResolvedType> = square_ty_o.get_member(&Identifier::from("sides"))?;
+    let field: &Field<ResolvedType> = tri_square_ty_o.get_member(&Identifier::from("sq1"))?;
 
     assert_eq!(&field.vis, &Visibility::Public);
     assert_eq!(
         &field.jtype.intermediate_type(),
-        &Primitive::Int.intermediate_type()
+        &IntermediateType::from(Identifier::from("Square"))
     );
 
+    let sides = field.jtype.get_member(&Identifier::new("sides"))?;
+    assert_eq!(
+        &sides.jtype.intermediate_type(),
+        &Primitive::Int.intermediate_type()
+    );
     Ok(())
 }

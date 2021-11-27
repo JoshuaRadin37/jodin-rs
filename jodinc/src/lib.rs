@@ -60,10 +60,11 @@ extern crate lalrpop_util;
 extern crate log;
 
 use crate::ast::JodinNode;
-use crate::core::error::JodinResult;
+use crate::core::error::{JodinError, JodinResult};
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
+use std::fs::File;
 
 #[macro_export]
 macro_rules! id {
@@ -95,14 +96,36 @@ pub mod utility;
 
 use simplelog::*;
 
-/// Initializes logging for the pacakge
+/// Initializes logging for the package
 pub fn init_logging(level: LevelFilter) {
-    TermLogger::init(
-        level,
-        Config::default(),
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
+    let log_term_config = ConfigBuilder::new()
+        .set_thread_mode(ThreadLogMode::Names)
+        .set_location_level(LevelFilter::Off)
+        .set_target_level(LevelFilter::Off)
+        .build();
+
+    let log_file_config = ConfigBuilder::new()
+        .set_thread_mode(ThreadLogMode::Names)
+        .set_thread_padding(ThreadPadding::Right(15))
+        .set_thread_level(LevelFilter::Error)
+        .set_location_level(LevelFilter::Error)
+        .set_target_level(LevelFilter::Off)
+        .set_level_padding(LevelPadding::Right)
+        .build();
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            level,
+            log_term_config,
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            level,
+            log_file_config,
+            File::create("compiler.log").expect("Could not open log file"),
+        ),
+    ])
     .expect("Could not create logger");
 }
 
@@ -115,7 +138,7 @@ pub fn default_logging() {
 }
 
 /// processes the jodin node tree
-pub fn process_jodin_node(mut node: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
+pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
     let (analyzed, env) = analyze(node)?;
     let optimized = optimize(analyzed)?;
     Ok((optimized, env))

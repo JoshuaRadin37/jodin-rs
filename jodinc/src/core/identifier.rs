@@ -197,6 +197,14 @@ impl Identifier {
     pub fn iter(&self) -> IdentifierIterator {
         IntoIterator::into_iter(self)
     }
+
+    /// Gets the length of the identifier
+    pub fn len(&self) -> usize {
+        if self.is_empty() {
+            return 0;
+        }
+        1 + self.parent.as_ref().map_or(0, |p| p.len())
+    }
 }
 
 impl<S: AsRef<str>> From<S> for Identifier {
