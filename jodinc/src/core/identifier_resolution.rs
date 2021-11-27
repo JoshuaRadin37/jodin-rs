@@ -681,7 +681,7 @@ pub struct Registry<T> {
     mapping: HashMap<Identifier, T>,
 }
 
-impl<T> Registry<T> {
+impl<T: Debug> Registry<T> {
     /// Creates a new, empty registry
     pub fn new() -> Self {
         Self {
@@ -723,6 +723,7 @@ impl<T> Registry<T> {
         if !self.resolver.contains_absolute_identifier(&absolute) {
             return Err(JodinErrorType::IdentifierDoesNotExist(absolute.clone()).into());
         }
+        trace!("Setting visibility of {:?} to {:?}", absolute, val);
         self.mapping.insert(absolute.clone(), val);
         Ok(&self.mapping[&absolute])
     }
@@ -773,7 +774,7 @@ impl<T> Registry<T> {
     }
 }
 
-impl<I: Into<Identifier>, T> Index<I> for Registry<T> {
+impl<I: Into<Identifier>, T: Debug> Index<I> for Registry<T> {
     type Output = T;
 
     fn index(&self, index: I) -> &Self::Output {
@@ -781,7 +782,7 @@ impl<I: Into<Identifier>, T> Index<I> for Registry<T> {
     }
 }
 
-impl<I: Into<Identifier>, T> IndexMut<I> for Registry<T> {
+impl<I: Into<Identifier>, T: Debug> IndexMut<I> for Registry<T> {
     fn index_mut(&mut self, index: I) -> &mut Self::Output {
         self.get_mut(&index.into()).unwrap()
     }

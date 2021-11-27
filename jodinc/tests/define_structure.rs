@@ -17,14 +17,15 @@ use logos::internal::CallbackResult;
 use std::error::Error;
 
 static JODIN_STRING: &str = r#"
+in shapes
 public struct Square {
     sides: int
 }
 
 struct TripleSquare {
-    sq1: Square,
-    sq2: Square,
-    sq3: Square
+    sq1: shapes::Square,
+    sq2: shapes::Square,
+    sq3: shapes::Square
 }
 
 "#;
@@ -62,7 +63,7 @@ fn define_a_structure() -> Result<(), Box<dyn Error>> {
     assert_eq!(&field.vis, &Visibility::Public);
     assert_eq!(
         &field.jtype.intermediate_type(),
-        &IntermediateType::from(Identifier::from("Square"))
+        &IntermediateType::from(Identifier::from_iter(&["shapes", "Square"]))
     );
 
     let sides = field.jtype.get_member(&Identifier::new("sides"))?;

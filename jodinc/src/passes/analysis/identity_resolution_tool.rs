@@ -183,6 +183,7 @@ impl IdentifierCreator {
         id_resolver: &mut IdentifierResolver,
         visibility_registry: &mut Registry<Visibility>,
     ) -> JodinResult<()> {
+        let visiblity_tag = tree.get_tag::<VisibilityTag>().ok().cloned();
         match tree.inner_mut() {
             // This one only occurs when requested
             JodinNodeType::Identifier(id) => {
@@ -271,6 +272,10 @@ impl IdentifierCreator {
                 self.end_block(id_resolver);
             }
             JodinNodeType::StructureDefinition { name, members } => {
+                if let Some(vis) = visiblity_tag {
+                    name.add_tag(vis);
+                }
+
                 self.create_identities(name, id_resolver, visibility_registry)?;
                 debug!("Set structure name to {}", name.resolved_id().unwrap());
 

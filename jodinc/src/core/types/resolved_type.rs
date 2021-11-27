@@ -80,7 +80,7 @@ impl GetResolvedMember<Field<ResolvedType>, ResolvedType> for ResolvedType {
     fn get_member(&self, member_id: &Identifier) -> JodinResult<&Field<ResolvedType>> {
         self.fields
             .iter()
-            .find(|field| &field.name.clone().strip_highest_parent().unwrap() == member_id)
+            .find(|field| field.name.clone().this() == member_id.to_string())
             .ok_or(JodinErrorType::IdentifierDoesNotExist(member_id.clone()).into())
     }
 }
