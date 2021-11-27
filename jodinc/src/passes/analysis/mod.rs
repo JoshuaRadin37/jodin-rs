@@ -22,7 +22,9 @@ mod type_resolution_tool;
 /// 1. Perform identity creation and resolution
 pub fn analyze(tree: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
     let mut identifier_tool = IdentityResolutionTool::new();
-    let (mut tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
+    let (mut tree, id_resolver) = identifier_tool.resolve_identities(tree)?;
+
+    tree.set_property("id_resolver", id_resolver);
 
     let mut type_resolution = TypeResolutionTool::new();
     type_resolution.visit(&mut tree)?;

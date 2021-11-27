@@ -1,6 +1,7 @@
 use jodinc::ast::tags::TagTools;
 use jodinc::core::error::JodinResult;
 use jodinc::core::identifier::Identifier;
+use jodinc::core::identifier_resolution::IdentifierResolver;
 use jodinc::core::privacy::Visibility;
 use jodinc::core::types::primitives::Primitive;
 use jodinc::core::types::resolved_type::{
@@ -11,10 +12,11 @@ use jodinc::parsing::parse_program;
 use jodinc::utility::Visitor;
 use jodinc::{default_logging, process_jodin_node};
 use logos::internal::CallbackResult;
+use std::error::Error;
 
-static JODIN_STRING: &str = r"
+static JODIN_STRING: &str = r#"
 in base {
-    struct Square {
+    public struct Square {
         sides: int
     }
     
@@ -24,14 +26,21 @@ in base {
         sq3: Square
     }
 }
-";
+"#;
 
 #[test]
-fn define_a_structure() -> JodinResult<()> {
+fn define_a_structure() -> Result<(), Box<dyn Error>> {
     default_logging();
     let declaration = parse_program(JODIN_STRING)?;
     let (processed, env) = process_jodin_node(declaration)?;
+
     println!("{:#?}", processed);
+
+    let id_resolver = processed
+        .property::<IdentifierResolver>("id_resolver")
+        .ok_or("id resolver not available")?;
+
+    println!("id resolver: {:#?}", id_resolver);
 
     let square_ty = env.get_type_by_name(&Identifier::from("Square"))?;
     println!("{:#?}", square_ty);

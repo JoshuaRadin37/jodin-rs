@@ -45,7 +45,10 @@ impl Identifier {
 
     /// Creates an empty identifier, should only ever be used to represent missing data
     pub fn empty() -> Self {
-        Self::from("")
+        Self {
+            parent: None,
+            id: "".to_string(),
+        }
     }
 
     /// Check if this identifier is empty
@@ -141,6 +144,13 @@ impl Identifier {
     ) -> Identifier {
         let mut child = child.into();
         let parent = parent.into();
+
+        if child.is_empty() {
+            return parent;
+        } else if parent.is_empty() {
+            return child;
+        }
+
         child.apply_to_highest_parent_mut(move |highest| {
             highest.parent = Some(Box::new(parent.clone()));
         });
@@ -152,10 +162,10 @@ impl Identifier {
         let mut iter = iter.into_iter();
         if let Some(last) = iter.next() {
             let parent = Self::from_iterator_backwards(iter).map(|id| Box::new(id));
-            Some(Self {
-                parent,
-                id: last.as_ref().to_string(),
-            })
+            match parent {
+                None => Some(Identifier::new(last)),
+                Some(parent) => Some(Self::new_concat(*parent, last)),
+            }
         } else {
             None
         }
@@ -556,8 +566,8 @@ mod test {
 
         let id1 = Identifier::from_iter(["hello", "world", "mars"]);
         assert_eq!(id1.partial_cmp(&id2),
-        None,
-        "Although they are both the same length, because neither is a subset of the other they can't be compared")
+                   None,
+                   "Although they are both the same length, because neither is a subset of the other they can't be compared")
     }
 
     #[test]
@@ -566,5 +576,11 @@ mod test {
             .with_child("world")
             .with_child("goodbye");
         assert_eq!(chain.to_string(), "hello->world->goodbye");
+    }
+
+    #[test]
+    fn empty_id_concats() {
+        assert_eq!(id!(Identifier::empty(), "test"), id!("test"));
+        assert_eq!(id!("test", Identifier::empty()), id!("test"));
     }
 }

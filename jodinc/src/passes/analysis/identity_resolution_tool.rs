@@ -40,9 +40,7 @@ impl IdentityResolutionTool {
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
         info!("Creating absolute identifiers...");
         let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
-        let base = resolver.base_namespace();
-        self.visibility
-            .insert_with_identifier(Visibility::Public, base.clone())?;
+        //println!("Visibilities: {:#?}", self.visibility);
         info!("Resolving identifiers...");
         self.setter
             .set_identities(&mut tree, &mut resolver, &self.visibility)
@@ -368,20 +366,25 @@ impl IdentifierCreator {
     fn start_block(&mut self, id_resolver: &mut IdentifierResolver) {
         let block_num = self.get_block_num();
         let string = Identifier::from(format!("{{block {}}}", block_num));
-        let last = id_resolver.current_namespace_with_base();
+        let last = id_resolver.current_namespace().clone();
         self.block_num.push(0);
 
         id_resolver.push_namespace(string.clone());
         //id_resolver.create_absolute_path(&Identifier::from(""));
-        id_resolver.use_namespace(last).unwrap();
+        if !last.is_empty() {
+            id_resolver.use_namespace(last).unwrap();
+        }
         //println!("{:#?}", id_resolver);
     }
 
     fn end_block(&mut self, id_resolver: &mut IdentifierResolver) {
         id_resolver.pop_namespace();
         self.block_num.pop();
-        let current = id_resolver.current_namespace_with_base();
-        id_resolver.stop_use_namespace(&current).unwrap();
+        if !id_resolver.current_namespace().is_empty() {
+            id_resolver
+                .stop_use_namespace(&id_resolver.current_namespace())
+                .unwrap();
+        }
     }
 
     /// Pushes a namespace as the current namespace, while saving the current namespace
@@ -395,15 +398,15 @@ impl IdentifierCreator {
     where
         F: Fn(&mut IdentifierResolver) -> R,
     {
-        let original_current = resolver.current_namespace().clone();
-        if let Some(current) = &original_current {
-            resolver.use_namespace(current.clone());
+        let original_current = resolver.current_namespace();
+        if !original_current.is_empty() {
+            resolver.use_namespace(original_current.clone());
         }
         resolver.push_namespace(id);
         let output = closure(resolver);
         resolver.pop_namespace();
-        if let Some(current) = &original_current {
-            resolver.stop_use_namespace(current);
+        if !original_current.is_empty() {
+            resolver.stop_use_namespace(&original_current);
         }
 
         output
@@ -489,7 +492,7 @@ impl IdentifierSetter {
                     info!(
                         "Attempting to find {} from {}",
                         id,
-                        id_resolver.current_namespace_with_base()
+                        id_resolver.current_namespace()
                     );
                     let resolved =
                         self.try_get_absolute_identifier(id, id_resolver, visibility_resolver)?;
@@ -618,19 +621,20 @@ impl IdentifierSetter {
         let ref id_with_base = id_resolver.base_namespace() + id;
         debug!("Attempting to find {}", id);
         // first get alias if it exist
-        let alias =
-            self.aliases
-                .get(id_with_base)
-                .ok()
-                .filter(|&alias_id| {
-                    let visibility = visibility.get(alias_id).ok();
-                    match visibility {
-                        None => true,
-                        Some(visibility) => visibility
-                            .is_visible(alias_id, &id_resolver.current_namespace_with_base()),
+        let alias = self
+            .aliases
+            .get(id_with_base)
+            .ok()
+            .filter(|&alias_id| {
+                let visibility = visibility.get(alias_id).ok();
+                match visibility {
+                    None => true,
+                    Some(visibility) => {
+                        visibility.is_visible(alias_id, &id_resolver.current_namespace())
                     }
-                })
-                .cloned();
+                }
+            })
+            .cloned();
         let as_normal = id_resolver
             .resolve_path(id.clone(), false)
             .ok()
@@ -639,7 +643,7 @@ impl IdentifierSetter {
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        visibility.is_visible(resolved, &id_resolver.current_namespace_with_base())
+                        visibility.is_visible(resolved, &id_resolver.current_namespace())
                     }
                 }
             });
@@ -670,7 +674,7 @@ impl IdentifierSetter {
         trace!("import base = {}", import.id());
         let mut aliases = vec![];
         let resolved = &id_resolver.resolve_path(import.id().clone(), true)?;
-        let current = id_resolver.current_namespace_with_base();
+        let current = id_resolver.current_namespace();
         if !identifier_is_visible_from(&current, resolved, visibility)? {
             return Err(JodinErrorType::IdentifierProtected {
                 target: import.id().clone(),
@@ -740,20 +744,23 @@ impl IdentifierSetter {
     fn start_block(&mut self, id_resolver: &mut IdentifierResolver) {
         let block_num = self.get_block_num();
         let string = Identifier::from(format!("{{block {}}}", block_num));
-        let last = id_resolver.current_namespace_with_base();
+        let last = id_resolver.current_namespace();
         self.block_num.push(0);
 
         id_resolver.push_namespace(string.clone());
         //id_resolver.create_absolute_path(&Identifier::from(""));
-        id_resolver.use_namespace(last).unwrap();
-        println!("{:#?}", id_resolver);
+        if !last.is_empty() {
+            id_resolver.use_namespace(last).unwrap();
+        }
     }
 
     fn end_block(&mut self, id_resolver: &mut IdentifierResolver) {
         id_resolver.pop_namespace();
         self.block_num.pop();
-        let current = id_resolver.current_namespace_with_base();
-        id_resolver.stop_use_namespace(&current).unwrap();
+        let current = id_resolver.current_namespace();
+        if !current.is_empty() {
+            id_resolver.stop_use_namespace(&current).unwrap();
+        }
     }
 
     fn get_block_num(&mut self) -> usize {

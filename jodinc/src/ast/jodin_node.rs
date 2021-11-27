@@ -181,7 +181,7 @@ impl JodinNode {
     /// let tag: &DummyTag = node.get_tag().unwrap();
     /// ```
     pub fn get_tag<T: 'static + Tag>(&self) -> JodinResult<&T> {
-        debug!(
+        trace!(
             "Attempting to get tag of type {}",
             std::any::type_name::<T>()
         );

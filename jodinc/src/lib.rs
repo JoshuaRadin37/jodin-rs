@@ -108,7 +108,7 @@ pub fn init_logging(level: LevelFilter) {
 
 pub fn default_logging() {
     if cfg!(debug_assertions) {
-        init_logging(LevelFilter::Trace);
+        init_logging(LevelFilter::Debug);
     } else if cfg!(release) {
         init_logging(LevelFilter::Info);
     }

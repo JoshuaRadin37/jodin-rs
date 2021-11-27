@@ -12,284 +12,253 @@ use crate::core::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::{Identifier, IdentifierIterator, Namespaced};
 use crate::utility::Tree;
-/// The default base namespace that all identifiers added to the project will be part of.
-pub const BASE_NAMESPACE: &str = "{base}";
 
-/// Maintains a [NamespaceTree](self::NamespaceTree), the current namespace,
-/// the base namespace, and all namespaces that are being "used".
-#[derive(Debug)]
-pub struct IdentifierResolver {
-    tree: NamespaceTree<Identifier>,
-    current_namespace: Option<Identifier>,
-    using_namespaces: Vec<Identifier>,
-    base_namespace: Identifier,
-    namespace_stash: Vec<Identifier>,
-}
+mod _hidden {
+    use super::*;
 
-impl IdentifierResolver {
-    /// Creates a new, empty identifier resolver
-    pub fn new() -> Self {
-        Self::with_base_namespace(BASE_NAMESPACE)
+    /// The default base namespace that all identifiers added to the project will be part of.
+    const BASE_NAMESPACE: &str = "{base}";
+
+    /// Maintains a [NamespaceTree](self::NamespaceTree), the current namespace,
+    /// the base namespace, and all namespaces that are being "used".
+    ///
+    /// The base namespace should **never** escape the resolver once it's been created. It's only used for
+    /// bookkeeping.
+    #[derive(Debug)]
+    pub struct IdentifierResolver {
+        tree: NamespaceTree<Identifier>,
+        current_namespace: Option<Identifier>,
+        using_namespaces: Vec<Identifier>,
+        base_namespace: Identifier,
+        namespace_stash: Vec<Identifier>,
     }
 
-    /// Creates a new, empty identifier resolver with a custom base namespace. This is used instead of
-    /// the `BASE_NAMESPACE`
-    pub fn with_base_namespace<S: AsRef<str>>(base_namespace: S) -> Self {
-        let mut tree = NamespaceTree::new();
-        tree.add_namespace(Identifier::from(&base_namespace));
-        Self {
-            tree,
-            current_namespace: None,
-            using_namespaces: vec![],
-            base_namespace: base_namespace.as_ref().to_string().into(),
-            namespace_stash: vec![],
+    impl IdentifierResolver {
+        /// Creates a new, empty identifier resolver
+        pub fn new() -> Self {
+            Self::with_base_namespace(BASE_NAMESPACE)
         }
-    }
 
-    /// Pushes a namespace onto the current namespace
-    pub fn push_namespace(&mut self, namespace: Identifier) {
-        let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
-        self.tree.add_namespace(full_path.clone());
-        self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
-        info!(
-            "Current namespace set to {}",
-            self.current_namespace_with_base()
-        );
-    }
-
-    /// Pops the outermost namespace from the current namespace
-    pub fn pop_namespace(&mut self) {
-        let old = std::mem::replace(&mut self.current_namespace, None);
-        if let Some(old) = old {
-            self.current_namespace = old.into_parent();
-        }
-    }
-
-    /// Adds a namespace to search from relatively
-    pub fn use_namespace(&mut self, namespace: Identifier) -> JodinResult<()> {
-        let resolved_set = self
-            .tree
-            .get_namespaces(self.current_namespace.as_ref(), &namespace);
-        if resolved_set.is_empty() {
-            return Err(JodinErrorType::IdentifierDoesNotExist(namespace))?;
-        } else if resolved_set.len() >= 2 {
-            return Err(JodinErrorType::AmbiguousIdentifierError {
-                given: namespace,
-                found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
-            })?;
-        }
-        let resolved = resolved_set.into_iter().next().cloned().unwrap();
-        self.using_namespaces.push(resolved);
-        Ok(())
-    }
-
-    /// Removes a namespace to search from, if it exists
-    pub fn stop_use_namespace(&mut self, namespace: &Identifier) -> JodinResult<()> {
-        let namespace = namespace.clone();
-        let resolved_set = self
-            .tree
-            .get_namespaces(self.current_namespace.as_ref(), &namespace);
-        if resolved_set.is_empty() {
-            return Err(JodinErrorType::IdentifierDoesNotExist(namespace).into());
-        } else if resolved_set.len() >= 2 {
-            return Err(JodinErrorType::AmbiguousIdentifierError {
-                given: namespace,
-                found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
+        /// Creates a new, empty identifier resolver with a custom base namespace. This is used instead of
+        /// the `BASE_NAMESPACE`
+        pub fn with_base_namespace<S: AsRef<str>>(base_namespace: S) -> Self {
+            let mut tree = NamespaceTree::new();
+            tree.add_namespace(Identifier::from(&base_namespace));
+            Self {
+                tree,
+                current_namespace: None,
+                using_namespaces: vec![],
+                base_namespace: base_namespace.as_ref().to_string().into(),
+                namespace_stash: vec![],
             }
-            .into());
         }
-        let resolved = resolved_set.into_iter().next().unwrap();
-        self.using_namespaces.retain(|id| id != resolved);
-        Ok(())
-    }
 
-    /// Creates an absolute path based off the current namespace
-    pub fn create_absolute_path(&mut self, id: &Identifier) -> Identifier {
-        /*
-        if self.current_namespace.is_none() {
-            if !self.tree.get_base_values().contains(&id) {
-                self.tree.get_base_values_mut().push(id.clone());
+        /// Pushes a namespace onto the current namespace
+        pub fn push_namespace(&mut self, namespace: Identifier) {
+            let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
+            self.tree.add_namespace(full_path.clone());
+            self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
+            info!(
+                "Current namespace set to {}",
+                self.current_namespace_with_base()
+            );
+        }
+
+        fn current_namespace_with_base(&self) -> Identifier {
+            match &self.current_namespace {
+                None => self.base_namespace.clone(),
+                Some(s) => Identifier::new_concat(&self.base_namespace, s),
             }
-            return id;
         }
 
-         */
-        let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
-        trace!("Created abs path {:?}", full_path);
-        let parent_path = &**full_path.parent().as_ref().unwrap();
-        self.tree.add_namespace(parent_path.clone());
-        let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
-        if !objects.contains(&full_path) {
-            objects.push(full_path.clone())
-        }
-        full_path.strip_highest_parent().unwrap()
-    }
-
-    /// Creates an absolute path based off the current namesapce without stripping the highest parent
-    pub fn create_absolute_path_no_strip(&mut self, id: &Identifier) -> Identifier {
-        /*
-        if self.current_namespace.is_none() {
-            if !self.tree.get_base_values().contains(&id) {
-                self.tree.get_base_values_mut().push(id.clone());
+        /// Pops the outermost namespace from the current namespace
+        pub fn pop_namespace(&mut self) {
+            let old = std::mem::replace(&mut self.current_namespace, None);
+            if let Some(old) = old {
+                self.current_namespace = old.into_parent();
             }
-            return id;
         }
 
-         */
-        let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
-        trace!("Created abs (no_strip) path {:?}", full_path);
-        let parent_path = &**full_path.parent().as_ref().unwrap();
-        self.tree.add_namespace(parent_path.clone());
-        let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
-        if !objects.contains(&full_path) {
-            objects.push(full_path.clone())
+        /// Adds a namespace to search from relatively
+        pub fn use_namespace(&mut self, namespace: Identifier) -> JodinResult<()> {
+            let resolved_set = self
+                .tree
+                .get_namespaces(self.current_namespace.as_ref(), &namespace);
+            if resolved_set.is_empty() {
+                return Err(JodinErrorType::IdentifierDoesNotExist(namespace))?;
+            } else if resolved_set.len() >= 2 {
+                return Err(JodinErrorType::AmbiguousIdentifierError {
+                    given: namespace,
+                    found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
+                })?;
+            }
+            let resolved = resolved_set.into_iter().next().cloned().unwrap();
+            self.using_namespaces.push(resolved);
+            Ok(())
         }
-        full_path
-    }
 
-    /// Add a new namespace relative to the current namespace to the resolver
-    pub fn add_namespace<N: Into<Identifier>>(&mut self, namespace: N) {
-        self.tree.add_namespace(Identifier::new_concat(
-            self.current_namespace_with_base(),
-            namespace,
-        ));
-    }
-
-    /// Attempts to resolve a single, absolute identifier out of a given path.
-    pub fn resolve_path(
-        &self,
-        path: Identifier,
-        keep_highest_parent: bool,
-    ) -> JodinResult<Identifier> {
-        info!("Resolving path {}...", path);
-        let mut output = HashSet::new();
-
-        let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
-        debug!("As absolute path = {:?}", absolute_path);
-        if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
-            output.insert(val);
+        /// Removes a namespace to search from, if it exists
+        pub fn stop_use_namespace(&mut self, namespace: &Identifier) -> JodinResult<()> {
+            let namespace = namespace.clone();
+            let resolved_set = self
+                .tree
+                .get_namespaces(self.current_namespace.as_ref(), &namespace);
+            if resolved_set.is_empty() {
+                return Err(JodinErrorType::IdentifierDoesNotExist(namespace).into());
+            } else if resolved_set.len() >= 2 {
+                return Err(JodinErrorType::AmbiguousIdentifierError {
+                    given: namespace,
+                    found: Vec::from_iter(resolved_set.into_iter().map(|id| id.clone())),
+                }
+                .into());
+            }
+            let resolved = resolved_set.into_iter().next().unwrap();
+            self.using_namespaces.retain(|id| id != resolved);
+            Ok(())
         }
-        if self.current_namespace.is_some() {
-            let relative_path = Identifier::new_concat(&self.current_namespace_with_base(), &path);
-            debug!("As relative to current path = {:?}", relative_path);
 
-            if relative_path != absolute_path {
-                if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
-                    output.insert(val);
+        /// Creates an absolute path based off the current namespace
+        pub fn create_absolute_path(&mut self, id: &Identifier) -> Identifier {
+            let full_path = Identifier::new_concat(self.current_namespace_with_base(), id);
+            trace!("Created abs path {:?}", full_path);
+            let parent_path = &**full_path.parent().as_ref().unwrap();
+            self.tree.add_namespace(parent_path.clone());
+            let objects = self.tree.get_relevant_objects_mut(parent_path).unwrap();
+            if !objects.contains(&full_path) {
+                objects.push(full_path.clone())
+            }
+            full_path.strip_highest_parent().unwrap()
+        }
+
+        /// Add a new namespace relative to the current namespace to the resolver
+        pub fn add_namespace<N: Into<Identifier>>(&mut self, namespace: N) {
+            self.tree.add_namespace(Identifier::new_concat(
+                self.current_namespace_with_base(),
+                namespace,
+            ));
+        }
+
+        /// Attempts to resolve a single, absolute identifier out of a given path.
+        pub fn resolve_path(
+            &self,
+            path: Identifier,
+            keep_highest_parent: bool,
+        ) -> JodinResult<Identifier> {
+            info!("Attempting to resolve path {:?}...", path);
+            let mut output = HashSet::new();
+
+            let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
+            if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
+                info!("Found absolute path: {}", absolute_path);
+                output.insert(val);
+            }
+            if self.current_namespace.is_some() {
+                let relative_path =
+                    Identifier::new_concat(&self.current_namespace_with_base(), &path);
+
+                if relative_path != absolute_path {
+                    if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
+                        info!(
+                            "Found relative path from {current}: {relative:?}",
+                            current = self.current_namespace_with_base(),
+                            relative = relative_path
+                        );
+                        output.insert(val);
+                    }
                 }
             }
-        }
 
-        for using in &self.using_namespaces {
-            let using_path = Identifier::new_concat(using, &path);
-            debug!("As relative to {:?} path = {:?}", using, using_path);
-            if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
-                output.insert(id);
-            }
-        }
-
-        match output.len() {
-            0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
-            1 => {
-                let identifier = output.into_iter().next().cloned().unwrap();
-                info!("Resolved {:?} -> {:?}", path, identifier);
-                if !keep_highest_parent {
-                    Ok(identifier.strip_highest_parent().unwrap())
-                } else {
-                    Ok(identifier)
+            for using in &self.using_namespaces {
+                let using_path = Identifier::new_concat(using, &path);
+                debug!("As relative to {:?} path = {:?}", using, using_path);
+                if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
+                    info!(
+                        "Found relative path from {current}: {relative:?}",
+                        current = using,
+                        relative = using_path
+                    );
+                    output.insert(id);
                 }
             }
-            _ => Err(JodinErrorType::AmbiguousIdentifierError {
-                given: path,
-                found: Vec::from_iter(
-                    output
-                        .into_iter()
-                        .cloned()
-                        .map(|id| id.strip_highest_parent().unwrap()),
-                ),
-            })?,
-        }
-    }
 
-    /// the current namespace.
-    pub fn current_namespace(&self) -> &Option<Identifier> {
-        &self.current_namespace
-    }
-
-    /// The current namespace with the base namespace prepended to it.
-    pub fn current_namespace_with_base(&self) -> Identifier {
-        let base = &self.base_namespace;
-        if let Some(current) = &self.current_namespace {
-            Identifier::new_concat(base, current)
-        } else {
-            base.clone()
-        }
-    }
-
-    /// Checks if the resolver contains the absolute identifier.
-    pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
-        let path = Identifier::new_concat(&self.base_namespace, path);
-        self.tree.get_from_absolute_identifier(&path).is_ok()
-    }
-
-    pub fn semi_push(&mut self, id: Identifier) {
-        let original_current = self.current_namespace.clone();
-        if let Some(current) = &original_current {
-            self.use_namespace(current.clone());
-        }
-        self.push_namespace(id);
-    }
-
-    pub fn semi_pop(&mut self) {
-        self.pop_namespace();
-        let original_current = self.current_namespace.clone();
-        if let Some(current) = &original_current {
-            self.stop_use_namespace(current);
-        }
-    }
-
-    /// Pushes a namespace as the current namespace, while saving the current namespace
-    /// as a used namespace, for the duration of the closure.
-    pub fn semi_push_namespace<F, R>(&mut self, id: Identifier, mut closure: F) -> R
-    where
-        F: FnMut() -> R,
-    {
-        let original_current = self.current_namespace.clone();
-        if let Some(current) = &original_current {
-            self.use_namespace(current.clone());
-        }
-        self.push_namespace(id);
-        let output = closure();
-        self.pop_namespace();
-        if let Some(current) = &original_current {
-            self.stop_use_namespace(current);
+            match output.len() {
+                0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
+                1 => {
+                    let identifier = output.into_iter().next().cloned().unwrap();
+                    info!("Resolved {:?} -> {:?}", path, identifier);
+                    if !keep_highest_parent {
+                        Ok(identifier.strip_highest_parent().unwrap())
+                    } else {
+                        Ok(identifier)
+                    }
+                }
+                _ => Err(JodinErrorType::AmbiguousIdentifierError {
+                    given: path,
+                    found: Vec::from_iter(
+                        output
+                            .into_iter()
+                            .cloned()
+                            .map(|id| id.strip_highest_parent().unwrap()),
+                    ),
+                })?,
+            }
         }
 
-        output
-    }
+        /// the current namespace.
+        pub fn current_namespace(&self) -> Identifier {
+            match &self.current_namespace {
+                None => Identifier::empty(),
+                Some(cur) => cur.clone(),
+            }
+        }
 
-    /// Add an alias
-    pub fn add_alias(&mut self, alias: Identifier, absolute_path: &Identifier) {
-        let identifier = self.create_absolute_path(&alias);
-        let alias_absolute_path = Identifier::new_concat(&self.base_namespace, identifier);
-        println!("Alias absolute path: {}", alias_absolute_path);
-        let object = self
-            .tree
-            .mut_from_absolute_identifier(&alias_absolute_path)
-            .expect("This value was just made");
-        *object = absolute_path.clone();
-    }
+        /// Checks if the resolver contains the absolute identifier.
+        pub fn contains_absolute_identifier(&self, path: &Identifier) -> bool {
+            let path = Identifier::new_concat(&self.base_namespace, path);
+            self.tree.get_from_absolute_identifier(&path).is_ok()
+        }
 
-    /// Gets a reference to the namespace tree used by this resolver
-    pub fn namespace_tree(&self) -> &NamespaceTree<Identifier> {
-        &self.tree
-    }
+        pub fn semi_push(&mut self, id: Identifier) {
+            let original_current = self.current_namespace.clone();
+            if let Some(current) = &original_current {
+                self.use_namespace(current.clone());
+            }
+            self.push_namespace(id);
+        }
 
-    /// Get the base namespace
-    pub fn base_namespace(&self) -> &Identifier {
-        &self.base_namespace
+        pub fn semi_pop(&mut self) {
+            self.pop_namespace();
+            let original_current = self.current_namespace.clone();
+            if let Some(current) = &original_current {
+                self.stop_use_namespace(current);
+            }
+        }
+
+        /// Add an alias
+        pub fn add_alias(&mut self, alias: Identifier, absolute_path: &Identifier) {
+            let identifier = self.create_absolute_path(&alias);
+            let alias_absolute_path = Identifier::new_concat(&self.base_namespace, identifier);
+            println!("Alias absolute path: {}", alias_absolute_path);
+            let object = self
+                .tree
+                .mut_from_absolute_identifier(&alias_absolute_path)
+                .expect("This value was just made");
+            *object = absolute_path.clone();
+        }
+
+        /// Gets a reference to the namespace tree used by this resolver
+        pub fn namespace_tree(&self) -> &NamespaceTree<Identifier> {
+            &self.tree
+        }
+
+        /// Get the base namespace
+        pub fn base_namespace(&self) -> &Identifier {
+            &self.base_namespace
+        }
     }
 }
+
+pub use _hidden::IdentifierResolver;
 
 struct Node<T: Namespaced> {
     id: Identifier,
@@ -587,7 +556,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 return Ok(value);
             }
         }
-        warn!("Nothing found for {}", path);
+        warn!("{} is not an identifier.", path);
         Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 

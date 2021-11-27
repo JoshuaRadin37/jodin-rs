@@ -179,9 +179,9 @@ pub trait TagTools {
     /// Gets the resolved id from the ResolvedIdentityTag tag.
     fn resolved_id(&self) -> JodinResult<&Identifier>;
     /// Set a property in the ExtraProperties tag
-    fn set_property<S: AsRef<str>, T: Any>(&mut self, key: S, value: T);
+    fn set_property<T: Any>(&mut self, key: &str, value: T);
     /// Get a property in the ExtraProperties tag
-    fn property<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T>;
+    fn property<T: Any>(&self, key: &str) -> Option<&T>;
 }
 
 impl TagTools for JodinNode {
@@ -190,13 +190,13 @@ impl TagTools for JodinNode {
             .map(|tag| tag.absolute_id())
     }
 
-    fn set_property<S: AsRef<str>, T: Any>(&mut self, key: S, value: T) {
+    fn set_property<T: Any>(&mut self, key: &str, value: T) {
         self.get_tag_mut::<ExtraProperties>()
             .expect("Every node has this tag")
             .put(key, value);
     }
 
-    fn property<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T> {
+    fn property<T: Any>(&self, key: &str) -> Option<&T> {
         self.get_tag::<ExtraProperties>()
             .expect("Every node has this tag")
             .get(key)
