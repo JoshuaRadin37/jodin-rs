@@ -3,10 +3,12 @@
 
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use std::fmt::{Display, Formatter};
 
 use crate::core::operator::Operator;
 
 use crate::core::types::intermediate_type::IntermediateType;
+use crate::utility::Flatten;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::FromStr;
@@ -217,6 +219,12 @@ pub enum Tok<'input> {
     Error,
 }
 
+impl Display for Tok<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 /// A part of an expression
 pub enum ExpressionMember {
     /// An indivisible part of the expression
@@ -348,7 +356,9 @@ type ParseResult = JodinResult<JodinNode>;
 
 /// Parse an expression into a parse result
 pub fn parse_expression<S: AsRef<str>>(expr: S) -> ParseResult {
-    parse!(jodin_grammar::ExpressionParser, expr.as_ref()).unwrap()
+    Flatten::flatten(
+        parse!(jodin_grammar::ExpressionParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+    )
 }
 
 pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
@@ -357,7 +367,9 @@ pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
 }
 
 pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
-    parse!(jodin_grammar::JodinFileParser, expr.as_ref()).unwrap()
+    Flatten::flatten(
+        parse!(jodin_grammar::JodinFileParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+    )
 }
 
 #[allow(unused_results)]

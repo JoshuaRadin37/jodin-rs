@@ -11,11 +11,13 @@ use std::any::TypeId;
 
 use crate::ast::JodinNode;
 use crate::core::literal::Literal;
+use lalrpop_util::ParseError;
 use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
 
+use crate::parsing::Tok;
 use thiserror::Error;
 
 /// The inner data type for the error that contains specific information required by the error.
@@ -55,8 +57,11 @@ pub enum JodinErrorType {
     #[error("Tag is not present")]
     TagNotPresent,
     /// The parser threw an error.
-    #[error("The parser threw an error (file: {1:?})")]
-    ParserError(#[source] Box<dyn Error>, Option<String>),
+    #[error("The parser threw an error (file: {1:?}): {0}")]
+    ParserError(
+        #[source] Box<ParseError<usize, String, JodinError>>,
+        Option<String>,
+    ),
     /// The entire string was not parsed.
     #[error("The entire string wasn't parsed (Remaining: {extra})")]
     IncompleteParse {
@@ -209,6 +214,15 @@ wrap_error!(ParseCharError);
 wrap_error!(ParseFloatError);
 wrap_error!(std::io::Error);
 wrap_error!(std::fmt::Error);
+impl From<lalrpop_util::ParseError<usize, crate::parsing::Tok<'_>, JodinError>> for JodinError {
+    fn from(e: lalrpop_util::ParseError<usize, crate::parsing::Tok<'_>, JodinError>) -> Self {
+        JodinError::new(JodinErrorType::ParserError(
+            Box::new(e.map_token(|tok| tok.to_string())),
+            None,
+        ))
+    }
+}
+
 // wrap_error!(pest::error::Error<crate::parsing::Rule>);
 /// Convenience result
 pub type JodinResult<T> = Result<T, JodinError>;
