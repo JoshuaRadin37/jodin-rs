@@ -2,8 +2,8 @@ use crate::core::error::{JodinError, JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::identifier_resolution::{IdentifierResolver, Registry};
 
-use crate::ast::JodinNode;
 use crate::ast::JodinNodeType;
+use crate::ast::{CompoundType, JodinNode};
 
 use crate::ast::tags::Tag;
 use crate::ast::tags::TagTools;
@@ -271,7 +271,12 @@ impl IdentifierCreator {
 
                 self.end_block(id_resolver);
             }
-            JodinNodeType::StructureDefinition { name, members } => {
+            JodinNodeType::CompoundTypeDefinition {
+                compound_type: CompoundType::Structure,
+                name,
+                inheritance: Option::None,
+                members,
+            } => {
                 if let Some(vis) = visiblity_tag {
                     name.add_tag(vis);
                 }
@@ -557,7 +562,12 @@ impl IdentifierSetter {
 
                 self.end_block(id_resolver);
             }
-            JodinNodeType::StructureDefinition { name, members } => {
+            JodinNodeType::CompoundTypeDefinition {
+                compound_type: CompoundType::Structure,
+                name,
+                inheritance: Option::None,
+                members,
+            } => {
                 self.set_identities(name, id_resolver, visibility_resolver)?;
 
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();

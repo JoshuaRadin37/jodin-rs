@@ -5,35 +5,35 @@ use std::error::Error;
 
 static JODIN_STRING: &str = r#"
 public trait Shape {
-    fn side_length(this, n: unsigned int) -> int;
-    fn area(this) -> int;
+    fn side_length(n: unsigned int) -> int;
+    fn area() -> int;
 }
 
 public class Rectangle : Shape {
     width: int;
     height: int;
     
-    public fn new(this, width: int, heigh: int) {
+    public fn new(width: int, heigh: int) {
         this.width = width;
         this.height = height;
     }
     
-    override public fn area(this) -> int {
+    override public fn area() -> int {
         return this.width * this.length;
     }
     
-    override(Shape) public fn side_length(this, n: unsigned int) -> int {
+    override(Shape) public fn side_length(n: unsigned int) -> int {
         if (n== 0 || n == 2) return this.width;
         if (n== 1 || n == 3) return this.length;
     }
 }
 
 public class Square : Rectangle {
-    public fn new(this, len: int) {
+    public fn new(len: int) {
         super(len, len);
     }
   
-    override(Shape) public fn side_length(this, n: unsigned int) -> int {
+    override(Shape) public fn side_length(n: unsigned int) -> int {
         return this.width;
     }
 }

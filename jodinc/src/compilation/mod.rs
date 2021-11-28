@@ -90,7 +90,7 @@ impl<T: Target, C: Compilable<T>> Compilable<T> for Vec<C> {
 ///
 /// # Example
 /// ```
-/// use jodinc:compilation::PaddedWriter;
+/// use jodinc::ompilation::PaddedWriter;
 /// use std::fmt::Write;
 /// let mut to_pad = PaddedWriter::new(String::new());
 /// writeln!(to_pad, "Hello");

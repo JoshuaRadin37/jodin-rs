@@ -170,8 +170,8 @@ pub enum CTypeSpecifier {
 ///
 /// # Examples
 /// ```
-/// use jodinc:compilation::c_compiler::{CType, CTypeSpecifier, CTypeDeclarator};
-/// use jodinc:core::types::primitives::Primitive::*;
+/// use jodinc::ompilation::c_compiler::{CType, CTypeSpecifier, CTypeDeclarator};
+/// use jodinc::ore::types::primitives::Primitive::*;
 ///
 /// // A primitive type
 /// let primtive = CType::new(false, CTypeSpecifier::Primitive(Int), CTypeDeclarator::Identifier);

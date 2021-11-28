@@ -816,7 +816,7 @@ mod tests {
 
     #[test]
     fn insert_entries() {
-        let mut register = Registry::new();
+        let mut register = Registry::<i32>::new();
         register.push_namespace(Identifier::from("std"));
         register.insert_with_identifier(3, Identifier::from("best value"));
         let value = &register[Identifier::from_iter(&["std", "best value"])];

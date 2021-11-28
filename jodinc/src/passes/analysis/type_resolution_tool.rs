@@ -4,8 +4,8 @@ use std::env::var;
 use itertools::Itertools;
 
 use crate::ast::tags::TagTools;
-use crate::ast::JodinNode;
 use crate::ast::JodinNodeType;
+use crate::ast::{CompoundType, JodinNode};
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::privacy::{Visibility, VisibilityTag};
@@ -45,7 +45,7 @@ impl<'nodes> TypeResolutionTool {
 
     fn visit_type_definitions(&mut self, tree: &'nodes JodinNode) -> JodinResult<()> {
         match tree.inner() {
-            JodinNodeType::StructureDefinition { .. } => self.build_structure(tree)?,
+            JodinNodeType::CompoundTypeDefinition { .. } => self.build_structure(tree)?,
             _ => {
                 for child in tree.direct_children() {
                     self.visit_type_definitions(child)?;
@@ -69,7 +69,13 @@ impl<'nodes> TypeResolutionTool {
     }
 
     fn build_structure(&mut self, structure_node: &'nodes JodinNode) -> JodinResult<()> {
-        if let JodinNodeType::StructureDefinition { name, members } = structure_node.inner() {
+        if let JodinNodeType::CompoundTypeDefinition {
+            compound_type: CompoundType::Structure,
+            name,
+            inheritance: Option::None,
+            members,
+        } = structure_node.inner()
+        {
             let name = name.resolved_id()?.clone();
             let mut fields = vec![];
             for member in members {

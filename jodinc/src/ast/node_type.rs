@@ -16,6 +16,17 @@ use crate::core::types::StorageModifier;
 use crate::parsing::JodinRule;
 use crate::utility::{Acceptor, AcceptorMut, Visitor};
 
+/// The type of the compound
+#[derive(Debug, Eq, PartialEq)]
+pub enum CompoundType {
+    /// Declared with the `struct` keyword
+    Structure,
+    /// Declared with the `trait` keyword
+    Trait,
+    /// Declared with the `class` keyword
+    Class,
+}
+
 /// Contains JodinNode variant information.
 #[derive(Debug)]
 pub enum JodinNodeType {
@@ -45,7 +56,7 @@ pub enum JodinNodeType {
         /// An option initial value for this variable
         maybe_initial_value: Option<JodinNode>,
     },
-    /// Stores a function definition, such as `int fibonacci(int n) { ... }`.
+    /// Stores a function definition, such as `fn fibonacci(n: int) -> int { ... }`.
     FunctionDefinition {
         /// The name of the function.
         name: JodinNode,
@@ -55,6 +66,15 @@ pub enum JodinNodeType {
         arguments: Vec<JodinNode>,
         /// The associated block of code.
         block: JodinNode,
+    },
+    /// Stores a function signature, such as `fn fibonacci(n: int) -> int;`.
+    FunctionSignature {
+        /// The name of the function.
+        name: JodinNode,
+        /// The return type.
+        return_type: IntermediateType,
+        /// The arguments of the function.
+        arguments: Vec<JodinNode>,
     },
     /// An external function declaration
     ExternDeclaration {
@@ -67,9 +87,14 @@ pub enum JodinNodeType {
         expressions: Vec<JodinNode>,
     },
     /// Contains a structure definition, such as `struct s1 { int i; }`.
-    StructureDefinition {
-        /// The id of the struct.
+    CompoundTypeDefinition {
+        /// The [CompoundType](CompoundType) of this definition.
+        compound_type: CompoundType,
+        /// The id of the compound type..
         name: JodinNode,
+        /// The inherited identifiers of this type. Validity of identifiers checked not
+        /// during parsing time
+        inheritance: Option<JodinNode>,
         /// The members of the struct.
         members: Vec<JodinNode>,
     },
@@ -336,9 +361,16 @@ impl JodinNodeType {
                 ret
             }
             JodinNodeType::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeType::StructureDefinition { name, members } => {
+            JodinNodeType::CompoundTypeDefinition {
+                compound_type: _,
+                name,
+                inheritance,
+                members,
+            } => {
                 let mut ret = vec![name];
+                ret.extend(inheritance);
                 ret.extend(members);
+
                 ret
             }
             JodinNodeType::NamedValue { name, var_type: _ } => {
@@ -503,6 +535,16 @@ impl JodinNodeType {
                 vec![to_repeat, repeats]
             }
             JodinNodeType::ListInitializer { values } => values.into_iter().collect(),
+            JodinNodeType::FunctionSignature {
+                name,
+                return_type: _,
+                arguments,
+            } => {
+                let mut ret = vec![];
+                ret.push(name);
+                ret.extend(arguments);
+                ret
+            }
         };
         vector
     }
@@ -541,8 +583,14 @@ impl JodinNodeType {
                 ret
             }
             JodinNodeType::Block { expressions } => expressions.into_iter().collect(),
-            JodinNodeType::StructureDefinition { name, members } => {
+            JodinNodeType::CompoundTypeDefinition {
+                compound_type: _,
+                name,
+                inheritance,
+                members,
+            } => {
                 let mut ret = vec![name];
+                ret.extend(inheritance);
                 ret.extend(members);
                 ret
             }
@@ -706,6 +754,16 @@ impl JodinNodeType {
                 vec![to_repeat, repeats]
             }
             JodinNodeType::ListInitializer { values } => values.into_iter().collect(),
+            JodinNodeType::FunctionSignature {
+                name,
+                return_type: _,
+                arguments,
+            } => {
+                let mut ret = vec![];
+                ret.push(name);
+                ret.extend(arguments);
+                ret
+            }
         };
         vector
     }

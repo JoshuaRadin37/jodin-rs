@@ -11,8 +11,8 @@
 //! A function pointer that takes in two integer pointers as input and an integer as an output would be
 //! defined as `int (int*, int*)` in jodin. This would results in an `IntermediateType` with this value:
 //! ```
-//! use jodinc:core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-//! use jodinc:core::types::primitives::Primitive;
+//! use jodinc::ore::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+//! use jodinc::ore::types::primitives::Primitive;
 //! let i_type = IntermediateType {
 //!     is_const: false,
 //!     type_specifier: TypeSpecifier::Primitive(Primitive::Int),

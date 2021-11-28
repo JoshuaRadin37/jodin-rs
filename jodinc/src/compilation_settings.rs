@@ -30,7 +30,7 @@ impl CompilationSettings {
     ///
     /// ```
     /// use std::path::{Path, PathBuf};
-    /// use jodinc:compilation_settings::CompilationSettings;
+    /// use jodinc::ompilation_settings::CompilationSettings;
     /// use std::iter::FromIterator;
     /// let file = Path::new("file.txt");
     /// let mut settings = CompilationSettings::default();

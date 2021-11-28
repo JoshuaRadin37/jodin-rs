@@ -115,10 +115,10 @@ impl JodinNode {
     /// # Examples
     ///
     /// ```
-    /// use jodinc:ast::JodinNode;
-    /// use jodinc:ast::JodinNodeType;
-    /// use jodinc:core::identifier::Identifier;
-    /// use jodinc:passes::analysis::ResolvedIdentityTag;
+    /// use jodinc::ast::JodinNode;
+    /// use jodinc::ast::JodinNodeType;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::passes::analysis::ResolvedIdentityTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(ResolvedIdentityTag::new(Identifier::from_array(["namespace", "id"]))).unwrap();
     /// ```
@@ -170,10 +170,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodinc:ast::JodinNode;
-    /// use jodinc:ast::JodinNodeType;
-    /// use jodinc:core::identifier::Identifier;
-    /// use jodinc:ast::tags::DummyTag;
+    /// use jodinc::ast::JodinNode;
+    /// use jodinc::ast::JodinNodeType;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -196,10 +196,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodinc:ast::JodinNode;
-    /// use jodinc:ast::JodinNodeType;
-    /// use jodinc:core::identifier::Identifier;
-    /// use jodinc:ast::tags::DummyTag;
+    /// use jodinc::ast::JodinNode;
+    /// use jodinc::ast::JodinNodeType;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -216,10 +216,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodinc:ast::JodinNode;
-    /// use jodinc:ast::JodinNodeType;
-    /// use jodinc:core::identifier::Identifier;
-    /// use jodinc:ast::tags::DummyTag;
+    /// use jodinc::ast::JodinNode;
+    /// use jodinc::ast::JodinNodeType;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -234,10 +234,10 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodinc:ast::JodinNode;
-    /// use jodinc:ast::JodinNodeType;
-    /// use jodinc:core::identifier::Identifier;
-    /// use jodinc:ast::tags::DummyTag;
+    /// use jodinc::ast::JodinNode;
+    /// use jodinc::ast::JodinNodeType;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::ast::tags::DummyTag;
     /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
@@ -274,6 +274,15 @@ impl JodinNode {
         let info = tag.info;
         let directions = self.get_directions();
         NodeReference { directions, info }
+    }
+}
+
+impl FromIterator<JodinNode> for JodinNode {
+    fn from_iter<T: IntoIterator<Item = JodinNode>>(iter: T) -> Self {
+        JodinNodeType::NodeVector {
+            vec: iter.into_iter().collect(),
+        }
+        .into()
     }
 }
 

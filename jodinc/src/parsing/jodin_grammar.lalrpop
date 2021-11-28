@@ -3,7 +3,7 @@ use crate::core::error::{JodinResult};
 use crate::core::literal::Literal;
 use crate::core::types::primitives::Primitive;
 use crate::core::operator::Operator;
-use crate::ast::{JodinNode, JodinNodeType,  tags::LabeledStatementTag};
+use crate::ast::{JodinNode, JodinNodeType, tags::LabeledStatementTag, CompoundType};
 use crate::core::types::intermediate_type::IntermediateType;
 
 use crate::parsing::Tok;
@@ -400,6 +400,7 @@ TopLevelDeclarationsList: JodinResult<Vec<JodinNode>> = {
 pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<VariableDeclaration>,
     WithVisibility<StructureDefinition>,
+    WithVisibility<TraitDefinition>,
     InNamespace,
     ";" => JodinNodeType::Empty.into_result()
 };
@@ -508,6 +509,12 @@ pub FunctionDefinition: ParseResult = {
 }
 
 
+
+Inheritance: JodinNode = {
+    ":" <List<IdentifierNode>> => JodinNode::from_iter(<>)
+}
+
+
 Parameters = OptionalList<Parameter>;
 
 Parameter: JodinNode = {
@@ -523,12 +530,46 @@ pub StructureDefinition: ParseResult = {
     "struct" <id:IdentifierNode> "{"
         <members:Parameters>
     "}" => {
-        JodinNodeType::StructureDefinition {
+        JodinNodeType::CompoundTypeDefinition {
+            compound_type: CompoundType::Structure,
             name: id,
+            inheritance: None,
             members
         }.into_result()
     }
 }
+
+pub FunctionDefinitionOrSignature: ParseResult = {
+    FunctionDefinition,
+    "fn" <id:Identifier> "(" <params:Parameters> ")" ";" => {
+        JodinNodeType::FunctionSignature {
+            name: JodinNodeType::Identifier(id).into(),
+            return_type: IntermediateType::void(),
+            arguments: params,
+        }.into_result()
+    },
+    "fn" <id:Identifier> "(" <params:Parameters> ")" "->" <ret:CanonicalType> ";" => {
+            JodinNodeType::FunctionSignature {
+                name: JodinNodeType::Identifier(id).into(),
+                return_type: ret,
+                arguments: params,
+            }.into_result()
+    }
+}
+
+pub TraitDefinition: ParseResult = {
+    "trait" <name:IdentifierNode> <inheritance:Inheritance?> "{"
+        <defs:FunctionDefinitionOrSignature*>
+    "}" => {
+        JodinNodeType::CompoundTypeDefinition {
+            compound_type: CompoundType::Trait,
+            name,
+            inheritance,
+            members: defs.unwrap_vec()?
+        }.into_result()
+    }
+}
+
 
 // macros
 
