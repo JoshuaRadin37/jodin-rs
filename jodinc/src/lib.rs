@@ -90,6 +90,7 @@ pub mod cli;
 pub mod compilation;
 pub mod compilation_settings;
 pub mod core;
+pub mod error_reporting;
 pub mod parsing;
 pub mod passes;
 pub mod utility;
