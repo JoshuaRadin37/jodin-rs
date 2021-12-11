@@ -296,6 +296,9 @@ version = "0.1.0"
 dependencies = [
  "bitfield",
  "byteorder",
+ "num",
+ "num-derive",
+ "num-traits",
 ]
 
 [[package]]
