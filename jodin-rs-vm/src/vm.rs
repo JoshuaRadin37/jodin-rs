@@ -2,11 +2,11 @@
 
 use crate::memory::{Heap, PopFromStack, Stack};
 
-use crate::bytecode::ByteCode;
 use crate::chunk::{ByteCodeVector, Chunk};
 use crate::compound_types::{Array, FunctionInfo, LocalVarsDeclarations, Pair, Pointer};
 use crate::frame::Frame;
 use crate::symbols::{Symbol, SystemCall, SystemCallTable};
+use jodin_asm::bytecode::ByteCode;
 use std::collections::VecDeque;
 use std::ffi::CString;
 use std::panic::{catch_unwind, UnwindSafe};

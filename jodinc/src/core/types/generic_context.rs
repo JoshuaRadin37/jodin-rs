@@ -30,17 +30,40 @@ impl GenericParameter {
     pub fn as_bound(&self, jtype: &JodinType) -> JodinResult<GenericParameterInstance> {
         match self {
             GenericParameter::Invariant(_) => {
-                Ok(GenericParameterInstance::Invariant(jtype.type_name()))
+                Ok(GenericParameterInstance::Invariant(jtype.type_identifier()))
             }
             GenericParameter::Covariant { .. } => {
-                Ok(GenericParameterInstance::Covariant(jtype.type_name()))
+                Ok(GenericParameterInstance::Covariant(jtype.type_identifier()))
             }
-            GenericParameter::Contravariant { .. } => {
-                Ok(GenericParameterInstance::Contravariant(jtype.type_name()))
+            GenericParameter::Contravariant { .. } => Ok(GenericParameterInstance::Contravariant(
+                jtype.type_identifier(),
+            )),
+        }
+    }
+}
+
+impl Display for GenericParameter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GenericParameter::Invariant(i) => {
+                write!(f, "{}", i)
+            }
+            GenericParameter::Covariant {
+                declaration,
+                super_class,
+            } => {
+                write!(f, "{} : {}", declaration, super_class)
+            }
+            GenericParameter::Contravariant {
+                declaration,
+                child_class,
+            } => {
+                write!(f, "{} super {}", declaration, child_class)
             }
         }
     }
 }
+
 /// Represents an instance of the generic
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum GenericParameterInstance {
@@ -83,8 +106,8 @@ impl Display for GenericParameterInstance {
     }
 }
 
-pub trait Morph<'n, 't> {
-    type Morphed: Type<'n, 't>;
+pub trait Morph<'t> {
+    type Morphed: Type<'t>;
 
     fn apply_generics<I>(&self, generics: I) -> Self::Morphed
     where

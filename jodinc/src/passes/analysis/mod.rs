@@ -6,8 +6,11 @@ pub use identity_resolution_tool::{
     BlockIdentifierTag, IdentityResolutionTool, ResolvedIdentityTag,
 };
 
+use crate::ast::tags::TagTools;
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::passes::analysis::type_resolution_tool::TypeResolutionTool;
 
 mod dependency_tool;
 mod identity_resolution_tool;
@@ -17,9 +20,13 @@ mod type_resolution_tool;
 ///
 /// Steps:
 /// 1. Perform identity creation and resolution
-pub fn analyze(tree: JodinNode) -> JodinResult<JodinNode> {
+pub fn analyze(tree: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
     let mut identifier_tool = IdentityResolutionTool::new();
-    let (tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
-    //println!("{:#?}", id_resolver);
-    Ok(tree)
+    let (mut tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
+
+    let mut type_resolution = TypeResolutionTool::new();
+    type_resolution.visit(&mut tree)?;
+    let environment = type_resolution.finish();
+
+    Ok((tree, environment))
 }

@@ -11,8 +11,8 @@
 //! A function pointer that takes in two integer pointers as input and an integer as an output would be
 //! defined as `int (int*, int*)` in jodin. This would results in an `IntermediateType` with this value:
 //! ```
-//! use jodin_rs::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-//! use jodin_rs::core::types::primitives::Primitive;
+//! use jodinc::ore::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+//! use jodinc::ore::types::primitives::Primitive;
 //! let i_type = IntermediateType {
 //!     is_const: false,
 //!     type_specifier: TypeSpecifier::Primitive(Primitive::Int),
@@ -40,20 +40,27 @@
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference
 
 use std::collections::HashMap;
-use crate::ast::{JodinNode, JodinNodeType};
-use crate::core::identifier::Identifier;
-use crate::core::types::primitives::Primitive;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 
-use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
 use itertools::Itertools;
+
+use crate::ast::{JodinNode, JodinNodeType};
+use crate::core::error::{JodinErrorType, JodinResult};
+use crate::core::identifier::Identifier;
 use crate::core::literal::ConstantCast;
-use crate::core::types::Type;
+use crate::core::types::arrays::Array;
+use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
+use crate::core::types::pointer::Pointer;
+use crate::core::types::primitives::Primitive;
+use crate::core::types::resolved_type::{
+    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
+};
+use crate::core::types::type_environment::TypeEnvironment;
+use crate::core::types::{AsIntermediate, Type};
 use crate::utility::Visitor;
 
 /// Contains data to represent types without storing any actual type information.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub struct IntermediateType {
     /// Whether this type is constant.
     pub is_const: bool,
@@ -86,6 +93,15 @@ impl IntermediateType {
         Self::from(Primitive::Void)
     }
 
+    pub fn identifier(&self) -> Option<&Identifier> {
+        match &self.type_specifier {
+            TypeSpecifier::Id(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn set_resolved_identifier(&mut self, id: Identifier) {}
+
     /// Make this type constant if it isn't already
     pub fn into_const(mut self) -> Self {
         self.is_const = true;
@@ -112,11 +128,15 @@ impl IntermediateType {
 
     /// Adds an array with an index
     pub fn with_array(mut self, index: JodinNode) -> JodinResult<Self> {
-        let size: u64 = index
-            .accept(&HashMap::new())?
-            .try_constant_cast()?;
-        self.tails.push(TypeTail::Array(Some(size)));
+        let size: u64 = index.visit(&HashMap::new())?.try_constant_cast()?;
+        self.tails.push(TypeTail::Array(Some(size as usize)));
         Ok(self)
+    }
+
+    /// Adds an array with an index
+    pub fn with_presized_array(mut self, size: usize) -> Self {
+        self.tails.push(TypeTail::Array(Some(size)));
+        self
     }
 
     /// Tries to make this type unsigned
@@ -251,11 +271,38 @@ impl IntermediateType {
             tails,
         })
     }
-}
 
-impl Clone for IntermediateType {
-    fn clone(&self) -> Self {
-        self.lose_info()
+    fn pop_last_tail(&self) -> (Self, Option<TypeTail>) {
+        let mut clone = self.clone();
+        let tail = clone.tails.pop();
+        (clone, tail)
+    }
+
+    fn _to_string(&self) -> String {
+        let (clone, tail) = self.pop_last_tail();
+        if let Some(tail) = tail {
+            tail.to_string_helper(clone)
+        } else {
+            let mut output = String::new();
+
+            if self.is_const {
+                write!(&mut output, "const ");
+            }
+            write!(&mut output, "{}", self.type_specifier);
+            if !self.generics.is_empty() {
+                write!(
+                    &mut output,
+                    "<{}>",
+                    Itertools::intersperse(
+                        self.generics.iter().map(|gen| gen.to_string()),
+                        ",".to_string()
+                    )
+                    .collect::<String>()
+                );
+            }
+
+            return output;
+        }
     }
 }
 
@@ -281,27 +328,56 @@ impl From<Identifier> for IntermediateType {
     }
 }
 
+impl Debug for IntermediateType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self._to_string())
+    }
+}
+
 impl Display for IntermediateType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_const {
-            write!(f, "const ")?;
-        }
-        write!(f, "{}", self.type_specifier)?;
-        if !self.generics.is_empty() {
-            write!(
-                f,
-                "<{}>",
-                Itertools::intersperse(
-                    self.generics.iter().map(|gen| gen.to_string()),
-                    ",".to_string()
-                )
-                .collect::<String>()
-            )?;
-        }
+        write!(f, "{}", self._to_string())
+    }
+}
+
+impl ResolveType for IntermediateType {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
+        let mut resolved = match &self.type_specifier {
+            TypeSpecifier::Id(id) => environment.get_type_by_name(id).unwrap().clone(),
+            TypeSpecifier::Primitive(prim) => {
+                let id = prim.type_identifier();
+                environment
+                    .get_type_by_name(&id)
+                    .expect("primitives should be within the type system")
+                    .clone()
+            }
+            TypeSpecifier::Generic(_) => {
+                unimplemented!("Generics in intermediate types haven't been implemented yet")
+            }
+        };
         for tail in &self.tails {
-            write!(f, "{}", tail)?;
+            match tail {
+                TypeTail::Pointer => {
+                    let as_ptr = Pointer::new(resolved.as_intermediate());
+                    resolved = environment.save_type(as_ptr)
+                }
+                TypeTail::Array(arr) => {
+                    let as_arr = Array::new(resolved.as_intermediate(), arr.clone());
+                    resolved = environment.save_type(as_arr);
+                }
+                TypeTail::Function(func) => {
+                    todo!("Create funciton types")
+                }
+            }
         }
-        Ok(())
+
+        resolved.resolve(environment)
+    }
+}
+
+impl AsIntermediate for IntermediateType {
+    fn intermediate_type(&self) -> IntermediateType {
+        self.clone()
     }
 }
 
@@ -333,15 +409,41 @@ impl Display for TypeSpecifier {
 }
 
 /// Contains a tail for the type, which are modifiers on a base type that expands the functionality of it
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypeTail {
     /// A pointer is one level of indirection from a data type.
     Pointer,
     /// An array is a contiguous block of memory of a type. The size is optional. An array with no
     /// size is equivalent to a pointer.
-    Array(Option<u64>),
+    Array(Option<usize>),
     /// Turns the type into a function pointer.
     Function(Vec<IntermediateType>),
+}
+
+impl TypeTail {
+    fn to_string_helper(&self, affected_type: IntermediateType) -> String {
+        match self {
+            TypeTail::Pointer => {
+                format!("*{}", affected_type)
+            }
+            TypeTail::Array(None) => {
+                format!("[{}]", affected_type)
+            }
+            TypeTail::Array(Some(len)) => {
+                format!("[{}: {}]", affected_type, len)
+            }
+            TypeTail::Function(func_params) => {
+                format!(
+                    "fn({}) -> {}",
+                    func_params
+                        .into_iter()
+                        .map(IntermediateType::to_string)
+                        .join(","),
+                    affected_type
+                )
+            }
+        }
+    }
 }
 
 impl PartialEq for TypeTail {
@@ -369,8 +471,8 @@ impl Display for TypeTail {
                 None => {
                     write!(f, "[]")
                 }
-                Some(_) => {
-                    write!(f, "[...]")
+                Some(i) => {
+                    write!(f, "[{}]", i)
                 }
             },
             TypeTail::Function(input_types) => {
@@ -384,5 +486,21 @@ impl Display for TypeTail {
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parsing::parse_type;
+
+    #[test]
+    fn intermediate_type_as_string() {
+        let expr = "*fn(int) -> [*int: 5]";
+        let intermediate_type = parse_type(expr).expect("This is a valid type");
+        assert_eq!(
+            intermediate_type.to_string(),
+            expr,
+            "Should go back flawlessly"
+        )
     }
 }

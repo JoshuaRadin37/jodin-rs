@@ -3,11 +3,12 @@
 use crate::ast::JodinNode;
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
-use crate::core::types::big_object::JBigObject;
 use crate::core::types::intermediate_type::IntermediateType;
+use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{get_type_id, Type};
+use crate::core::types::{get_type_id, AsIntermediate, JodinType, Type};
 use crate::utility::Visitor;
+use std::sync::{Arc, Weak};
 
 /// An array type
 #[derive(Debug)]
@@ -27,42 +28,55 @@ pub enum ArrayType {
 }
 
 /// An Array type
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Array {
     /// The base type of the array
     pub base_type: IntermediateType,
     /// How the array is being created
-    pub array_type: ArrayType,
+    pub array_size: Option<usize>,
     type_id: u32,
 }
 
 impl Array {
     /// Create a new array type
-    pub fn new(base_type: IntermediateType, array_type: ArrayType) -> Self {
+    pub fn new(base_type: IntermediateType, array_size: Option<usize>) -> Self {
         Array {
             base_type,
-            array_type,
+            array_size,
             type_id: get_type_id(),
         }
     }
 }
 
-impl<'n, 't> Visitor<TypeEnvironment<'n>, JodinResult<JBigObject<'t>>> for Array {
-    fn accept(&self, environment: &TypeEnvironment<'n>) -> JodinResult<JBigObject<'t>> {
+impl Into<JodinType> for Array {
+    fn into(self) -> JodinType {
+        JodinType::Array(self)
+    }
+}
+
+impl ResolveType for Array {
+    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }
 
-impl Type<'_, '_> for Array {
-    fn type_name(&self) -> Identifier {
-        format!("[{} array]", self.base_type).into()
+impl Type<'_> for Array {
+    fn type_identifier(&self) -> Identifier {
+        match self.array_size {
+            None => Identifier::new(format!("[{}]", self.base_type)),
+            Some(size) => Identifier::new(format!("[{}: {}]", self.base_type, size)),
+        }
     }
 
-    fn type_id(&self) -> u32 {
+    fn type_unique_id(&self) -> u32 {
         self.type_id
     }
 
     fn as_intermediate(&self) -> IntermediateType {
-        self.base_type.clone().with_abstract_array()
+        let inter = self.base_type.intermediate_type();
+        match self.array_size {
+            None => inter.with_abstract_array(),
+            Some(size) => inter.with_presized_array(size),
+        }
     }
 }

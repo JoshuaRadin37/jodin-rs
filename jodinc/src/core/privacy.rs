@@ -24,6 +24,12 @@ pub enum Visibility {
 impl Visibility {
     /// Checks whether a path is visible from another, checking path
     pub fn is_visible(&self, protected_path: &Identifier, checking_path: &Identifier) -> bool {
+        if protected_path.len() == checking_path.len() {
+            if protected_path.parent() == checking_path.parent() {
+                // paths in the same namespace are always visible to each-other
+                return true;
+            }
+        }
         match self {
             Visibility::Public => true,
             Visibility::Protected => checking_path >= protected_path,

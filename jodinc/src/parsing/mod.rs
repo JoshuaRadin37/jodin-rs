@@ -3,9 +3,12 @@
 
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use std::fmt::{Display, Formatter};
 
 use crate::core::operator::Operator;
 
+use crate::core::types::intermediate_type::IntermediateType;
+use crate::utility::Flatten;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::FromStr;
@@ -216,6 +219,12 @@ pub enum Tok<'input> {
     Error,
 }
 
+impl Display for Tok<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 /// A part of an expression
 pub enum ExpressionMember {
     /// An indivisible part of the expression
@@ -346,24 +355,35 @@ macro_rules! parse {
 type ParseResult = JodinResult<JodinNode>;
 
 /// Parse an expression into a parse result
-pub fn parse_expression<S : AsRef<str>>(expr: S) -> ParseResult {
-    use crate::utility::Flatten;
-    parse!(jodin_grammar::ExpressionParser, expr.as_ref()).unwrap()
+pub fn parse_expression<S: AsRef<str>>(expr: S) -> ParseResult {
+    Flatten::flatten(
+        parse!(jodin_grammar::ExpressionParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+    )
 }
 
+pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
+    parse!(jodin_grammar::CanonicalTypeParser, expr.as_ref())
+        .map_err(|e| JodinError::new(JodinErrorType::LexerError("Couldn't parse".to_string())))
+}
+
+pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
+    Flatten::flatten(
+        parse!(jodin_grammar::JodinFileParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+    )
+}
 
 #[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
+    use crate::ast::{JodinNode, JodinNodeType};
     use crate::core::identifier::Identifier;
     use crate::core::literal::Literal;
     use crate::core::operator::Operator;
+    use crate::core::types::primitives::Primitive;
+    use crate::core::types::Type;
     use crate::parsing::{JodinLexer, Tok};
     use std::iter::FromIterator;
     use std::str::FromStr;
-    use crate::ast::{JodinNode, JodinNodeType};
-    use crate::core::types::primitives::Primitive;
-    use crate::core::types::Type;
 
     #[test]
     fn lex_identifiers() {
@@ -418,7 +438,10 @@ mod tests {
         let x = parse!(jodin_grammar::CanonicalTypeParser, "[int: 5]").unwrap();
         assert_eq!(
             x,
-            Primitive::Int.as_intermediate().with_array(JodinNode::from(JodinNodeType::Literal(Literal::Int(5)))).unwrap()
+            Primitive::Int
+                .as_intermediate()
+                .with_array(JodinNode::from(JodinNodeType::Literal(Literal::Int(5))))
+                .unwrap()
         );
     }
 
@@ -540,23 +563,54 @@ mod tests {
         )
         .unwrap();
 
-       //  parse!(
-       //      jodin_grammar::FunctionDefinitionParser,
-       //      r"
-       //  fn fibonacci(n: unsigned int) -> unsigned int {
-       //      static table: *[unsigned int] = new [0u: n+1];
-       //      if (n < 2) {
-       //          return n;
-       //      }
-       //      (*table)[1] = 1;
-       //      for (i: int in range(2, n+1)) {
-       //          (*table)[i] = (*table)[i-1] + (*table)[i-2];
-       //      }
-       //      return (*table)[n];
-       //  }
-       // "
-       //  )
-       //  .unwrap();
+        //  parse!(
+        //      jodin_grammar::FunctionDefinitionParser,
+        //      r"
+        //  fn fibonacci(n: unsigned int) -> unsigned int {
+        //      static table: *[unsigned int] = new [0u: n+1];
+        //      if (n < 2) {
+        //          return n;
+        //      }
+        //      (*table)[1] = 1;
+        //      for (i: int in range(2, n+1)) {
+        //          (*table)[i] = (*table)[i-1] + (*table)[i-2];
+        //      }
+        //      return (*table)[n];
+        //  }
+        // "
+        //  )
+        //  .unwrap();
     }
 
+    #[test]
+    fn parse_structure_definition() {
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+            
+            }
+        "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+                value: int
+            }
+        "
+        )
+        .unwrap();
+        parse!(
+            jodin_grammar::StructureDefinitionParser,
+            r"
+            struct Hello {
+                value: int,
+                value2: short
+            }
+        "
+        )
+        .unwrap();
+    }
 }

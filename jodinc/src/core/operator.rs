@@ -312,15 +312,9 @@ impl<N: NumType> TryConstEvaluation<N> for Operator {
 
     fn evaluate_uniop(&self, lhs: N) -> JodinResult<Literal> {
         match self {
-            Operator::Not => {
-                (!lhs).try_into()
-            }
-            Operator::Plus => {
-                lhs.try_into()
-            }
-            Operator::Minus => {
-                (N::zero()-lhs).try_into()
-            }
+            Operator::Not => (!lhs).try_into(),
+            Operator::Plus => lhs.try_into(),
+            Operator::Minus => (N::zero() - lhs).try_into(),
             _ => return Err(JodinErrorType::InvalidOperatorForConstantExpression.into()),
         }
     }

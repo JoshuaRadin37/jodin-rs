@@ -9,8 +9,8 @@
 //! [node type]: self::node_type::JodinNodeType
 //! [JodinNode]: self::jodin_node::JodinNode
 
-pub use crate::ast::jodin_node::JodinNode;
-pub use crate::ast::node_type::JodinNodeType;
+pub use crate::ast::jodin_node::*;
+pub use crate::ast::node_type::{CompoundType, JodinNodeType};
 use crate::core::error::JodinResult;
 use crate::core::identifier::Identifier;
 

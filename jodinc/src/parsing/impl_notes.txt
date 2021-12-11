@@ -11,3 +11,57 @@ foreach (i: int in range(0,3)) {
         }
     }
 }
+
+
+implement Object {
+    fn to_string() -> String {
+
+    }
+}
+
+for<T> trait Equals {
+    fn equals(other: T) -> bool;
+}
+
+public for<T : Equals<T>> class Wrapper : Equals<Wrapper<T>> {
+    private T value;
+
+    fn get_value() -> T {
+        return value;
+    }
+
+    fn equals(other: Wrapper<T>) {
+        return this.value.equals(other.value);
+    }
+}
+gets translated to effectively
+for<T : Equals<T>>
+struct Wrapper {
+    T __value;
+}
+for<T : Equals<T>>
+trait __WrapperTrait : Equals<Wrapper<T>> {
+    fn get_value() -> T;
+}
+for<T : Equals<T>> implement __WrapperTrait<T> for Wrapper<T> {
+    fn get_value() -> T {
+        return this.__value;
+    }
+}
+for<T : Equals<T>> implement Equals<Wrapper<T>> for Wrapper<T> {
+    fn equals(other: Wrapper<T>) -> boolean {
+        return this.__value.equals(other.__value);
+    }
+}
+which is honestly more like
+static {
+    struct EqualsTraitObject {
+        Function<? : Object, bool : ?> equals;
+    }
+    fn wrapper_equals(other: Wrapper) -> boolean {
+        return this.value.equals(other.value);
+    }
+    Wrapper.traits.Equals.equals = wrapper_equals;
+}
+
+

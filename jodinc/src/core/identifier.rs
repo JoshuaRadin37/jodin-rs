@@ -18,6 +18,12 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    /// Create a new identifier from any type that can be converted into an identifier
+    #[inline]
+    pub fn new<I: Into<Identifier>>(into: I) -> Self {
+        into.into()
+    }
+
     /// Creates an identifier from an array.
     ///
     /// # Arguments
@@ -29,12 +35,25 @@ impl Identifier {
     /// # Example
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// let id = Identifier::from_array(["hello", "world"]);
     /// ```
     #[deprecated = "No longer necessary, as arrays not directly implement IntoIterator"]
     pub fn from_array<S: AsRef<str>, const N: usize>(array: [S; N]) -> Self {
         Self::from_iter(IntoIter::new(array))
+    }
+
+    /// Creates an empty identifier, should only ever be used to represent missing data
+    pub fn empty() -> Self {
+        Self {
+            parent: None,
+            id: "".to_string(),
+        }
+    }
+
+    /// Check if this identifier is empty
+    pub fn is_empty(&self) -> bool {
+        self.id.is_empty() && self.parent.is_none()
     }
 
     /// The parent of the identifier.
@@ -50,7 +69,7 @@ impl Identifier {
     ///
     /// # Example
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["hello", "world"]);
     /// assert_eq!(id, "hello::world");
@@ -63,7 +82,7 @@ impl Identifier {
     ///
     /// # Example
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["hello", "world"]);
     /// assert_eq!(id, "hello::world");
@@ -76,7 +95,7 @@ impl Identifier {
     ///
     /// # Examples
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::iter::FromIterator;
     /// let id = Identifier::from_iter(["lvl1", "lvl2", "lvl3"]);
     /// assert_eq!(id, "lvl1::lvl2::lvl3");
@@ -113,7 +132,7 @@ impl Identifier {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// let example1 = Identifier::new_concat(Identifier::from("hello"), Identifier::from("world"));
     /// let example2 = Identifier::new_concat("hello", "world");
     ///
@@ -125,6 +144,13 @@ impl Identifier {
     ) -> Identifier {
         let mut child = child.into();
         let parent = parent.into();
+
+        if child.is_empty() {
+            return parent;
+        } else if parent.is_empty() {
+            return child;
+        }
+
         child.apply_to_highest_parent_mut(move |highest| {
             highest.parent = Some(Box::new(parent.clone()));
         });
@@ -136,10 +162,10 @@ impl Identifier {
         let mut iter = iter.into_iter();
         if let Some(last) = iter.next() {
             let parent = Self::from_iterator_backwards(iter).map(|id| Box::new(id));
-            Some(Self {
-                parent,
-                id: last.as_ref().to_string(),
-            })
+            match parent {
+                None => Some(Identifier::new(last)),
+                Some(parent) => Some(Self::new_concat(*parent, last)),
+            }
         } else {
             None
         }
@@ -151,7 +177,7 @@ impl Identifier {
     /// # Examples
     ///
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// let id = Identifier::from_array(["lvl1", "lvl2", "lvl3"]);
     /// let new_id = id.strip_highest_parent().unwrap();
     /// assert_eq!(new_id, Identifier::from_array(["lvl2", "lvl3"]));
@@ -171,6 +197,14 @@ impl Identifier {
     pub fn iter(&self) -> IdentifierIterator {
         IntoIterator::into_iter(self)
     }
+
+    /// Gets the length of the identifier
+    pub fn len(&self) -> usize {
+        if self.is_empty() {
+            return 0;
+        }
+        1 + self.parent.as_ref().map_or(0, |p| p.len())
+    }
 }
 
 impl<S: AsRef<str>> From<S> for Identifier {
@@ -188,9 +222,16 @@ impl From<&Identifier> for Identifier {
     }
 }
 
-impl<S: AsRef<str>> FromIterator<S> for Identifier {
-    fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
-        let mut vec = Vec::from_iter(iter);
+// impl<S: AsRef<str>> FromIterator<S> for Identifier {
+//     fn from_iter<T: IntoIterator<Item = S>>(iter: T) -> Self {
+//         let mut vec = Vec::from_iter(iter);
+//         vec.reverse();
+//         Identifier::from_iterator_backwards(vec).unwrap()
+//     }
+// }
+impl<I: Into<Identifier>> FromIterator<I> for Identifier {
+    fn from_iter<T: IntoIterator<Item = I>>(iter: T) -> Self {
+        let mut vec: Vec<String> = iter.into_iter().flat_map(|i| i.into().iter()).collect();
         vec.reverse();
         Identifier::from_iterator_backwards(vec).unwrap()
     }
@@ -208,7 +249,7 @@ impl Display for Identifier {
 
 impl Debug for Identifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "\"{}\"", self)
     }
 }
 
@@ -266,14 +307,14 @@ impl PartialOrd for Identifier {
     /// # Examples
     /// None => Neither this or the other identifier represents subsets of each other
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = Identifier::from("Goodbye");
     /// assert_eq!(id1.partial_cmp(&id2), None);
     /// ```
     /// Some(Greater) => The `self` identifier is a super set of `other`
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::cmp::Ordering::Greater;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = Identifier::new_concat("Hello", "World");
@@ -281,7 +322,7 @@ impl PartialOrd for Identifier {
     /// ```
     /// Some(Equal) => The `self` identifier and the `other` identifier represent the same set
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::cmp::Ordering::Equal;
     /// let id1 = Identifier::from("Hello");
     /// let id2 = id1.clone();
@@ -289,7 +330,7 @@ impl PartialOrd for Identifier {
     /// ```
     /// Some(Less) => The `self` identifier is a sub set of `other`
     /// ```
-    /// use jodin_rs::core::identifier::Identifier;
+    /// use jodinc::ore::identifier::Identifier;
     /// use std::cmp::Ordering::Less;
     /// let id1 = Identifier::new_concat("Hello", "World");
     /// let id2 = Identifier::from("Hello");
@@ -370,6 +411,7 @@ impl Iterator for IdentifierIterator {
 /// A wrapper type that can attach an identifier to a type that doesn't implement [Namespaced].
 ///
 /// [Namespaced]: Namespaced
+#[derive(Debug)]
 pub struct Identifiable<T> {
     id: Identifier,
     /// The associated value
@@ -490,6 +532,12 @@ mod test {
     fn id_from_iter() {
         let id = Identifier::from_iter(&["std", "iter", "FromIterator"]);
         assert_eq!(id.to_string(), "std::iter::FromIterator");
+        assert_eq!(id!(std::iter::FromIterator), id);
+        assert_eq!(id!(std::iter::FromIterator), id!(std, iter, FromIterator));
+        assert_eq!(
+            id!(std::iter::FromIterator),
+            id!(id!("std"::"iter"), "FromIterator")
+        );
     }
 
     #[test]
@@ -527,8 +575,8 @@ mod test {
 
         let id1 = Identifier::from_iter(["hello", "world", "mars"]);
         assert_eq!(id1.partial_cmp(&id2),
-        None,
-        "Although they are both the same length, because neither is a subset of the other they can't be compared")
+                   None,
+                   "Although they are both the same length, because neither is a subset of the other they can't be compared")
     }
 
     #[test]
@@ -537,5 +585,11 @@ mod test {
             .with_child("world")
             .with_child("goodbye");
         assert_eq!(chain.to_string(), "hello->world->goodbye");
+    }
+
+    #[test]
+    fn empty_id_concats() {
+        assert_eq!(id!(Identifier::empty(), "test"), id!("test"));
+        assert_eq!(id!("test", Identifier::empty()), id!("test"));
     }
 }

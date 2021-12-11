@@ -1,7 +1,7 @@
 //! A chunk is a set of data being used by the virtual machine that contains instructions and
 //! constants.
 
-use crate::bytecode::{BinaryOpOperand, ByteCode};
+use jodin_asm::bytecode::{BinaryOpOperand, ByteCode};
 use std::ops::Index;
 use std::slice::SliceIndex;
 
@@ -226,8 +226,8 @@ impl<'a> ByteCodeVector<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::bytecode::{BinaryOpOperand, ByteCode};
     use crate::chunk::Chunk;
+    use jodin_asm::bytecode::{BinaryOpOperand, ByteCode};
 
     #[test]
     fn disassemble() {
