@@ -291,12 +291,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "jodin-asm"
+version = "0.1.0"
+dependencies = [
+ "bitfield",
+ "byteorder",
+]
+
+[[package]]
 name = "jodin-rs-vm"
 version = "0.1.0"
 dependencies = [
  "bitfield",
  "byteorder",
  "itertools",
+ "jodin-asm",
  "jodin-rs-vm_derive",
  "lazy_static",
  "num",

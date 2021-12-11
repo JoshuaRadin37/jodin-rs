@@ -8,12 +8,14 @@ edition = "2021"
 strict = []
 
 [dependencies]
+jodin-rs-vm_derive = { path="../jodin-rs-vm-derive"}
+jodin-asm = { path="../jodin-asm"}
+
 num = "0.4"
 num-derive = "0.3"
 num-traits = "0.2"
 byteorder = "1.4"
 bitfield = "0.13"
-jodin-rs-vm_derive = { path="../jodin-rs-vm-derive"}
 itertools = "0.10"
 regex = "1"
 lazy_static = "1.4"
