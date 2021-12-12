@@ -37,6 +37,8 @@ use jodin_asm::mvp::value::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use std::io::{Read, Write};
+
 pub mod core_traits;
 pub mod function_names;
 
@@ -53,6 +55,10 @@ where
     label_to_instruction: HashMap<String, usize>,
     counter_stack: Vec<usize>,
 
+    stdin: Box<dyn Read>,
+    stdout: Box<dyn Write>,
+    stderr: Box<dyn Write>,
+
     next_anonymous_function: AtomicU64,
 }
 
@@ -65,7 +71,26 @@ where
         match message {
             "print" => {
                 if let Value::Str(s) = args.remove(0) {
-                    print!("{}", s)
+                    write!(self.stdout, "{}", s).expect("Couldn't print to output");
+                } else {
+                    panic!("Can not only pass strings to the print function")
+                }
+            }
+            "write" => {
+                let fd = if let Value::UInteger(fd) = args.remove(0) {
+                    fd
+                } else {
+                    panic!("File descriptors should only be unsigned ints")
+                };
+                let output = match fd {
+                    1 => &mut self.stdout,
+                    2 => &mut self.stderr,
+                    _ => {
+                        panic!("{} is not a valid file descriptor for writing", fd);
+                    }
+                };
+                if let Value::Str(s) = args.remove(0) {
+                    write!(output, "{}", s).expect("Couldn't write");
                 } else {
                     panic!("Can not only pass strings to the print function")
                 }
@@ -93,8 +118,7 @@ where
             Value::Str(_) => {}
             Value::Dictionary { dict } => {
                 if let Some(receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
-                    if let Value::Native = receive_msg {
-                    } else {
+                    if receive_msg != Value::Native {
                         self.send_message(receive_msg, message, args);
                         return;
                     }
@@ -119,6 +143,15 @@ where
                         let mut next = dict;
                         next.insert(name, value);
                         Value::Dictionary { dict: next }
+                    }
+                    "contains" => {
+                        todo!()
+                    }
+                    "remove" => {
+                        todo!()
+                    }
+                    "len" => {
+                        todo!()
                     }
                     m => panic!("{:?} is not a valid message for dictionary", m),
                 };

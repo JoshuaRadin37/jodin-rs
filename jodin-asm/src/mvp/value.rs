@@ -5,7 +5,7 @@ use smallvec::SmallVec;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Value {
     Empty,
     Byte(u8),
@@ -13,11 +13,16 @@ pub enum Value {
     Integer(i64),
     UInteger(u64),
     Str(String),
-    Dictionary { dict: HashMap<String, Value> },
+    Dictionary {
+        dict: HashMap<String, Value>,
+    },
     Array(Vec<Value>),
     Reference(AsmLocation),
     Bytecode(Bytecode),
     Function(AsmLocation),
+    /// The native value is used to refer to two different states. When alone, the Native value
+    /// is a reference to the actual virtual machine. When used as the value of an entry of an
+    /// attribute that's being checked for, this means to pretend that there's no entry at all.
     Native,
 }
 

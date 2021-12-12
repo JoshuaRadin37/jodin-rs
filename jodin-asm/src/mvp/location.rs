@@ -1,7 +1,7 @@
 use crate::mvp::error::BytecodeError;
 use crate::mvp::value::Value;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum AsmLocation {
     ByteIndex(usize),
     InstructionDiff(isize),
