@@ -61,7 +61,20 @@ where
     M: MemoryTrait,
     A: ArithmeticsTrait,
 {
-    fn send_message(&mut self, target: Value, message: &str, args: Vec<Value>) {
+    fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
+        match message {
+            "print" => {
+                if let Value::Str(s) = args.remove(0) {
+                    print!("{}", s)
+                } else {
+                    panic!("Can not only pass strings to the print function")
+                }
+            }
+            _ => panic!("{:?} is not a native method", message),
+        }
+    }
+
+    fn send_message(&mut self, target: Value, message: &str, mut args: Vec<Value>) {
         match target {
             Value::Empty => {}
             Value::Byte(_) => {}
@@ -71,7 +84,31 @@ where
             Value::Str(_) => {}
             Value::Dictionary { dict } => {
                 if let Some(receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
+                    self.send_message(receive_msg, message, args);
                 } else {
+                    let ret = match message {
+                        "get" => {
+                            let name = args
+                                .remove(0)
+                                .into_string()
+                                .expect("first value should be a string");
+                            dict.get(&*name)
+                                .expect(&*format!("{} not in dictionary", name))
+                                .clone()
+                        }
+                        "put" => {
+                            let name = args
+                                .remove(0)
+                                .into_string()
+                                .expect("first value should be a string");
+                            let value = args.remove(0);
+                            let mut next = dict;
+                            next.insert(name, value);
+                            self.memory.push(Value::Dictionary { dict: next });
+                        }
+                        m => panic!("{:?} is not a valid message for dictionary", m),
+                    };
+                    self.memory.push(ret);
                 }
             }
             Value::Array(_) => {}
@@ -99,6 +136,9 @@ where
                 }
                 self.call(f, args);
             }
+            Value::Native => {
+                self.native_method(message, args);
+            }
         }
     }
 
@@ -109,11 +149,11 @@ where
     fn call(&mut self, asm_location: AsmLocation, mut args: Vec<Value>) {
         let name = match &asm_location {
             AsmLocation::ByteIndex(i) => {
-                let ref instruction = self.instructions[i];
+                let ref instruction = self.instructions[*i];
                 if let Asm::Label(name) = instruction {
                     name.clone()
                 } else {
-                    panic!("Functions mus either be called with a label or start with a label")
+                    panic!("Functions must either be called with a label or start with a label")
                 }
             }
             AsmLocation::InstructionDiff(_) => {
@@ -131,7 +171,7 @@ where
             AsmLocation::InstructionDiff(_) => {
                 panic!("Illegal for calling functions")
             }
-            AsmLocation::Label(l) => self.label_to_instruction[l],
+            AsmLocation::Label(l) => self.label_to_instruction[&l],
         };
         self.counter_stack.push(next_pc);
     }
@@ -188,6 +228,7 @@ where
                 } else {
                     panic!("Arguments must be an array of values")
                 };
+                self.send_message(target, &*message, args);
             }
             _ => panic!("Invalid instruction"),
         }

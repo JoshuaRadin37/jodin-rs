@@ -18,6 +18,17 @@ pub enum Value {
     Reference(AsmLocation),
     Bytecode(Bytecode),
     Function(AsmLocation),
+    Native,
+}
+
+impl Value {
+    pub fn into_string(self) -> Option<String> {
+        if let Value::Str(s) = self {
+            Some(s)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<f64> for Value {
