@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
 use syn::{DeriveInput, Field, Fields, Index, ItemStruct};
 
-#[proc_macro_derive(PushToStack)]
-pub fn push_to_stack(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(ToBytes)]
+pub fn to_bytes(input: TokenStream) -> TokenStream {
     let ast: ItemStruct = syn::parse(input).unwrap();
 
     let name = ast.ident;
@@ -38,12 +38,14 @@ pub fn push_to_stack(input: TokenStream) -> TokenStream {
     };
     let (impl_generics, ty_generics, where_clause) = gens.split_for_impl();
     let push_to_stack_impl = quote! {
-         impl #impl_generics PushToStack for #name #ty_generics #where_clause {
+         impl #impl_generics jodin_asm::ToBytes for #name #ty_generics #where_clause {
 
-                fn push_to_stack(self, stack: &mut Stack) {
+                fn to_bytes(self) {
+                    let mut output = vec![];
                     #(
-                    self.#fields.push_to_stack(stack);
+                        output.extend(<ToBytes>::to_bytes(self.#fields));
                     )*
+                    output
                 }
 
         }
@@ -56,8 +58,8 @@ pub fn push_to_stack(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-#[proc_macro_derive(PopFromStack)]
-pub fn pop_from_stack(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(FromBytes)]
+pub fn from_bytes(input: TokenStream) -> TokenStream {
     let ast: ItemStruct = syn::parse(input).unwrap();
 
     let name = ast.ident;

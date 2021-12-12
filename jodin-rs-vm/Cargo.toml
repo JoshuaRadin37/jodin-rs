@@ -8,7 +8,7 @@ edition = "2021"
 strict = []
 
 [dependencies]
-jodin-rs-vm_derive = { path="../jodin-rs-vm-derive"}
+jodin-asm-derive = { path= "../jodin-asm-derive" }
 jodin-asm = { path="../jodin-asm"}
 
 num = "0.4"
