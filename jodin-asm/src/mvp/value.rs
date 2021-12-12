@@ -17,7 +17,7 @@ pub enum Value {
         dict: HashMap<String, Value>,
     },
     Array(Vec<Value>),
-    Reference(AsmLocation),
+    Reference(/* Need to be a pointer a value somehow */),
     Bytecode(Bytecode),
     Function(AsmLocation),
     /// The native value is used to refer to two different states. When alone, the Native value
