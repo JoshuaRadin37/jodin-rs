@@ -70,6 +70,15 @@ where
                     panic!("Can not only pass strings to the print function")
                 }
             }
+            "invoke" => {
+                // invokes the message (arg 2) on the target (arg 1) with args (arg 3..)
+                let target = args.remove(0);
+                let msg = args
+                    .remove(1)
+                    .into_string()
+                    .expect("String expected for message");
+                self.send_message(target, &msg, args);
+            }
             _ => panic!("{:?} is not a native method", message),
         }
     }
@@ -84,32 +93,36 @@ where
             Value::Str(_) => {}
             Value::Dictionary { dict } => {
                 if let Some(receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
-                    self.send_message(receive_msg, message, args);
-                } else {
-                    let ret = match message {
-                        "get" => {
-                            let name = args
-                                .remove(0)
-                                .into_string()
-                                .expect("first value should be a string");
-                            dict.get(&*name)
-                                .expect(&*format!("{} not in dictionary", name))
-                                .clone()
-                        }
-                        "put" => {
-                            let name = args
-                                .remove(0)
-                                .into_string()
-                                .expect("first value should be a string");
-                            let value = args.remove(0);
-                            let mut next = dict;
-                            next.insert(name, value);
-                            self.memory.push(Value::Dictionary { dict: next });
-                        }
-                        m => panic!("{:?} is not a valid message for dictionary", m),
-                    };
-                    self.memory.push(ret);
+                    if let Value::Native = receive_msg {
+                    } else {
+                        self.send_message(receive_msg, message, args);
+                        return;
+                    }
                 }
+
+                let ret = match message {
+                    "get" => {
+                        let name = args
+                            .remove(0)
+                            .into_string()
+                            .expect("first value should be a string");
+                        dict.get(&*name)
+                            .expect(&*format!("{} not in dictionary", name))
+                            .clone()
+                    }
+                    "put" => {
+                        let name = args
+                            .remove(0)
+                            .into_string()
+                            .expect("first value should be a string");
+                        let value = args.remove(0);
+                        let mut next = dict;
+                        next.insert(name, value);
+                        Value::Dictionary { dict: next }
+                    }
+                    m => panic!("{:?} is not a valid message for dictionary", m),
+                };
+                self.memory.push(ret);
             }
             Value::Array(_) => {}
             Value::Reference(_) => {}
