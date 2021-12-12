@@ -97,18 +97,18 @@ where
             }
             "invoke" => {
                 // invokes the message (arg 2) on the target (arg 1) with args (arg 3..)
-                let target = args.remove(0);
+                let mut target = args.remove(0);
                 let msg = args
                     .remove(1)
                     .into_string()
                     .expect("String expected for message");
-                self.send_message(target, &msg, args);
+                self.send_message(&mut target, &msg, args);
             }
             _ => panic!("{:?} is not a native method", message),
         }
     }
 
-    fn send_message(&mut self, target: Value, message: &str, mut args: Vec<Value>) {
+    fn send_message(&mut self, target: &mut Value, message: &str, mut args: Vec<Value>) {
         match target {
             Value::Empty => {}
             Value::Byte(_) => {}
@@ -117,9 +117,9 @@ where
             Value::UInteger(_) => {}
             Value::Str(_) => {}
             Value::Dictionary { dict } => {
-                if let Some(receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
+                if let Some(mut receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
                     if receive_msg != Value::Native {
-                        self.send_message(receive_msg, message, args);
+                        self.send_message(&mut receive_msg, message, args);
                         return;
                     }
                 }

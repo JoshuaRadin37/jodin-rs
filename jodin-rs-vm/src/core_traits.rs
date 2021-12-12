@@ -4,6 +4,7 @@ use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Decode};
 use jodin_asm::mvp::error::BytecodeError;
 use jodin_asm::mvp::value::Value;
 use num_traits::PrimInt;
+use std::cell::RefCell;
 use std::hash::Hash;
 
 pub trait VirtualMachine {
@@ -67,7 +68,7 @@ pub trait MemoryTrait {
     fn back_scope(&mut self);
 
     fn set_var(&mut self, var: usize, value: Value);
-    fn get_var(&self, var: usize) -> Result<&Value, BytecodeError>;
+    fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError>;
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError>;
     fn next_var_number(&self) -> usize;
 

@@ -2,6 +2,7 @@ use crate::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
 use crate::mvp::location::AsmLocation;
 use num_traits::{PrimInt, Signed};
 use smallvec::SmallVec;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -17,7 +18,7 @@ pub enum Value {
         dict: HashMap<String, Value>,
     },
     Array(Vec<Value>),
-    Reference(/* Need to be a pointer a value somehow */),
+    Reference(RefCell<Value>),
     Bytecode(Bytecode),
     Function(AsmLocation),
     /// The native value is used to refer to two different states. When alone, the Native value
