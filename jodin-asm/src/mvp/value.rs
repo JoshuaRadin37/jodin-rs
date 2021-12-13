@@ -87,3 +87,12 @@ impl From<Assembly> for Value {
         Value::Bytecode(as_bytecode)
     }
 }
+
+impl<V> From<Vec<V>> for Value
+where
+    Value: From<V>,
+{
+    fn from(vs: Vec<V>) -> Self {
+        Value::Array(vs.into_iter().map(|v| v.into()).collect())
+    }
+}

@@ -351,6 +351,7 @@ dependencies = [
  "paris",
  "regex",
  "simplelog",
+ "thiserror",
 ]
 
 [[package]]

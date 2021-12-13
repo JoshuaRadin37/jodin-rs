@@ -1,5 +1,7 @@
 //! The core traits are the traits the define the different core functionalities of the virtual machine
 
+use crate::error::VMError;
+use crate::vm::VM;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Decode};
 use jodin_asm::mvp::error::BytecodeError;
 use jodin_asm::mvp::value::Value;
@@ -8,7 +10,12 @@ use std::cell::RefCell;
 use std::hash::Hash;
 
 pub trait VirtualMachine {
-    fn interpret_instruction(&mut self, bytecode: Asm) -> Result<(), ()>;
+    /// Interprets an instruction and returns the next instruction
+    fn interpret_instruction(
+        &mut self,
+        bytecode: &Asm,
+        current_instruction: usize,
+    ) -> Result<usize, VMError>;
 
     /// Runs instructions within the virtual machine without any connection to the current state
     /// beyond the global context. Prevents loading new code into the VM during this phase.
@@ -18,7 +25,7 @@ pub trait VirtualMachine {
     fn load<A: GetAsm>(&mut self, asm: A);
 
     /// Runs the VM starting at a label
-    fn run(&mut self, start_label: &str) -> Result<u32, ()>;
+    fn run(&mut self, start_label: &str) -> Result<u32, VMError>;
 }
 
 pub trait GetAsm {

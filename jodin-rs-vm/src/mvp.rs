@@ -4,55 +4,45 @@ use jodin_asm::mvp::value::Value;
 use std::cell::RefCell;
 use std::hash::Hash;
 
-pub struct MinimumMemory;
+/// Only has stack implementations
+#[derive(Default)]
+pub struct MinimumMemory {
+    stack: Vec<Value>,
+}
 
 impl MemoryTrait for MinimumMemory {
-    fn global_scope(&self) {
-        todo!()
-    }
+    fn global_scope(&self) {}
 
-    fn save_current_scope<H: Hash>(&mut self, identifier: H) {
-        todo!()
-    }
+    fn save_current_scope<H: Hash>(&mut self, identifier: H) {}
 
-    fn load_scope<H: Hash>(&mut self, identifier: H) {
-        todo!()
-    }
+    fn load_scope<H: Hash>(&mut self, identifier: H) {}
 
-    fn push_scope(&mut self) {
-        todo!()
-    }
+    fn push_scope(&mut self) {}
 
-    fn pop_scope(&mut self) {
-        todo!()
-    }
+    fn pop_scope(&mut self) {}
 
-    fn back_scope(&mut self) {
-        todo!()
-    }
+    fn back_scope(&mut self) {}
 
-    fn set_var(&mut self, var: usize, value: Value) {
-        todo!()
-    }
+    fn set_var(&mut self, var: usize, value: Value) {}
 
     fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError> {
-        todo!()
+        Err(BytecodeError::VariableNotSet(var))
     }
 
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError> {
-        todo!()
+        Err(BytecodeError::VariableNotSet(var))
     }
 
     fn next_var_number(&self) -> usize {
-        todo!()
+        1
     }
 
     fn push(&mut self, value: Value) {
-        todo!()
+        self.stack.push(value);
     }
 
     fn pop(&mut self) -> Option<Value> {
-        todo!()
+        self.stack.pop()
     }
 }
 

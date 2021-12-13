@@ -1,8 +1,9 @@
 use jodin_asm::default_logging;
 use jodin_asm::mvp::bytecode::Asm;
+use jodin_asm::mvp::value::Value;
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
-use jodin_rs_vm::VMBuilder;
+use jodin_rs_vm::vm::VMBuilder;
 use simplelog::info;
 use std::io::Write;
 
@@ -14,12 +15,20 @@ fn hello_world() {
     info!("Running hello world program");
     let mut buffer: Vec<u8> = Vec::new();
     let mut vm = VMBuilder::new()
-        .memory(MinimumMemory)
+        .memory(MinimumMemory::default())
         .alu(MinimumALU)
         .with_stdout(&mut buffer)
         .build();
 
-    let instructions = vec![Asm::label("__start"), Asm::push(0u64), Asm::Return];
+    let instructions = vec![
+        Asm::label("__start"),
+        Asm::push(Value::from(vec![Value::from(HELLO_WORLD)])),
+        Asm::push(Value::from("print")),
+        Asm::push(Value::Native),
+        Asm::SendMessage,
+        Asm::push(0u64),
+        Asm::Return,
+    ];
     vm.load(instructions);
     vm.run("__start").expect("VM should not fail");
     drop(vm);
