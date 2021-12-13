@@ -18,7 +18,7 @@ pub enum Value {
         dict: HashMap<String, Value>,
     },
     Array(Vec<Value>),
-    Reference(RefCell<Value>),
+    Reference(Box<RefCell<Value>>),
     Bytecode(Bytecode),
     Function(AsmLocation),
     /// The native value is used to refer to two different states. When alone, the Native value

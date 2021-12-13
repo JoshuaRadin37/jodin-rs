@@ -74,6 +74,10 @@ pub enum Asm {
 }
 
 impl Asm {
+    pub fn label<S: AsRef<str>>(lbl: S) -> Self {
+        Self::Label(lbl.as_ref().to_string())
+    }
+
     pub fn push<V>(value: V) -> Self
     where
         Value: From<V>,

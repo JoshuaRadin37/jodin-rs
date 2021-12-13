@@ -17,3 +17,6 @@ bytes = "1.1.0"
 serde_derive = "1.0.130"
 serde = "1.0.130"
 bincode = "1.3.3"
+simplelog = { version="0.11.1", features=["paris"] }
+log = "0.4.14"
+paris = "1.5.8"

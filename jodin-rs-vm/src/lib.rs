@@ -29,20 +29,26 @@ extern crate num_derive;
 #[macro_use]
 extern crate jodin_asm_derive;
 
+#[macro_use]
+extern crate log;
+
 use crate::core_traits::{ArithmeticsTrait, GetAsm, MemoryTrait, VirtualMachine};
 use crate::function_names::{CALL, RECEIVE_MESSAGE};
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Decode};
 use jodin_asm::mvp::location::AsmLocation;
 use jodin_asm::mvp::value::Value;
+use std::cell::RefCell;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use std::io::{Read, Write};
+use std::io::{stderr, stdin, stdout, Read, Write};
 
 pub mod core_traits;
 pub mod function_names;
+pub mod mvp;
 
-pub struct VM<M, A>
+pub struct VM<'l, M, A>
 where
     M: MemoryTrait,
     A: ArithmeticsTrait,
@@ -55,18 +61,30 @@ where
     label_to_instruction: HashMap<String, usize>,
     counter_stack: Vec<usize>,
 
-    stdin: Box<dyn Read>,
-    stdout: Box<dyn Write>,
-    stderr: Box<dyn Write>,
+    stdin: Box<dyn Read + 'l>,
+    stdout: Box<dyn Write + 'l>,
+    stderr: Box<dyn Write + 'l>,
 
     next_anonymous_function: AtomicU64,
 }
 
-impl<M, A> VM<M, A>
+impl<'l, M, A> VM<'l, M, A>
 where
     M: MemoryTrait,
     A: ArithmeticsTrait,
 {
+    pub fn set_stdin<R: Read + 'l>(&mut self, reader: R) {
+        self.stdin = Box::new(reader);
+    }
+
+    pub fn set_stdout<W: Write + 'l>(&mut self, writer: W) {
+        self.stdout = Box::new(writer);
+    }
+
+    pub fn set_stderr<W: Write + 'l>(&mut self, writer: W) {
+        self.stderr = Box::new(writer);
+    }
+
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
         match message {
             "print" => {
@@ -104,6 +122,17 @@ where
                     .expect("String expected for message");
                 self.send_message(&mut target, &msg, args);
             }
+            "ref" => {
+                let target = args.remove(0);
+                let as_ref = Value::Reference(Box::new(RefCell::new(target)));
+                self.memory.push(as_ref);
+            }
+            "copy" => {
+                let target = args.remove(0);
+                let cloned = target.clone();
+                self.memory.push(target);
+                self.memory.push(cloned);
+            }
             _ => panic!("{:?} is not a native method", message),
         }
     }
@@ -140,9 +169,8 @@ where
                             .into_string()
                             .expect("first value should be a string");
                         let value = args.remove(0);
-                        let mut next = dict;
-                        next.insert(name, value);
-                        Value::Dictionary { dict: next }
+                        dict.insert(name, value);
+                        Value::Empty
                     }
                     "contains" => {
                         todo!()
@@ -158,23 +186,27 @@ where
                 self.memory.push(ret);
             }
             Value::Array(_) => {}
-            Value::Reference(_) => {}
+            Value::Reference(reference) => {
+                let mut as_mut = reference.borrow_mut();
+                let as_mut_ref = &mut *as_mut;
+                self.send_message(as_mut_ref, message, args);
+            }
             Value::Bytecode(bytecode) => {
                 if message != CALL {
                     panic!("Can only call bytecode objects")
                 }
-                let mut decoded = bytecode.decode();
+                let mut decoded = bytecode.clone().decode();
                 let name = self.anonymous_function_label();
                 let label = Asm::Label(name.clone());
                 decoded.insert(0, label);
                 self.load(decoded);
 
                 self.memory.push_scope();
-                let value = Value::Function(AsmLocation::Label(name.clone()));
+                let mut value = Value::Function(AsmLocation::Label(name.clone()));
                 self.memory.save_current_scope(&name);
                 self.memory.pop_scope();
 
-                self.send_message(value, CALL, args);
+                self.send_message(&mut value, CALL, args);
             }
             Value::Function(f) => {
                 if message != CALL {
@@ -192,7 +224,7 @@ where
         *self.counter_stack.last().unwrap()
     }
 
-    fn call(&mut self, asm_location: AsmLocation, mut args: Vec<Value>) {
+    fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) {
         let name = match &asm_location {
             AsmLocation::ByteIndex(i) => {
                 let ref instruction = self.instructions[*i];
@@ -213,11 +245,11 @@ where
             self.memory.push(arg);
         }
         let next_pc = match asm_location {
-            AsmLocation::ByteIndex(i) => i,
+            &AsmLocation::ByteIndex(i) => i,
             AsmLocation::InstructionDiff(_) => {
                 panic!("Illegal for calling functions")
             }
-            AsmLocation::Label(l) => self.label_to_instruction[&l],
+            AsmLocation::Label(l) => self.label_to_instruction[l],
         };
         self.counter_stack.push(next_pc);
     }
@@ -226,9 +258,14 @@ where
         let num = self.next_anonymous_function.fetch_add(1, Ordering::Relaxed);
         format!("<anonymous function {}>", num)
     }
+
+    fn set_program_counter(&mut self, pc: usize) {
+        self.counter_stack.pop();
+        self.counter_stack.push(pc);
+    }
 }
 
-impl<M, A> VirtualMachine for VM<M, A>
+impl<M, A> VirtualMachine for VM<'_, M, A>
 where
     M: MemoryTrait,
     A: ArithmeticsTrait,
@@ -260,7 +297,7 @@ where
             Asm::Not => {}
             Asm::Or => {}
             Asm::SendMessage => {
-                let target = self
+                let mut target = self
                     .memory
                     .pop()
                     .expect("There should be a target value on the stack");
@@ -274,7 +311,7 @@ where
                 } else {
                     panic!("Arguments must be an array of values")
                 };
-                self.send_message(target, &*message, args);
+                self.send_message(&mut target, &*message, args);
             }
             _ => panic!("Invalid instruction"),
         }
@@ -285,11 +322,120 @@ where
         todo!()
     }
 
-    fn load<Asm: GetAsm>(&mut self, asm: Asm) {
-        todo!()
+    fn load<Assembly: GetAsm>(&mut self, asm: Assembly) {
+        let start_index = self.instructions.len();
+        let as_asm = asm.get_asm();
+        let mut new_labels = HashMap::new();
+        for (index, asm) in as_asm.into_iter().enumerate() {
+            if let Asm::Label(asm_label) = &asm {
+                let label_index = start_index + index;
+                match self.label_to_instruction.entry(asm_label.clone()) {
+                    Entry::Occupied(_) => {
+                        panic!("label {:?} already registered", asm_label);
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(label_index);
+                        new_labels.insert(asm_label.clone(), label_index);
+                    }
+                }
+            }
+            self.instructions.push(asm);
+        }
+        info!("Created new labels = {:?}", new_labels);
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, ()> {
-        todo!()
+        self.cont = true;
+        let start_counter = self.label_to_instruction[start_label];
+        self.counter_stack.push(start_counter);
+        while self.cont && (1..self.instructions.len()).contains(&self.program_counter()) {
+            let instruction = &self.instructions[self.program_counter()];
+            let next_instruction = self.program_counter() + 1;
+
+            self.set_program_counter(next_instruction);
+        }
+        self.memory
+            .pop()
+            .map(|value| {
+                if let Value::UInteger(u) = value {
+                    u as u32
+                } else {
+                    panic!("must return an integer")
+                }
+            })
+            .ok_or(())
+    }
+}
+
+pub struct VMBuilder<'l, A, M> {
+    arithmetic: Option<A>,
+    memory: Option<M>,
+    stdin: Box<dyn Read + 'l>,
+    stdout: Box<dyn Write + 'l>,
+    stderr: Box<dyn Write + 'l>,
+}
+
+impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
+    pub fn build(self) -> VM<'l, M, A> {
+        let VMBuilder {
+            arithmetic,
+            memory,
+            stdin,
+            stdout,
+            stderr,
+        } = self;
+        VM {
+            memory: memory.expect("Memory module must be set"),
+            alu: arithmetic.expect("Arithmetic module must be set"),
+            cont: false,
+            instructions: vec![Asm::Nop],
+            label_to_instruction: Default::default(),
+            counter_stack: vec![],
+            stdin,
+            stdout,
+            stderr,
+            next_anonymous_function: Default::default(),
+        }
+    }
+}
+
+impl<'l, A, M> VMBuilder<'l, A, M> {
+    pub fn new() -> Self {
+        Self {
+            arithmetic: None,
+            memory: None,
+            stdin: Box::new(stdin()),
+            stdout: Box::new(stdout()),
+            stderr: Box::new(stderr()),
+        }
+    }
+
+    pub fn with_stdin<R: Read + 'l>(mut self, reader: R) -> Self {
+        self.stdin = Box::new(reader);
+        self
+    }
+
+    pub fn with_stdout<W: Write + 'l>(mut self, writer: W) -> Self {
+        self.stdout = Box::new(writer);
+        self
+    }
+
+    pub fn with_stderr<W: Write + 'l>(mut self, writer: W) -> Self {
+        self.stderr = Box::new(writer);
+        self
+    }
+}
+
+impl<A: ArithmeticsTrait, M> VMBuilder<'_, A, M> {
+    pub fn alu(mut self, alu: A) -> Self {
+        self.arithmetic = Some(alu);
+        self
+    }
+}
+
+impl<A, M: MemoryTrait> VMBuilder<'_, A, M> {
+    pub fn memory(mut self, memory: M) -> Self {
+        self.memory = Some(memory);
+        self
     }
 }
