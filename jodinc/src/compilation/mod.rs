@@ -11,7 +11,10 @@ use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
-// pub mod c_compiler;
+#[doc(hidden)]
+pub mod c_compiler;
+#[doc(hidden)]
+pub use c_compiler::C99;
 
 /// A target for compilation.
 pub trait Target {}

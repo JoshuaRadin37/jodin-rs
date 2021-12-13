@@ -330,7 +330,6 @@ where
                     panic!("Arguments must be an array of values")
                 };
                 if let Some(next) = self.send_message(&mut target, &*message, args) {
-                    trace!("found alt next pc: {}", next);
                     next_instruction = next;
                 }
             }
@@ -342,7 +341,6 @@ where
                     .pop()
                     .expect("There should be a target value on the stack")];
                 if let Some(next) = self.send_message(&mut target, message, args) {
-                    trace!("found alt next pc: {}", next);
                     next_instruction = next;
                 }
             }
@@ -358,7 +356,6 @@ where
                     )
                 }
                 if let Some(next) = self.send_message(&mut target, message, args) {
-                    trace!("found alt next pc: {}", next);
                     next_instruction = next;
                 }
             }

@@ -60,7 +60,11 @@ fn dict_with_native_override() {
             .with_stderr(stdout())
             .build();
 
-        let receive_msg: Assembly = vec![Asm::label("__output"), Asm::push("boob"), Asm::Return];
+        let receive_msg: Assembly = vec![
+            Asm::label("__output"),
+            Asm::push("OTHER VALUE"),
+            Asm::Return,
+        ];
         vm.load(receive_msg);
 
         let ignore_attribute = Value::from([
@@ -87,4 +91,5 @@ fn dict_with_native_override() {
         vm.run("__start").expect("VM should not fail");
     }
     let decoded = String::from_utf8(buffer).expect("Output should be in utf-8");
+    assert_eq!(decoded, "OTHER VALUE");
 }
