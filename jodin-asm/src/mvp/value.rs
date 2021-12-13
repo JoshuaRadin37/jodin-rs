@@ -35,6 +35,25 @@ impl Value {
             None
         }
     }
+
+    pub fn new<V: Into<Value>>(v: V) -> Self {
+        v.into()
+    }
+
+    pub fn new_dict() -> Self {
+        Value::Dictionary {
+            dict: Default::default(),
+        }
+    }
+
+    pub fn into_reference(self) -> Self {
+        match self {
+            Value::Reference(_) => {
+                panic!("Can not have a reference to a reference")
+            }
+            v => Value::Reference(Box::new(RefCell::new(v))),
+        }
+    }
 }
 
 impl From<f64> for Value {
@@ -94,5 +113,58 @@ where
 {
     fn from(vs: Vec<V>) -> Self {
         Value::Array(vs.into_iter().map(|v| v.into()).collect())
+    }
+}
+
+impl<V> From<HashMap<String, V>> for Value
+where
+    Value: From<V>,
+{
+    fn from(m: HashMap<String, V>) -> Self {
+        Value::Dictionary {
+            dict: m.into_iter().map(|(k, v)| (k, v.into())).collect(),
+        }
+    }
+}
+
+impl<V> From<Vec<(String, V)>> for Value
+where
+    Value: From<V>,
+{
+    fn from(m: Vec<(String, V)>) -> Self {
+        Value::Dictionary {
+            dict: m.into_iter().map(|(k, v)| (k, v.into())).collect(),
+        }
+    }
+}
+
+impl<V, const N: usize> From<[(String, V); N]> for Value
+where
+    Value: From<V>,
+{
+    fn from(m: [(String, V); N]) -> Self {
+        Value::Dictionary {
+            dict: m.into_iter().map(|(k, v)| (k.clone(), v.into())).collect(),
+        }
+    }
+}
+
+impl<V, const N: usize> From<[(&str, V); N]> for Value
+where
+    Value: From<V>,
+{
+    fn from(m: [(&str, V); N]) -> Self {
+        Value::Dictionary {
+            dict: m
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.into()))
+                .collect(),
+        }
+    }
+}
+
+impl From<RefCell<Value>> for Value {
+    fn from(r: RefCell<Value>) -> Self {
+        Value::Reference(Box::new(r))
     }
 }

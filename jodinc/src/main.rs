@@ -1,10 +1,11 @@
+use jodin_asm::init_logging;
 use jodinc::cli::JodinRsApp;
 use jodinc::compilation_settings::CompilationSettings;
 use jodinc::core::error::{JodinError, JodinErrorType, JodinResult};
 use jodinc::passes::analysis::analyze;
 use jodinc::passes::frontend::FilesToJodinNodeTool;
 use jodinc::passes::optimization::optimize;
-use jodinc::{init_logging, process_jodin_node};
+use jodinc::process_jodin_node;
 use log::LevelFilter;
 use std::fs::File;
 use std::io::Write;

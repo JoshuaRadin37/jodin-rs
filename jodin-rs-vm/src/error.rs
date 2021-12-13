@@ -7,4 +7,6 @@ pub enum VMError {
     NoExitCode,
     #[error("Expected UInteger exit code (found = {0:?})")]
     ExitCodeInvalidType(Value),
+    #[error("Invalid type found (expected= {expected}, found= {:?})")]
+    InvalidType { value: Value, expected: String },
 }

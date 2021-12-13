@@ -2,12 +2,14 @@ use crate::{ArithmeticsTrait, MemoryTrait};
 use jodin_asm::mvp::error::BytecodeError;
 use jodin_asm::mvp::value::Value;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::hash::Hash;
 
-/// Only has stack implementations
-#[derive(Default)]
+/// Only has stack implementations and non-scoped variables
+#[derive(Default, Debug)]
 pub struct MinimumMemory {
     stack: Vec<Value>,
+    vars: HashMap<usize, RefCell<Value>>,
 }
 
 impl MemoryTrait for MinimumMemory {
@@ -23,14 +25,22 @@ impl MemoryTrait for MinimumMemory {
 
     fn back_scope(&mut self) {}
 
-    fn set_var(&mut self, var: usize, value: Value) {}
+    fn set_var(&mut self, var: usize, value: Value) {
+        self.vars.insert(var, RefCell::new(value));
+    }
 
     fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError> {
-        Err(BytecodeError::VariableNotSet(var))
+        self.vars
+            .get(&var)
+            .cloned()
+            .ok_or(BytecodeError::VariableNotSet(var))
     }
 
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError> {
-        Err(BytecodeError::VariableNotSet(var))
+        self.vars
+            .remove(&var)
+            .map(|_| ())
+            .ok_or(BytecodeError::VariableNotSet(var))
     }
 
     fn next_var_number(&self) -> usize {

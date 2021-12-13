@@ -363,6 +363,7 @@ dependencies = [
  "either",
  "glob",
  "itertools",
+ "jodin-asm",
  "jodin-rs-vm",
  "lalrpop",
  "lalrpop-util",

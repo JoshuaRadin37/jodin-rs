@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::io::{stderr, stdin, stdout, Read, Write};
+use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct VM<'l, M, A>
@@ -85,7 +86,8 @@ where
             }
             "ref" => {
                 let target = args.remove(0);
-                let as_ref = Value::Reference(Box::new(RefCell::new(target)));
+
+                let as_ref = target.into_reference();
                 self.memory.push(as_ref);
             }
             "copy" => {
@@ -94,12 +96,20 @@ where
                 self.memory.push(target);
                 self.memory.push(cloned);
             }
+            "@print_stack" => {
+                info!("memory: {:#?}", self.memory);
+            }
             _ => panic!("{:?} is not a native method", message),
         }
     }
 
-    fn send_message(&mut self, target: &mut Value, message: &str, mut args: Vec<Value>) {
-        info!("Sending {:?} to {:?} with args {:?}", message, target, args);
+    fn send_message(
+        &mut self,
+        target: &mut Value,
+        message: &str,
+        mut args: Vec<Value>,
+    ) -> Option<usize> {
+        debug!("Sending {:?} to {:?} with args {:?}", message, target, args);
         match target {
             Value::Empty => {}
             Value::Byte(_) => {}
@@ -110,8 +120,7 @@ where
             Value::Dictionary { dict } => {
                 if let Some(mut receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
                     if receive_msg != Value::Native {
-                        self.send_message(&mut receive_msg, message, args);
-                        return;
+                        return self.send_message(&mut receive_msg, CALL, args);
                     }
                 }
 
@@ -151,7 +160,7 @@ where
             Value::Reference(reference) => {
                 let mut as_mut = reference.borrow_mut();
                 let as_mut_ref = &mut *as_mut;
-                self.send_message(as_mut_ref, message, args);
+                return self.send_message(as_mut_ref, message, args);
             }
             Value::Bytecode(bytecode) => {
                 if message != CALL {
@@ -168,25 +177,30 @@ where
                 self.memory.save_current_scope(&name);
                 self.memory.pop_scope();
 
-                self.send_message(&mut value, CALL, args);
+                return self.send_message(&mut value, CALL, args);
             }
             Value::Function(f) => {
                 if message != CALL {
                     panic!("Can only call function objects")
                 }
-                self.call(f, args);
+                return self.call(f, args);
             }
             Value::Native => {
                 self.native_method(message, args);
             }
         }
+        return None;
     }
 
     fn program_counter(&self) -> usize {
         *self.counter_stack.last().unwrap()
     }
 
-    fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) {
+    fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) -> Option<usize> {
+        debug!(
+            "Attempting to call {:?} with args: {:?}",
+            asm_location, args
+        );
         let name = match &asm_location {
             AsmLocation::ByteIndex(i) => {
                 let ref instruction = self.instructions[*i];
@@ -213,7 +227,9 @@ where
             }
             AsmLocation::Label(l) => self.label_to_instruction[l],
         };
-        self.counter_stack.push(next_pc);
+        debug!("Returning next PC to function at index 0x{:016X}", next_pc);
+        self.counter_stack.push(0);
+        Some(next_pc)
     }
 
     fn anonymous_function_label(&self) -> String {
@@ -240,31 +256,64 @@ where
         let mut next_instruction = instruction_pointer + 1;
         match bytecode {
             Asm::Label(_) | Asm::Nop => {}
+            Asm::Return => {
+                self.counter_stack.pop();
+                let next = self
+                    .counter_stack
+                    .last()
+                    .cloned()
+                    .map(|v| v + 1)
+                    .unwrap_or(0);
+                trace!("Returning to instruction {}", next);
+                next_instruction = next;
+            }
             Asm::Halt => {
                 self.cont = false;
             }
-            Asm::Goto(_) => {}
-            Asm::CondGoto(_) => {}
             Asm::Push(v) => {
                 self.memory.push(v.clone());
             }
-            Asm::Clear => {}
-            Asm::NextVar(_) => {}
-            Asm::SetVar(_) => {}
-            Asm::GetVar(_) => {}
-            Asm::ClearVar(_) => {}
-            Asm::GetAttribute(_) => {}
-            Asm::Index(_) => {}
-            Asm::Return => {}
-            Asm::Call(_) => {}
-            Asm::Add => {}
-            Asm::Subtract => {}
-            Asm::Multiply => {}
-            Asm::Divide => {}
-            Asm::Remainder => {}
-            Asm::And => {}
-            Asm::Not => {}
-            Asm::Or => {}
+            Asm::GetAttribute(attr) => {
+                let dict = self.memory.pop().expect("No value found on stack");
+                let val = match dict {
+                    Value::Dictionary { mut dict } => {
+                        dict.remove(attr.as_str()).expect("Attribute must exist")
+                    }
+                    Value::Reference(refr) => {
+                        let inner = refr.borrow();
+                        if let Value::Dictionary { dict } = &*inner {
+                            dict.get(attr.as_str())
+                                .expect("Attribute must exist")
+                                .clone()
+                        } else {
+                            return Err(VMError::InvalidType {
+                                value: inner.deref().clone(),
+                                expected: "Dictionary".to_string(),
+                            });
+                        }
+                    }
+                    v => {
+                        return Err(VMError::InvalidType {
+                            value: v,
+                            expected: "Dictionary".to_string(),
+                        });
+                    }
+                };
+                self.memory.push(val);
+            }
+            &Asm::SetVar(v) => {
+                let value = self
+                    .memory
+                    .pop()
+                    .expect("value expected from stack to save to ");
+                self.memory.set_var(v as usize, value);
+            }
+            &Asm::GetVar(v) => {
+                let val = self.memory.get_var(v as usize).expect("no var");
+                let value: Value = val.into();
+                self.memory.push(value);
+            }
+            &Asm::ClearVar(v) => {}
             Asm::SendMessage => {
                 let mut target = self
                     .memory
@@ -280,9 +329,40 @@ where
                 } else {
                     panic!("Arguments must be an array of values")
                 };
-                self.send_message(&mut target, &*message, args);
+                if let Some(next) = self.send_message(&mut target, &*message, args) {
+                    trace!("found alt next pc: {}", next);
+                    next_instruction = next;
+                }
             }
-            _ => panic!("Invalid instruction"),
+            Asm::IntoReference => {
+                let mut target = Value::Native;
+                let message = "ref";
+                let args = vec![self
+                    .memory
+                    .pop()
+                    .expect("There should be a target value on the stack")];
+                if let Some(next) = self.send_message(&mut target, message, args) {
+                    trace!("found alt next pc: {}", next);
+                    next_instruction = next;
+                }
+            }
+            Asm::NativeMethod(msg, count) => {
+                let mut target = Value::Native;
+                let message = &*msg;
+                let mut args = vec![];
+                for _ in 0..*count {
+                    args.push(
+                        self.memory
+                            .pop()
+                            .expect("Expected a value on the stack for native method call"),
+                    )
+                }
+                if let Some(next) = self.send_message(&mut target, message, args) {
+                    trace!("found alt next pc: {}", next);
+                    next_instruction = next;
+                }
+            }
+            a => panic!("Invalid instruction: {:?}", a),
         }
         Ok(next_instruction)
     }
@@ -320,9 +400,8 @@ where
         while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
             let pc = self.program_counter();
             let ref instruction = self.instructions[pc].clone();
-            debug!("0x{:016X}: {:?}", pc, instruction);
+            trace!("0x{:016X}: {:?}", pc, instruction);
             let next = self.interpret_instruction(instruction, pc)?;
-
             self.set_program_counter(next);
         }
         match self.memory.pop() {

@@ -38,7 +38,7 @@ pub enum Asm {
     GetAttribute(String),
     /// Gets a value from an array
     Index(usize),
-    /// Packs {0} amount of values from the stack into an array
+    /// Packs n amount of values from the stack into an array
     Pack(usize),
 
     /// Return to the previous frame
@@ -71,6 +71,11 @@ pub enum Asm {
     /// There should be a default implementation for all value types, but with the ability to override
     /// somehow.
     SendMessage,
+    // send message shortcuts
+    /// Last thing on stack becomes a reference
+    IntoReference,
+    /// Invoke native method with the last N values are args
+    NativeMethod(String, usize),
 }
 
 impl Asm {
@@ -83,6 +88,18 @@ impl Asm {
         Value: From<V>,
     {
         Self::Push(value.into())
+    }
+
+    pub fn native_method<S: AsRef<str>, I: Into<Option<usize>>>(native: S, args: I) -> Self {
+        let args = args.into().unwrap_or(0);
+        Self::NativeMethod(native.as_ref().to_string(), args)
+    }
+
+    pub fn get_attribute<S>(attribute_name: S) -> Self
+    where
+        S: AsRef<str>,
+    {
+        Self::GetAttribute(attribute_name.as_ref().to_string())
     }
 }
 

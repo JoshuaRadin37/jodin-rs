@@ -5,8 +5,10 @@ use crate::vm::VM;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Decode};
 use jodin_asm::mvp::error::BytecodeError;
 use jodin_asm::mvp::value::Value;
+use log::Level;
 use num_traits::PrimInt;
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::hash::Hash;
 
 pub trait VirtualMachine {
@@ -57,7 +59,7 @@ impl<GB: GetBytecode> GetAsm for GB {
 }
 
 /// Memory defines a way of storing and getting variables.
-pub trait MemoryTrait {
+pub trait MemoryTrait: Debug {
     /// Sets the memory to the global scope. Works similarly to a load
     fn global_scope(&self);
     /// Saves the current scope using some value to identify it for later.

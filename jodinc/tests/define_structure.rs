@@ -1,3 +1,4 @@
+use jodin_asm::init_logging;
 use jodinc::ast::tags::TagTools;
 use jodinc::core::error::JodinResult;
 use jodinc::core::identifier::Identifier;
@@ -10,8 +11,8 @@ use jodinc::core::types::resolved_type::{
 };
 use jodinc::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodinc::parsing::parse_program;
+use jodinc::process_jodin_node;
 use jodinc::utility::Visitor;
-use jodinc::{default_logging, init_logging, process_jodin_node};
 use log::LevelFilter;
 use logos::internal::CallbackResult;
 use std::error::Error;
