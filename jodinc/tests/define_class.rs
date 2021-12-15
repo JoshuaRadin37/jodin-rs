@@ -1,6 +1,7 @@
+use jodin_asm::init_logging;
 use jodinc::core::error::JodinError;
 use jodinc::parsing::parse_program;
-use jodinc::{init_logging, process_jodin_node};
+use jodinc::process_jodin_node;
 use log::LevelFilter;
 use std::error::Error;
 

@@ -12,6 +12,7 @@ use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::literal::Literal;
 use crate::core::operator::Operator;
+use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier};
 use crate::core::types::primitives::Primitive;
 use itertools::Itertools;
 use std::fmt::Write;

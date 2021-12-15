@@ -11,3 +11,12 @@ byteorder = "1.4.3"
 num = "0.4"
 num-derive = "0.3"
 num-traits = "0.2"
+thiserror = "1.0.30"
+smallvec = { version="1.7.0", features=["const_generics"] }
+bytes = "1.1.0"
+serde_derive = "1.0.130"
+serde = "1.0.130"
+bincode = "1.3.3"
+simplelog = { version="0.11.1", features=["paris"] }
+log = "0.4.14"
+paris = "1.5.8"

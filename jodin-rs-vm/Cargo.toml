@@ -8,7 +8,7 @@ edition = "2021"
 strict = []
 
 [dependencies]
-jodin-rs-vm_derive = { path="../jodin-rs-vm-derive"}
+jodin-asm-derive = { path= "../jodin-asm-derive" }
 jodin-asm = { path="../jodin-asm"}
 
 num = "0.4"
@@ -19,3 +19,7 @@ bitfield = "0.13"
 itertools = "0.10"
 regex = "1"
 lazy_static = "1.4"
+simplelog = { version = "0.11.0", features=["paris"] }
+log = "0.4.14"
+paris = "1.5.8"
+thiserror = "1.0.30"

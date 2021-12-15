@@ -1,303 +1,483 @@
-//! Contains the virtual machine
+use crate::error::VMError;
+use crate::{ArithmeticsTrait, GetAsm, MemoryTrait, VirtualMachine, CALL, RECEIVE_MESSAGE};
+use jodin_asm::mvp::bytecode::{Asm, Assembly, Decode};
+use jodin_asm::mvp::location::AsmLocation;
+use jodin_asm::mvp::value::Value;
+use std::cell::RefCell;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::io::{stderr, stdin, stdout, Read, Write};
+use std::ops::Deref;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::memory::{Heap, PopFromStack, Stack};
-
-use crate::chunk::{ByteCodeVector, Chunk};
-use crate::compound_types::{Array, FunctionInfo, LocalVarsDeclarations, Pair, Pointer};
-use crate::frame::Frame;
-use crate::symbols::{Symbol, SystemCall, SystemCallTable};
-use jodin_asm::bytecode::ByteCode;
-use std::collections::VecDeque;
-use std::ffi::CString;
-use std::panic::{catch_unwind, UnwindSafe};
-use std::str::FromStr;
-use std::sync::mpsc::{Receiver, Sender, TryRecvError};
-use std::sync::{mpsc, Arc, RwLock};
-
-pub const PUSH_SYMBOL_TO_STACK: usize = 0;
-pub const CREATE_LOCAL_VARS_DECLARATION: usize = 1;
-
-/// The machine that actually runs the bytecode
-pub struct VirtualMachine {
-    interrupt_sender: Sender<Interrupt>,
-    halt_receiver: Receiver<()>,
-    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
-}
-
-impl VirtualMachine {
-    pub fn boot_with(chunk: Chunk) -> Self {
-        let mut sys_calls = SystemCallTable::new();
-        sys_calls[PUSH_SYMBOL_TO_STACK] = SystemCall::VM(Core::push_current_symbol);
-        sys_calls[CREATE_LOCAL_VARS_DECLARATION] =
-            SystemCall::VM(Core::create_local_vars_declaration);
-
-        let sys_calls = Arc::new(RwLock::new(sys_calls));
-        let (interrupt_sender, halt_receiver) = Self::create_core(chunk, sys_calls.clone());
-        Self {
-            interrupt_sender,
-            halt_receiver,
-            sys_calls,
-        }
-    }
-
-    fn create_core(
-        base_heap: Chunk,
-        ref sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
-    ) -> (Sender<Interrupt>, Receiver<()>) {
-        let (halt_s, halt_r) = mpsc::channel::<()>();
-        let (interrupt_s, interrupt_r) = mpsc::channel::<Interrupt>();
-
-        let mut heap = Heap::new();
-        heap.data_mut().extend(&base_heap.0);
-        let core = Core::new(heap, halt_s, interrupt_r, sys_calls);
-        std::thread::spawn(move || {
-            core.run();
-        });
-        (interrupt_s, halt_r)
-    }
-
-    pub fn send_interrupt(&self, interrupt: Interrupt) {
-        self.interrupt_sender
-            .send(interrupt)
-            .expect("Could not send interrupt")
-    }
-
-    pub fn wait_for_halt(&self) {
-        while let Err(TryRecvError::Empty) = self.halt_receiver.try_recv() {}
-    }
-}
-
-pub enum Interrupt {
-    RunCode(Chunk),
-    Halt,
-    SysCall(usize),
-}
-
-pub const SYS_CALLS: usize = 256;
-
-pub struct Core {
-    heap: Heap,
-    pub stack: Stack,
-    halt: Sender<()>,
-    interrupt_receiver: Receiver<Interrupt>,
-
-    frames: Vec<Frame>,
-    current_frame: usize,
-
-    interrupt_queue: VecDeque<Interrupt>,
-    wait_for_interrupt: bool,
-
+pub struct VM<'l, M, A>
+where
+    M: MemoryTrait,
+    A: ArithmeticsTrait,
+{
+    memory: M,
+    alu: A,
     cont: bool,
 
-    sys_calls: Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
+    instructions: Assembly,
+    label_to_instruction: HashMap<String, usize>,
+    counter_stack: Vec<usize>,
+
+    stdin: Box<dyn Read + 'l>,
+    stdout: Box<dyn Write + 'l>,
+    stderr: Box<dyn Write + 'l>,
+
+    next_anonymous_function: AtomicU64,
 }
 
-impl UnwindSafe for Core {}
-
-unsafe impl Sync for Core {}
-unsafe impl Send for Core {}
-
-impl Core {
-    pub fn new(
-        heap: Heap,
-        halt: Sender<()>,
-        interrupt_receiver: Receiver<Interrupt>,
-        sys_calls: &Arc<RwLock<SystemCallTable<SYS_CALLS>>>,
-    ) -> Self {
-        Core {
-            heap,
-            stack: Stack::new(),
-            halt,
-            interrupt_receiver,
-            frames: vec![],
-            current_frame: 0,
-            interrupt_queue: Default::default(),
-            wait_for_interrupt: false,
-            cont: true,
-            sys_calls: sys_calls.clone(),
-        }
+impl<'l, M, A> VM<'l, M, A>
+where
+    M: MemoryTrait,
+    A: ArithmeticsTrait,
+{
+    pub fn set_stdin<R: Read + 'l>(&mut self, reader: R) {
+        self.stdin = Box::new(reader);
     }
 
-    fn create_local_vars_declaration(&mut self) {
-        let count: usize = self.stack.pop().unwrap();
-        let mut vec = VecDeque::new();
-        for _ in 0..count {
-            let pair: Pair<usize, usize> = self.stack.pop().unwrap();
-            vec.push_front(pair);
-        }
-        let array = Array::new(Vec::from(vec));
-        let locals = LocalVarsDeclarations::new(array);
-        self.stack.push(locals);
+    pub fn set_stdout<W: Write + 'l>(&mut self, writer: W) {
+        self.stdout = Box::new(writer);
     }
 
-    fn push_current_symbol(&mut self) {
-        let symbol = self.current_frame().within_symbol.clone().unwrap();
-        let string = symbol.to_string();
-        let c_string = CString::new(string).expect("symbol is invalid c_string");
-        self.stack.push(c_string);
+    pub fn set_stderr<W: Write + 'l>(&mut self, writer: W) {
+        self.stderr = Box::new(writer);
     }
 
-    fn apply_generics(&mut self) {
-        let symbol: CString = self.stack.pop().unwrap();
-        let generics_array: Array<CString> = self.stack.pop().unwrap();
-
-        let symbol: Symbol<String> = Symbol::from_str(symbol.to_str().unwrap()).unwrap();
-    }
-
-    fn handle_interrupts(&mut self) {
-        while let Ok(next) = self.interrupt_receiver.try_recv() {
-            self.interrupt_queue.push_back(next);
-        }
-
-        let drain = self.interrupt_queue.drain(..).collect::<Vec<_>>();
-        for interrupt in drain {
-            self.handle_interrupt(interrupt);
-        }
-    }
-
-    fn handle_interrupt(&mut self, interrupt: Interrupt) {
-        match interrupt {
-            Interrupt::RunCode(code) => {
-                let next_ip = self.heap.data().len();
-                self.heap.data_mut().extend(code.0);
-                self.current_frame_mut().instruction_pointer = next_ip;
+    fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
+        match message {
+            "print" => {
+                if let Value::Str(s) = args.remove(0) {
+                    write!(self.stdout, "{}", s).expect("Couldn't print to output");
+                } else {
+                    panic!("Can not only pass strings to the print function")
+                }
             }
-            Interrupt::Halt => {
-                self.halt.send(());
+            "write" => {
+                let fd = if let Value::UInteger(fd) = args.remove(0) {
+                    fd
+                } else {
+                    panic!("File descriptors should only be unsigned ints")
+                };
+                let output = match fd {
+                    1 => &mut self.stdout,
+                    2 => &mut self.stderr,
+                    _ => {
+                        panic!("{} is not a valid file descriptor for writing", fd);
+                    }
+                };
+                if let Value::Str(s) = args.remove(0) {
+                    write!(output, "{}", s).expect("Couldn't write");
+                } else {
+                    panic!("Can not only pass strings to the print function")
+                }
+            }
+            "invoke" => {
+                // invokes the message (arg 2) on the target (arg 1) with args (arg 3..)
+                let mut target = args.remove(0);
+                let msg = args
+                    .remove(1)
+                    .into_string()
+                    .expect("String expected for message");
+                self.send_message(&mut target, &msg, args);
+            }
+            "ref" => {
+                let target = args.remove(0);
+
+                let as_ref = target.into_reference();
+                self.memory.push(as_ref);
+            }
+            "copy" => {
+                let target = args.remove(0);
+                let cloned = target.clone();
+                self.memory.push(target);
+                self.memory.push(cloned);
+            }
+            "@print_stack" => {
+                info!("memory: {:#?}", self.memory);
+            }
+            _ => panic!("{:?} is not a native method", message),
+        }
+    }
+
+    fn send_message(
+        &mut self,
+        target: &mut Value,
+        message: &str,
+        mut args: Vec<Value>,
+    ) -> Option<usize> {
+        debug!("Sending {:?} to {:?} with args {:?}", message, target, args);
+        match target {
+            Value::Empty => {}
+            Value::Byte(_) => {}
+            Value::Float(_) => {}
+            Value::Integer(_) => {}
+            Value::UInteger(_) => {}
+            Value::Str(_) => {}
+            Value::Dictionary { dict } => {
+                if let Some(mut receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
+                    if receive_msg != Value::Native {
+                        return self.send_message(&mut receive_msg, CALL, args);
+                    }
+                }
+
+                let ret = match message {
+                    "get" => {
+                        let name = args
+                            .remove(0)
+                            .into_string()
+                            .expect("first value should be a string");
+                        dict.get(&*name)
+                            .expect(&*format!("{} not in dictionary", name))
+                            .clone()
+                    }
+                    "put" => {
+                        let name = args
+                            .remove(0)
+                            .into_string()
+                            .expect("first value should be a string");
+                        let value = args.remove(0);
+                        dict.insert(name, value);
+                        Value::Empty
+                    }
+                    "contains" => {
+                        todo!()
+                    }
+                    "remove" => {
+                        todo!()
+                    }
+                    "len" => {
+                        todo!()
+                    }
+                    m => panic!("{:?} is not a valid message for dictionary", m),
+                };
+                self.memory.push(ret);
+            }
+            Value::Array(_) => {}
+            Value::Reference(reference) => {
+                let mut as_mut = reference.borrow_mut();
+                let as_mut_ref = &mut *as_mut;
+                return self.send_message(as_mut_ref, message, args);
+            }
+            Value::Bytecode(bytecode) => {
+                if message != CALL {
+                    panic!("Can only call bytecode objects")
+                }
+                let mut decoded = bytecode.clone().decode();
+                let name = self.anonymous_function_label();
+                let label = Asm::Label(name.clone());
+                decoded.insert(0, label);
+                self.load(decoded);
+
+                self.memory.push_scope();
+                let mut value = Value::Function(AsmLocation::Label(name.clone()));
+                self.memory.save_current_scope(&name);
+                self.memory.pop_scope();
+
+                return self.send_message(&mut value, CALL, args);
+            }
+            Value::Function(f) => {
+                if message != CALL {
+                    panic!("Can only call function objects")
+                }
+                return self.call(f, args);
+            }
+            Value::Native => {
+                self.native_method(message, args);
+            }
+        }
+        return None;
+    }
+
+    fn program_counter(&self) -> usize {
+        *self.counter_stack.last().unwrap()
+    }
+
+    fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) -> Option<usize> {
+        debug!(
+            "Attempting to call {:?} with args: {:?}",
+            asm_location, args
+        );
+        let name = match &asm_location {
+            AsmLocation::ByteIndex(i) => {
+                let ref instruction = self.instructions[*i];
+                if let Asm::Label(name) = instruction {
+                    name.clone()
+                } else {
+                    panic!("Functions must either be called with a label or start with a label")
+                }
+            }
+            AsmLocation::InstructionDiff(_) => {
+                panic!("Illegal for calling functions")
+            }
+            AsmLocation::Label(l) => l.to_string(),
+        };
+        self.memory.load_scope(name);
+        args.reverse();
+        for arg in args {
+            self.memory.push(arg);
+        }
+        let next_pc = match asm_location {
+            &AsmLocation::ByteIndex(i) => i,
+            AsmLocation::InstructionDiff(_) => {
+                panic!("Illegal for calling functions")
+            }
+            AsmLocation::Label(l) => self.label_to_instruction[l],
+        };
+        debug!("Returning next PC to function at index 0x{:016X}", next_pc);
+        self.counter_stack.push(0);
+        Some(next_pc)
+    }
+
+    fn anonymous_function_label(&self) -> String {
+        let num = self.next_anonymous_function.fetch_add(1, Ordering::Relaxed);
+        format!("<anonymous function {}>", num)
+    }
+
+    fn set_program_counter(&mut self, pc: usize) {
+        self.counter_stack.pop();
+        self.counter_stack.push(pc);
+    }
+}
+
+impl<M, A> VirtualMachine for VM<'_, M, A>
+where
+    M: MemoryTrait,
+    A: ArithmeticsTrait,
+{
+    fn interpret_instruction(
+        &mut self,
+        bytecode: &Asm,
+        instruction_pointer: usize,
+    ) -> Result<usize, VMError> {
+        let mut next_instruction = instruction_pointer + 1;
+        match bytecode {
+            Asm::Label(_) | Asm::Nop => {}
+            Asm::Return => {
+                self.counter_stack.pop();
+                let next = self
+                    .counter_stack
+                    .last()
+                    .cloned()
+                    .map(|v| v + 1)
+                    .unwrap_or(0);
+                trace!("Returning to instruction {}", next);
+                next_instruction = next;
+            }
+            Asm::Halt => {
                 self.cont = false;
             }
-            Interrupt::SysCall(call) => {
-                let table = self.sys_calls.read().expect("Syscalls poisoned");
-                let sys_call = table[call];
-                drop(table);
-                match sys_call {
-                    SystemCall::VM(vm) => {
-                        (vm)(self);
+            Asm::Push(v) => {
+                self.memory.push(v.clone());
+            }
+            Asm::GetAttribute(attr) => {
+                let dict = self.memory.pop().expect("No value found on stack");
+                let val = match dict {
+                    Value::Dictionary { mut dict } => {
+                        dict.remove(attr.as_str()).expect("Attribute must exist")
                     }
-                    SystemCall::FunctionPointer(pointer) => {
-                        self.call(pointer);
+                    Value::Reference(refr) => {
+                        let inner = refr.borrow();
+                        if let Value::Dictionary { dict } = &*inner {
+                            dict.get(attr.as_str())
+                                .expect("Attribute must exist")
+                                .clone()
+                        } else {
+                            return Err(VMError::InvalidType {
+                                value: inner.deref().clone(),
+                                expected: "Dictionary".to_string(),
+                            });
+                        }
+                    }
+                    v => {
+                        return Err(VMError::InvalidType {
+                            value: v,
+                            expected: "Dictionary".to_string(),
+                        });
+                    }
+                };
+                self.memory.push(val);
+            }
+            &Asm::SetVar(v) => {
+                let value = self
+                    .memory
+                    .pop()
+                    .expect("value expected from stack to save to ");
+                self.memory.set_var(v as usize, value);
+            }
+            &Asm::GetVar(v) => {
+                let val = self.memory.get_var(v as usize).expect("no var");
+                let value: Value = val.into();
+                self.memory.push(value);
+            }
+            &Asm::ClearVar(v) => {}
+            Asm::SendMessage => {
+                let mut target = self
+                    .memory
+                    .pop()
+                    .expect("There should be a target value on the stack");
+                let message = if let Some(Value::Str(msg)) = self.memory.pop() {
+                    msg
+                } else {
+                    panic!("Message must exist and must be of type String")
+                };
+                let args = if let Some(Value::Array(args)) = self.memory.pop() {
+                    args
+                } else {
+                    panic!("Arguments must be an array of values")
+                };
+                if let Some(next) = self.send_message(&mut target, &*message, args) {
+                    next_instruction = next;
+                }
+            }
+            Asm::IntoReference => {
+                let mut target = Value::Native;
+                let message = "ref";
+                let args = vec![self
+                    .memory
+                    .pop()
+                    .expect("There should be a target value on the stack")];
+                if let Some(next) = self.send_message(&mut target, message, args) {
+                    next_instruction = next;
+                }
+            }
+            Asm::NativeMethod(msg, count) => {
+                let mut target = Value::Native;
+                let message = &*msg;
+                let mut args = vec![];
+                for _ in 0..*count {
+                    args.push(
+                        self.memory
+                            .pop()
+                            .expect("Expected a value on the stack for native method call"),
+                    )
+                }
+                if let Some(next) = self.send_message(&mut target, message, args) {
+                    next_instruction = next;
+                }
+            }
+            a => panic!("Invalid instruction: {:?}", a),
+        }
+        Ok(next_instruction)
+    }
+
+    fn enclosed(&mut self, asm: &Assembly) -> Value {
+        todo!()
+    }
+
+    fn load<Assembly: GetAsm>(&mut self, asm: Assembly) {
+        let start_index = self.instructions.len();
+        let as_asm = asm.get_asm();
+        let mut new_labels = HashMap::new();
+        for (index, asm) in as_asm.into_iter().enumerate() {
+            if let Asm::Label(asm_label) = &asm {
+                let label_index = start_index + index;
+                match self.label_to_instruction.entry(asm_label.clone()) {
+                    Entry::Occupied(_) => {
+                        panic!("label {:?} already registered", asm_label);
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(label_index);
+                        new_labels.insert(asm_label.clone(), label_index);
                     }
                 }
             }
+            self.instructions.push(asm);
         }
-    }
-    fn current_frame(&self) -> &Frame {
-        &self.frames[self.current_frame]
+        info!("Created new labels = {:?}", new_labels);
     }
 
-    fn current_frame_mut(&mut self) -> &mut Frame {
-        &mut self.frames[self.current_frame]
-    }
-
-    fn get_var(&mut self, parent_count: usize, variable: usize) {
-        let (size, ptr) = self.variable_pointer(parent_count, &variable);
-        let slice = self.heap.get_data(ptr as usize, size as usize);
-        self.stack.push(slice);
-    }
-
-    fn store_to_var(&mut self, parent_count: usize, variable: usize) {
-        let (size, ptr) = self.variable_pointer(parent_count, &variable);
-
-        // pop the variable and store it
-        let bytes = self.stack.pop_vec(size as usize);
-
-        self.heap.set_data(ptr as usize, bytes);
-    }
-
-    fn variable_pointer(&self, parent_count: usize, variable: &usize) -> (usize, usize) {
-        let mut frame_ptr = self.current_frame();
-        for _ in 0..parent_count {
-            let next_frame = frame_ptr.frame_parent;
-            frame_ptr = &self.frames[next_frame];
+    fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
+        self.cont = true;
+        let start_counter = self.label_to_instruction[start_label];
+        self.counter_stack.push(start_counter);
+        while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
+            let pc = self.program_counter();
+            let ref instruction = self.instructions[pc].clone();
+            trace!("0x{:016X}: {:?}", pc, instruction);
+            let next = self.interpret_instruction(instruction, pc)?;
+            self.set_program_counter(next);
         }
-
-        let heap_pointer = frame_ptr.locals_heap_pointer;
-        let (offset, size) = frame_ptr.locals_offset_size[&variable];
-
-        let ptr = heap_pointer + offset;
-        (size, ptr)
-    }
-
-    fn call(&mut self, pointer: Pointer) {
-        let ip = pointer.0;
-        if ip == 0 {
-            panic!("Function at pointer 0 is invalid!")
-        }
-    }
-
-    pub fn call_function_info(&mut self, function_info: &FunctionInfo) {}
-
-    fn run(mut self) {
-        let send = self.halt.clone();
-        let result = catch_unwind(move || {
-            while self.cont {
-                self.handle_interrupts();
-
-                if !self.wait_for_interrupt && self.cont {
-                    let ip = self.current_frame().instruction_pointer;
-
-                    let chunkish = ByteCodeVector::new(self.heap.data());
-                    println!("{}", chunkish.disassemble_instruction(ip));
-                    let (code, _bytes) = chunkish.bytecode_and_operands(ip);
-
-                    let mut next_ip = chunkish.next_bytecode(ip);
-                    match code {
-                        ByteCode::Halt => {
-                            self.halt.send(()).unwrap();
-                            break;
-                        }
-                        ByteCode::WaitForRunCode => {
-                            next_ip = Some(ip);
-                        }
-                        ByteCode::SysCall => {
-                            let sys_call_num: usize = self.stack.pop().unwrap();
-                            self.interrupt_queue
-                                .push_back(Interrupt::SysCall(sys_call_num));
-                        }
-                        _ => {}
-                    }
-
-                    if next_ip.is_none() {
-                        self.halt.send(()).unwrap();
-                        break;
-                    } else {
-                        self.frames
-                            .get_mut(self.current_frame)
-                            .unwrap()
-                            .instruction_pointer = next_ip.unwrap();
-                    }
-                }
-            }
-        });
-        if result.is_err() {
-            send.send(()).unwrap();
+        match self.memory.pop() {
+            None => Err(VMError::NoExitCode),
+            Some(Value::UInteger(u)) => Ok(u as u32),
+            Some(v) => Err(VMError::ExitCodeInvalidType(v)),
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::chunk::Chunk;
-    use crate::vm::{Interrupt, VirtualMachine};
+pub struct VMBuilder<'l, A, M> {
+    arithmetic: Option<A>,
+    memory: Option<M>,
+    stdin: Box<dyn Read + 'l>,
+    stdout: Box<dyn Write + 'l>,
+    stderr: Box<dyn Write + 'l>,
+}
 
-    #[test]
-    fn run_basic() {
-        let mut chunk = Chunk::new_start_at(256);
-        chunk.halt();
-        let vm = VirtualMachine::boot_with(chunk);
-        vm.wait_for_halt();
-        println!("VM Finished")
+impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
+    pub fn build(self) -> VM<'l, M, A> {
+        let VMBuilder {
+            arithmetic,
+            memory,
+            stdin,
+            stdout,
+            stderr,
+        } = self;
+        VM {
+            memory: memory.expect("Memory module must be set"),
+            alu: arithmetic.expect("Arithmetic module must be set"),
+            cont: false,
+            instructions: vec![Asm::Nop],
+            label_to_instruction: Default::default(),
+            counter_stack: vec![],
+            stdin,
+            stdout,
+            stderr,
+            next_anonymous_function: Default::default(),
+        }
+    }
+}
+
+impl<'l, A, M> VMBuilder<'l, A, M> {
+    pub fn new() -> Self {
+        Self {
+            arithmetic: None,
+            memory: None,
+            stdin: Box::new(stdin()),
+            stdout: Box::new(stdout()),
+            stderr: Box::new(stderr()),
+        }
     }
 
-    #[test]
-    #[should_panic]
-    fn cant_send_interrupt_after_halt() {
-        let mut chunk = Chunk::new_start_at(256);
+    pub fn with_stdin<R: Read + 'l>(mut self, reader: R) -> Self {
+        self.stdin = Box::new(reader);
+        self
+    }
 
-        chunk.halt();
-        let vm = VirtualMachine::boot_with(chunk);
-        vm.wait_for_halt();
-        println!("VM Finished");
-        vm.send_interrupt(Interrupt::Halt);
+    pub fn with_stdout<W: Write + 'l>(mut self, writer: W) -> Self {
+        self.stdout = Box::new(writer);
+        self
+    }
+
+    pub fn with_stderr<W: Write + 'l>(mut self, writer: W) -> Self {
+        self.stderr = Box::new(writer);
+        self
+    }
+}
+
+impl<A: ArithmeticsTrait, M> VMBuilder<'_, A, M> {
+    pub fn alu(mut self, alu: A) -> Self {
+        self.arithmetic = Some(alu);
+        self
+    }
+}
+
+impl<A, M: MemoryTrait> VMBuilder<'_, A, M> {
+    pub fn memory(mut self, memory: M) -> Self {
+        self.memory = Some(memory);
+        self
     }
 }

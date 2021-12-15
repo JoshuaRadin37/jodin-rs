@@ -1,5 +1,5 @@
 [package]
-name = "jodin-rs-vm_derive"
+name = "jodin-asm-derive"
 version = "0.0.0"
 authors = ["Joshua Radin <jradin16@gmail.com>"]
 description = "A `cargo generate` template for quick-starting a procedural macro crate"

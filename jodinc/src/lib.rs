@@ -95,49 +95,6 @@ pub mod parsing;
 pub mod passes;
 pub mod utility;
 
-use simplelog::*;
-
-/// Initializes logging for the package
-pub fn init_logging(level: LevelFilter) {
-    let log_term_config = ConfigBuilder::new()
-        .set_thread_mode(ThreadLogMode::Names)
-        .set_location_level(LevelFilter::Off)
-        .set_target_level(LevelFilter::Off)
-        .build();
-
-    let log_file_config = ConfigBuilder::new()
-        .set_thread_mode(ThreadLogMode::Names)
-        .set_thread_padding(ThreadPadding::Right(15))
-        .set_thread_level(LevelFilter::Error)
-        .set_location_level(LevelFilter::Error)
-        .set_target_level(LevelFilter::Off)
-        .set_level_padding(LevelPadding::Right)
-        .build();
-
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            level,
-            log_term_config,
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(
-            level,
-            log_file_config,
-            File::create("compiler.log").expect("Could not open log file"),
-        ),
-    ])
-    .expect("Could not create logger");
-}
-
-pub fn default_logging() {
-    if cfg!(debug_assertions) {
-        init_logging(LevelFilter::Debug);
-    } else if cfg!(release) {
-        init_logging(LevelFilter::Info);
-    }
-}
-
 /// processes the jodin node tree
 pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
     let (analyzed, env) = analyze(node)?;

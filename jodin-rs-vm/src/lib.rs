@@ -27,12 +27,25 @@
 extern crate num_derive;
 
 #[macro_use]
-extern crate jodin_rs_vm_derive;
+extern crate jodin_asm_derive;
 
-pub mod chunk;
-pub mod compound_types;
-pub mod constant_pool;
-pub mod frame;
-pub mod memory;
-pub mod symbols;
+#[macro_use]
+extern crate log;
+
+use crate::core_traits::{ArithmeticsTrait, GetAsm, MemoryTrait, VirtualMachine};
+use crate::function_names::{CALL, RECEIVE_MESSAGE};
+use jodin_asm::mvp::bytecode::{Asm, Assembly, Decode};
+use jodin_asm::mvp::location::AsmLocation;
+use jodin_asm::mvp::value::Value;
+use std::cell::RefCell;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use std::io::{stderr, stdin, stdout, Read, Write};
+
+pub mod core_traits;
+pub mod error;
+pub mod function_names;
+pub mod mvp;
 pub mod vm;
