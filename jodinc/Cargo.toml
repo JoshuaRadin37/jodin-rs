@@ -17,8 +17,10 @@ categories = ["compilers"]
 lalrpop = "0.19.6"
 
 [features]
+default = ["jodin_vm_compiler"]
 strict = []
 c_compiler = []
+jodin_vm_compiler = []
 
 [dependencies]
 regex = "1.5.4"
