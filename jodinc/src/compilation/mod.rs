@@ -11,12 +11,15 @@ use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::core::error::JodinResult;
 
-#[doc(hidden)]
 #[cfg(feature = "c_compiler")]
 pub mod c_compiler;
-#[doc(hidden)]
 #[cfg(feature = "c_compiler")]
 pub use c_compiler::C99;
+
+#[cfg(feature = "jodin_vm_compiler")]
+pub mod jodin_vm_compiler;
+#[cfg(feature = "jodin_vm_compiler")]
+pub use jodin_vm_compiler::JodinVM;
 
 /// A target for compilation.
 pub trait Target {}
