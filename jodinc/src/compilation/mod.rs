@@ -4,6 +4,7 @@
 //! [JodinNode]: crate::ast::JodinNode
 
 use std::fmt::Write;
+use std::io;
 
 // pub use c_compiler::{C99Compiler, C99};
 
@@ -82,11 +83,11 @@ where
 /// A component of a program that can be compiled
 pub trait Compilable<T: Target> {
     /// Compile the instance into a target writer
-    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()>;
+    fn compile<W: io::Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()>;
 }
 
 impl<T: Target, C: Compilable<T>> Compilable<T> for Vec<C> {
-    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+    fn compile<W: io::Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         for node in self {
             node.compile(context, w)?
         }
@@ -119,14 +120,14 @@ impl<T: Target, C: Compilable<T>> Compilable<T> for Vec<C> {
 /// ";
 /// assert_eq!(string, hopeful)
 /// ```
-pub struct PaddedWriter<W: Write> {
+pub struct PaddedWriter<W: io::Write> {
     writer: W,
     pad_string: String,
     count: usize,
     pad_next: bool,
 }
 
-impl<W: Write> PaddedWriter<W> {
+impl<W: io::Write> PaddedWriter<W> {
     /// Create a new padded writer from some other writer
     pub fn new(writer: W) -> Self {
         PaddedWriter {
@@ -183,15 +184,15 @@ impl<W: Write> PaddedWriter<W> {
     }
 }
 
-impl<W: Write> Write for PaddedWriter<W> {
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        for c in s.chars() {
+impl<W: io::Write> io::Write for PaddedWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        for &c in buf {
             if self.pad_next {
                 write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
                 self.pad_next = false;
             }
 
-            match c {
+            match c as char {
                 '\n' => {
                     writeln!(self.writer)?;
                     self.pad_next = true;
@@ -202,6 +203,31 @@ impl<W: Write> Write for PaddedWriter<W> {
             }
         }
 
-        Ok(())
+        Ok(buf.len())
     }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
+
+    // fn write_str(&mut self, s: &str) -> std::io::Result {
+    //     for c in s.chars() {
+    //         if self.pad_next {
+    //             write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
+    //             self.pad_next = false;
+    //         }
+    //
+    //         match c {
+    //             '\n' => {
+    //                 writeln!(self.writer)?;
+    //                 self.pad_next = true;
+    //             }
+    //             c => {
+    //                 write!(self.writer, "{}", c)?;
+    //             }
+    //         }
+    //     }
+    //
+    //     Ok(())
+    // }
 }

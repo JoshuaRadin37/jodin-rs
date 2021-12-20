@@ -1,8 +1,7 @@
 //! The jodin asm version string
 
-use sha3::{Digest, Sha3_256};
-
 /// The current version of the jodin asm
+#[derive(Debug)]
 pub struct Version;
 const VERSION_STRING: &str = "1.0";
 

@@ -13,6 +13,7 @@ use std::fmt::{write, Display, Formatter, Write};
 use std::fs::File;
 use std::io;
 use std::io::stdout;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI32;
 
@@ -23,20 +24,53 @@ pub struct JodinVM(Version);
 
 impl Target for JodinVM {}
 
-pub struct JodinVMCompiler;
+pub struct JodinVMCompiler<'c> {
+    writer_override: Option<Box<dyn io::Write + 'c>>,
+    lifetime: PhantomData<&'c ()>,
+}
 
-impl Compiler<JodinVM> for JodinVMCompiler {
+impl<'c> JodinVMCompiler<'c> {
+    pub fn new<W>(writer: W) -> JodinVMCompiler<'c>
+    where
+        Option<W>: From<W>,
+        W: io::Write + 'c,
+    {
+        let as_opt: Option<_> = writer.into();
+        let as_box = as_opt.map(|w| {
+            let boxed: Box<dyn io::Write> = Box::new(w);
+            boxed
+        });
+        JodinVMCompiler {
+            writer_override: as_box,
+            lifetime: PhantomData::default(),
+        }
+    }
+}
+
+impl Default for JodinVMCompiler<'static> {
+    fn default() -> Self {
+        Self {
+            writer_override: None,
+            lifetime: PhantomData::default(),
+        }
+    }
+}
+
+impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
     fn compile(&mut self, tree: &JodinNode, settings: &CompilationSettings) -> JodinResult<()> {
         let modules = split_by_module(tree);
         let context = Context::new();
         for module in modules {
-            let mut compiler = if settings.compile_to_stdout {
-                ModuleCompiler::new(stdout())
-            } else {
-                module.compiler(&settings.target_directory)
+            match &mut self.writer_override {
+                None => {
+                    let mut compiler = module.compiler(&settings.target_directory);
+                    module.compile(&context, &mut compiler.writer)?;
+                }
+                Some(s) => {
+                    let mut writer = PaddedWriter::new(s);
+                    module.compile(&context, &mut writer)?;
+                }
             };
-
-            module.compile(&context, &mut compiler);
         }
 
         Ok(())
@@ -44,11 +78,11 @@ impl Compiler<JodinVM> for JodinVMCompiler {
 }
 
 pub struct ModuleCompiler {
-    writer: PaddedWriter<Box<dyn io::Write>>,
+    writer: PaddedWriter<Box<dyn io::Write + 'static>>,
 }
 
 impl ModuleCompiler {
-    pub fn new<W: io::Write>(writer: W) -> Self {
+    pub fn new<W: io::Write + 'static>(writer: W) -> Self {
         ModuleCompiler {
             writer: PaddedWriter::new(Box::new(writer)),
         }
@@ -79,8 +113,8 @@ impl<'j> Module<'j> {
     }
 }
 
-impl Compilable<JodinVM> for Module {
-    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+impl<'j> Compilable<JodinVM> for Module<'j> {
+    fn compile<W: io::Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         todo!()
     }
 }
@@ -145,14 +179,17 @@ impl Display for CompiledObject {
         for by in encoded {
             f.write_char(by as char)?;
         }
-        writeln!()
+        writeln!(f)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
+    use crate::compilation::Compiler;
+    use crate::compilation_settings::CompilationSettings;
     use crate::parsing::parse_program;
-    use crate::process_jodin_node;
+    use crate::{process_jodin_node, JodinResult};
     use jodin_asm::init_logging;
     use log::LevelFilter;
 
@@ -178,6 +215,19 @@ mod tests {
             }
         };
         let (processed, _) = process_jodin_node(declaration).expect("Should be processable");
-        println!("{:#?}", processed)
+        println!("{:#?}", processed);
+        let mut buffer = vec![0u8; 0];
+        let mut compiler = JodinVMCompiler::new(&mut buffer);
+        let result = compiler.compile(&processed, &CompilationSettings::new());
+        drop(compiler);
+        match result {
+            Ok(_) => {
+                println!("{}", String::from_utf8(buffer).expect("maybe utf-8 output"));
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+                panic!("Fib failed to compile")
+            }
+        }
     }
 }
