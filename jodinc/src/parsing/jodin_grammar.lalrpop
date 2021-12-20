@@ -401,6 +401,7 @@ pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<VariableDeclaration>,
     WithVisibility<StructureDefinition>,
     WithVisibility<TraitDefinition>,
+    WithVisibility<FunctionDefinition>,
     InNamespace,
     ";" => JodinNodeType::Empty.into_result()
 };

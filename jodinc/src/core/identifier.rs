@@ -5,10 +5,10 @@ use crate::utility::IntoBox;
 use itertools::Itertools;
 use std::array::IntoIter;
 use std::cmp::{min, Ordering};
-use std::collections::VecDeque;
+use std::collections::{Bound, VecDeque};
 use std::fmt::{Debug, Display, Formatter};
-use std::iter::FromIterator;
-use std::ops::{Add, Shl, Shr};
+use std::iter::{FromIterator, FusedIterator};
+use std::ops::{Add, Div, Index, Range, RangeBounds, Shl, Shr};
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -205,6 +205,62 @@ impl Identifier {
         }
         1 + self.parent.as_ref().map_or(0, |p| p.len())
     }
+
+    /// Creates an iterator that iterates over the different identifiers of these two
+    /// identifiers
+    ///
+    /// # Example
+    /// ```
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::id;
+    /// let left = id!(n1, n2, n3, n4);
+    /// let right = id!(n1, n2, n5);
+    /// let mut diff = Identifier::diff(&left, &right);
+    ///
+    /// assert_eq!(diff.next(), Some((Some(id!(n1, n2, n3)), Some(id!(n1, n2, n5)))));
+    /// ```
+    pub fn diff(left: &Self, right: &Self) -> IdentifierDiffIterator {
+        let mut break_point = None;
+        let mut count = 0;
+        let mut zipped = left.iter().zip(right.iter()).enumerate();
+        for (index, (left, right)) in zipped {
+            if left != right {
+                break_point = Some(index);
+                break;
+            }
+            count += 1;
+        }
+        let diff_start = break_point.unwrap_or(count);
+        IdentifierDiffIterator::new(left.clone(), right.clone(), diff_start)
+    }
+
+    /// Gets a sub identifier of an identifier
+    ///
+    /// # Example
+    /// ```
+    /// use jodinc::id;
+    /// let id = id!(n1, n2, n3, n4);
+    /// assert_eq!(id.sub_identifier(1..3), Some(id!(n2, n3)));
+    /// assert_eq!(id.sub_identifier(1..=3), Some(id!(n2, n3, n4)));
+    /// assert_eq!(id.sub_identifier(1..), Some(id!(n2, n3, n4)));
+    /// ```
+    pub fn sub_identifier<R: RangeBounds<usize>>(&self, range: R) -> Option<Self> {
+        let start = match range.start_bound() {
+            Bound::Included(i) => (*i),
+            Bound::Excluded(i) => i + 1,
+            Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            Bound::Included(i) => (*i),
+            Bound::Excluded(i) => *i - 1,
+            Bound::Unbounded => self.len() - 1,
+        };
+        if start >= self.len() || end >= self.len() {
+            return None;
+        }
+        let ids: Vec<_> = self.into_iter().collect();
+        Some(Identifier::from_iter(&ids[start..=end]))
+    }
 }
 
 impl<S: AsRef<str>> From<S> for Identifier {
@@ -395,6 +451,22 @@ impl Shr for Identifier {
     }
 }
 
+impl Div for Identifier {
+    type Output = Identifier;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Identifier::new_concat(self, rhs)
+    }
+}
+
+impl Div for &Identifier {
+    type Output = Identifier;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Identifier::new_concat(self, rhs)
+    }
+}
+
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
@@ -522,9 +594,55 @@ impl<'i> Iterator for IdentifierChainIterator<'i> {
     }
 }
 
+pub struct IdentifierDiffIterator {
+    left: Identifier,
+    right: Identifier,
+    diff_start: usize,
+    index: usize,
+}
+
+impl IdentifierDiffIterator {
+    pub fn new(left: Identifier, right: Identifier, diff_start: usize) -> Self {
+        IdentifierDiffIterator {
+            left,
+            right,
+            diff_start,
+            index: 0,
+        }
+    }
+}
+
+impl Iterator for IdentifierDiffIterator {
+    type Item = (Option<Identifier>, Option<Identifier>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let left = self.left.sub_identifier(..=self.diff_start + self.index);
+        let right = self.right.sub_identifier(..=self.diff_start + self.index);
+        match (left, right) {
+            (None, None) => None,
+            other => {
+                self.index += 1;
+                Some(other)
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let left_size = self.left.len() - self.diff_start;
+        let right_size = self.right.len() - self.diff_start;
+        let max = usize::max(left_size, right_size);
+        (max, Some(max))
+    }
+}
+
+impl FusedIterator for IdentifierDiffIterator {}
+
+impl ExactSizeIterator for IdentifierDiffIterator {}
+
 #[cfg(test)]
 mod test {
     use crate::core::identifier::{Identifier, IdentifierChain};
+    use itertools::Diff;
     use std::cmp::Ordering;
     use std::iter::FromIterator;
 
@@ -591,5 +709,36 @@ mod test {
     fn empty_id_concats() {
         assert_eq!(id!(Identifier::empty(), "test"), id!("test"));
         assert_eq!(id!("test", Identifier::empty()), id!("test"));
+    }
+
+    #[test]
+    fn sub_range() {
+        let id = id!(n1, n2, n3, n4);
+        assert_eq!(id.sub_identifier(1..3), Some(id!(n2, n3)));
+        assert_eq!(id.sub_identifier(1..=3), Some(id!(n2, n3, n4)));
+        assert_eq!(id.sub_identifier(1..), Some(id!(n2, n3, n4)));
+        assert_eq!(
+            id.sub_identifier(0..2),
+            id.sub_identifier(..2),
+            "{:?} is equivalent to {:?}",
+            0..2,
+            ..2
+        );
+        assert_eq!(id.sub_identifier(..), Some(id.clone()));
+        assert_eq!(id.sub_identifier(4..), None);
+    }
+
+    #[test]
+    fn id_diff() {
+        let left = id!(n1::n2::n3);
+        let right = id!(n1::n4::n5);
+        let mut diff = Identifier::diff(&left, &right);
+        assert_eq!(diff.len(), 2);
+        assert_eq!(diff.next().unwrap(), (Some(id!(n1::n2)), Some(id!(n1::n4))));
+        assert_eq!(
+            diff.next().unwrap(),
+            (Some(id!(n1::n2::n3)), Some(id!(n1::n4::n5)))
+        );
+        assert_eq!(diff.next(), None);
     }
 }

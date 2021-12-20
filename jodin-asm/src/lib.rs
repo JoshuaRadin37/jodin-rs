@@ -10,6 +10,8 @@ use simplelog::*;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+pub mod asm_version;
+
 /// Initializes logging for the package
 pub fn init_logging(level: LevelFilter) {
     static LOGGING_INIT: AtomicBool = AtomicBool::new(false);

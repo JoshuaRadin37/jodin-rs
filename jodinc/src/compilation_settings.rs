@@ -15,6 +15,8 @@ pub struct CompilationSettings {
     pub output_tast: bool,
     /// The directory to output files in
     pub target_directory: PathBuf,
+    /// Whether to compile to stdout instead of files
+    pub compile_to_stdout: bool,
 }
 
 impl CompilationSettings {
@@ -65,6 +67,7 @@ impl Default for CompilationSettings {
             output_ast: false,
             output_tast: false,
             target_directory: std::env::current_dir().unwrap(),
+            compile_to_stdout: false,
         }
     }
 }

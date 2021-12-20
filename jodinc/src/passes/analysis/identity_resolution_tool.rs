@@ -642,7 +642,7 @@ impl IdentifierSetter {
         &self,
         id: &Identifier,
         id_resolver: &IdentifierResolver,
-        visibility: &Registry<Visibility>,
+        visibility_registry: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
         let ref id_with_base = *id;
         info!("Attempting to find absolute path {:?}", id);
@@ -652,7 +652,7 @@ impl IdentifierSetter {
             .get(id_with_base)
             .ok()
             .filter(|&alias_id| {
-                let visibility = visibility.get(alias_id).ok();
+                let visibility = visibility_registry.get(alias_id).ok();
                 info!(
                     "Found alias {:?} with visibility {:?}",
                     alias_id, visibility
@@ -660,7 +660,16 @@ impl IdentifierSetter {
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        if visibility.is_visible(alias_id, &id_resolver.current_namespace()) {
+                        let checking = alias_id;
+                        let from = id_resolver.current_namespace();
+
+                        if visibility_registry.is_visible(checking, &from) {
+                            trace!(
+                                "Path {:?} ({:?}) is visible from {:?}",
+                                alias_id,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
                             true
                         } else {
                             warn!(
@@ -679,12 +688,21 @@ impl IdentifierSetter {
             .resolve_path(id.clone(), false)
             .ok()
             .filter(|resolved| {
-                let visibility = visibility.get(resolved).ok();
+                let visibility = visibility_registry.get(resolved).ok();
                 info!("Found path {:?} with visibility {:?}", resolved, visibility);
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        if visibility.is_visible(resolved, &id_resolver.current_namespace()) {
+                        let checking = resolved;
+                        let from = id_resolver.current_namespace();
+
+                        if visibility_registry.is_visible(checking, &from) {
+                            trace!(
+                                "Path {:?} ({:?}) is visible from {:?}",
+                                checking,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
                             true
                         } else {
                             warn!(

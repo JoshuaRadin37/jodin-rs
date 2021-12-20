@@ -1,5 +1,6 @@
 //! The main method for tracking, then resolving identifiers.
 
+use num_traits::abs;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
@@ -83,8 +84,9 @@ mod _hidden {
         #[must_use]
         pub fn use_namespace(&mut self, namespace: Identifier) -> JodinResult<()> {
             let resolved_set = self.tree.get_namespaces(
+                &namespace,
                 Some(&self.current_namespace_with_base()),
-                &Identifier::new_concat(&self.base_namespace, &namespace),
+                &self.base_namespace,
             );
             if resolved_set.is_empty() {
                 return Err(JodinErrorType::IdentifierDoesNotExist(namespace))?;
@@ -100,13 +102,26 @@ mod _hidden {
             Ok(())
         }
 
+        /// Gets a list of namespaces
+        pub fn namespaces(&self) -> Vec<&Identifier> {
+            let mut output = vec![];
+            for node in self.tree.head.children_prefix() {
+                output.push(&node.id);
+            }
+            output
+        }
+
         /// Removes a namespace to search from, if it exists
         pub fn stop_use_namespace(&mut self, namespace: &Identifier) -> JodinResult<()> {
             let namespace = namespace.clone();
-            let resolved_set = self
-                .tree
-                .get_namespaces(self.current_namespace.as_ref(), &namespace);
+            let resolved_set = self.tree.get_namespaces(
+                &namespace,
+                self.current_namespace.as_ref(),
+                &self.base_namespace,
+            );
             if resolved_set.is_empty() {
+                error!("No namespace known as {}", namespace);
+                error!("Valid namespaces: {:?}", self.namespaces());
                 return Err(JodinErrorType::IdentifierDoesNotExist(namespace).into());
             } else if resolved_set.len() >= 2 {
                 return Err(JodinErrorType::AmbiguousIdentifierError {
@@ -268,6 +283,7 @@ mod _hidden {
     }
 }
 
+use crate::core::privacy::Visibility;
 pub use _hidden::IdentifierResolver;
 
 #[derive(Clone)]
@@ -389,10 +405,12 @@ impl<T: Namespaced> NamespaceTree<T> {
     /// be treated as both relative and absolute
     pub fn get_namespaces(
         &self,
-        current_namespace: Option<&Identifier>,
         path: &Identifier,
+        current_namespace: Option<&Identifier>,
+        base_namespace: &Identifier,
     ) -> HashSet<&Identifier> {
         //println!("Attempting to find namespace {}", path);
+        info!("Trying to find namespace {}", path);
         trace!(
             "Trying to find possible namespaces with id {:?} (from: {:?})",
             path,
@@ -402,12 +420,13 @@ impl<T: Namespaced> NamespaceTree<T> {
             //println!("Using {} as current namespace", current);
         }
         let mut output = HashSet::new();
-        trace!("Searching for absolute namespace {}...", path);
-        if let Some(abs) = self.get_namespace_absolute(path) {
-            trace!("Absolute found.");
+        let abs_path = base_namespace / path;
+        info!("Searching for absolute namespace {}...", abs_path);
+        if let Some(abs) = self.get_namespace_absolute(&abs_path) {
+            info!("Absolute found.");
             output.insert(abs.id());
         }
-        trace!("Searching for a relative path...");
+        info!("Searching for a relative path...");
         if let Some(current) = current_namespace {
             if let Some(current_node) = self.get_namespace_absolute(current) {
                 let mut iter: IdentifierIterator = path.into_iter();
@@ -429,7 +448,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 }
             }
         }
-        trace!("Found possible namespaces: {:?}", output);
+        info!("Found possible namespaces: {:?}", output);
         output
     }
 
@@ -492,45 +511,6 @@ impl<T: Namespaced> NamespaceTree<T> {
     /// Gets a mutable reference to the base associated objects.
     pub fn get_base_values_mut(&mut self) -> &mut Vec<T> {
         &mut self.head.related_values
-    }
-
-    /// Attempts to get the associated value by taking in a current path and a relative path. The path
-    /// can either be relative or absolute. If more than one value is found, an error is returned.
-    ///
-    /// # Arguments
-    ///
-    /// * `current_namespace`: An optional, current namespace.
-    /// * `path`: The path to search for.
-    ///
-    /// returns: `Result<&T, JodinError>` Either a reference to the associated value, or an Error
-    #[deprecated]
-    pub fn get_from_identifier(
-        &self,
-        current_namespace: Option<&Identifier>,
-        path: &Identifier,
-    ) -> JodinResult<&T> {
-        if path.parent().is_none() {
-            for o in self.get_base_values() {
-                if o.get_identifier() == path {
-                    return Ok(o);
-                }
-            }
-        }
-
-        let mut output = None;
-        for namespace in self.get_namespaces(current_namespace, path) {
-            for object in self.get_relevant_objects(namespace).unwrap() {
-                if object.get_identifier() == path {
-                    if output.is_none() {
-                        output = Some(object);
-                    } else {
-                        return Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into());
-                    }
-                }
-            }
-        }
-
-        output.ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 
     /// Attempts to get the associated value from an absolute path.
@@ -774,6 +754,70 @@ impl<T: Debug> Registry<T> {
     }
 }
 
+impl Registry<Visibility> {
+    /// Checks if `check_path` is visible from `from_path`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::iter::FromIterator;
+    /// use jodinc::core::identifier::Identifier;
+    /// use jodinc::core::identifier_resolution::Registry;
+    /// use jodinc::core::privacy::Visibility;
+    ///
+    ///
+    /// let mut registry: Registry<Visibility> = Registry::new();
+    /// registry.insert_with_identifier(Visibility::Public, Identifier::from_iter(["{base}", "namespace", "v1"]));
+    /// registry.insert_with_identifier(Visibility::Protected, Identifier::from_iter(["{base}", "namespace", "v2"]));
+    /// assert!(registry.is_visible(&Identifier::from_iter(["{base}", "namespace", "v1"]), &Identifier::from("{base}")));
+    /// assert!(!registry.is_visible(&Identifier::from_iter(["{base}", "namespace", "v2"]), &Identifier::from("{base}")));
+    /// ```
+    pub fn is_visible(&self, check_path: &Identifier, from_namespace: &Identifier) -> bool {
+        info!(
+            "Checking if {:?} is visible from {:?}",
+            check_path, from_namespace
+        );
+        if !self.mapping.contains_key(check_path) {
+            error!("Checked path ({:?}) not in visibility registry", check_path);
+            error!("Registry: {:#?}", self);
+            return false;
+        } /*else if !self.mapping.contains_key(from_namespace) {
+              error!(
+                  "From-namespace ({:?}) not in visibility registry",
+                  from_namespace
+              );
+              error!("Registry: {:#?}", self);
+              return false;
+          }
+          */
+        if let Ok(Visibility::Public) = self.get(check_path) {
+            return true;
+        }
+
+        let diff = Identifier::diff(check_path, from_namespace);
+        let mut is_first = true;
+        for (check, _) in diff {
+            if check.is_none() {
+                break;
+            }
+            let check = check.unwrap();
+            match self.get(&check) {
+                Ok(Visibility::Public) => {}
+                Ok(Visibility::Protected) => {
+                    if !is_first {
+                        return false;
+                    }
+                }
+                Err(_) | Ok(Visibility::Private) => {
+                    return false;
+                }
+            }
+            is_first = false;
+        }
+        true
+    }
+}
+
 impl<I: Into<Identifier>, T: Debug> Index<I> for Registry<T> {
     type Output = T;
 
@@ -806,6 +850,8 @@ pub trait Registrable<T = Self>: Sized {
 
 #[cfg(test)]
 mod tests {
+    use jodin_asm::init_logging;
+    use log::LevelFilter;
     use std::iter::FromIterator;
 
     use crate::core::error::JodinErrorType;
@@ -813,6 +859,7 @@ mod tests {
     use crate::core::identifier::Identifier;
     use crate::core::identifier_resolution::IdentifierResolver;
     use crate::core::identifier_resolution::Registry;
+    use crate::core::privacy::Visibility;
 
     #[test]
     fn insert_entries() {
@@ -826,6 +873,27 @@ mod tests {
         registry.insert(Identifiable::new("val1", 1)).unwrap();
         registry.insert(Identifiable::new("val2", 2)).unwrap();
         registry.insert(Identifiable::new("val3", 3)).unwrap();
+    }
+
+    #[test]
+    fn is_visible() {
+        init_logging(LevelFilter::Trace);
+        let mut registry: Registry<Visibility> = Registry::new();
+        registry.insert_with_identifier(
+            Visibility::Public,
+            Identifier::from_iter(["{base}", "namespace", "v1"]),
+        );
+        registry.insert_with_identifier(
+            Visibility::Protected,
+            Identifier::from_iter(["{base}", "namespace", "v2"]),
+        );
+        registry.insert_with_identifier(Visibility::Public, id!("{base}"));
+        registry.insert_with_identifier(Visibility::Public, id!("{base}", "namespace"));
+        assert!(registry.is_visible(&id!("{base}", "namespace", "v1"), &id!("{base}")));
+        assert!(!registry.is_visible(
+            &Identifier::from_iter(["{base}", "namespace", "v2"]),
+            &Identifier::from("{base}")
+        ));
     }
 
     #[test]
