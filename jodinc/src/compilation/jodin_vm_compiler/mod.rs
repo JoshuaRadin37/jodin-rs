@@ -61,6 +61,7 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
         let modules = split_by_module(tree);
         let context = Context::new();
         for module in modules {
+            info!("Compiling module {:?}", module.identifier);
             match &mut self.writer_override {
                 None => {
                     let mut compiler = module.compiler(&settings.target_directory);
@@ -196,6 +197,7 @@ mod tests {
     #[test]
     fn fibonacci() {
         const FIB_FUNCTION: &str = r#"
+        in std
         fn fib(n: int) -> int {
             if (n < 2) {
                 let x: int = 2;
