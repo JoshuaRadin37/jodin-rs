@@ -29,22 +29,25 @@ public class Rectangle : Shape {
         this.height = height;
     }
     
-    override public fn area() -> int {
+    @override(Shape::area) 
+    public fn area() -> int {
         return this.width * this.length;
     }
     
-    override(Shape) public fn side_length(n: unsigned int) -> int {
+    @override(Shape) 
+    public fn side_length(n: unsigned int) -> int {
         if (n== 0 || n == 2) return this.width;
         if (n== 1 || n == 3) return this.length;
+        return -1;
     }
 }
 
-public class Square : Rectangle {
+public class Square<T> : Rectangle {
     public fn new(len: int) {
         super(len, len);
     }
   
-    override(Shape) public fn side_length(n: unsigned int) -> int {
+    override public fn side_length(n: unsigned int) -> int {
         return this.width;
     }
 }
