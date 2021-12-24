@@ -355,6 +355,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "jodin-tests"
+version = "0.1.0"
+dependencies = [
+ "jodin-asm",
+ "jodin-rs-vm",
+ "jodinc",
+]
+
+[[package]]
 name = "jodinc"
 version = "0.1.0"
 dependencies = [
