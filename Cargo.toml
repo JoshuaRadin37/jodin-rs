@@ -3,5 +3,5 @@
 
 
 [workspace]
-members = ["jodin-rs-vm", "jodin-asm-derive", "jodinc", "jodin-asm"]
+members = ["jodin-rs-vm", "jodin-asm-derive", "jodinc", "jodin-asm", "jodin-tests"]
 

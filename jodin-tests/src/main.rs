@@ -1,3 +1,6 @@
 fn main() {
-    println!("Hello, world!");
+    /* empty */
 }
+
+#[test]
+fn hello() {}
