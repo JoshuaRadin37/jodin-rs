@@ -59,6 +59,9 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate static_assertions;
+
 use crate::ast::JodinNode;
 use crate::core::error::{JodinError, JodinResult};
 use crate::core::types::type_environment::TypeEnvironment;

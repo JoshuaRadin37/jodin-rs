@@ -7,6 +7,7 @@ use crate::ast::{CompoundType, JodinNode};
 
 use crate::ast::tags::Tag;
 use crate::ast::tags::TagTools;
+use crate::compilation::incremental::unit::TranslationUnit;
 use crate::core::import::{Import, ImportType};
 use crate::core::privacy::{Visibility, VisibilityTag};
 use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
@@ -31,6 +32,22 @@ impl IdentityResolutionTool {
             setter: IdentifierSetter::new(),
             visibility: Registry::new(),
         }
+    }
+
+    /// Creates a new id resolution tool.
+    pub fn with_translation_units(units: &[TranslationUnit]) -> Self {
+        let mut output = Self {
+            creator: IdentifierCreator::new(),
+            setter: IdentifierSetter::new(),
+            visibility: Registry::new(),
+        };
+        for unit in units {
+            let vis = unit.vis.clone();
+            let id = unit.name.clone();
+
+            output.visibility.insert_with_identifier(vis, id);
+        }
+        output
     }
 
     /// Resolve identifiers

@@ -22,6 +22,9 @@ pub mod jodin_vm_compiler;
 #[cfg(feature = "jodin_vm_compiler")]
 pub use jodin_vm_compiler::JodinVM;
 
+#[cfg(feature = "incremental")]
+pub mod incremental;
+
 /// A target for compilation.
 pub trait Target {}
 

@@ -8,6 +8,7 @@ pub use identity_resolution_tool::{
 
 use crate::ast::tags::TagTools;
 use crate::ast::JodinNode;
+use crate::compilation::incremental::unit::TranslationUnit;
 use crate::core::error::JodinResult;
 use crate::core::types::type_environment::TypeEnvironment;
 use crate::passes::analysis::type_resolution_tool::TypeResolutionTool;
@@ -25,6 +26,21 @@ pub fn analyze(tree: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
     let (mut tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
 
     let mut type_resolution = TypeResolutionTool::new();
+    type_resolution.visit(&mut tree)?;
+    let environment = type_resolution.finish();
+
+    Ok((tree, environment))
+}
+
+pub fn analyze_with_preload<I>(tree: JodinNode, ids: I) -> JodinResult<(JodinNode, TypeEnvironment)>
+where
+    I: IntoIterator<Item = TranslationUnit>,
+{
+    let units = ids.into_iter().collect::<Vec<_>>();
+    let mut identifier_tool = IdentityResolutionTool::with_translation_units(&units);
+    let (mut tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
+
+    let mut type_resolution = TypeResolutionTool::with_translation_units(&units);
     type_resolution.visit(&mut tree)?;
     let environment = type_resolution.finish();
 

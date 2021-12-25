@@ -6,9 +6,12 @@
 
 use crate::ast::tags::Tag;
 
+use crate::core::error::JodinErrorType;
 use crate::core::identifier::Identifier;
+use crate::JodinError;
 use std::any::Any;
-use std::fmt::Debug;
+use std::fmt::{write, Debug, Display, Formatter};
+use std::str::FromStr;
 
 /// The visibility of a declaration
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -34,6 +37,35 @@ impl Visibility {
             Visibility::Public => true,
             Visibility::Protected => checking_path >= protected_path,
             Visibility::Private => checking_path == protected_path,
+        }
+    }
+}
+
+impl Display for Visibility {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Visibility::Public => {
+                write!(f, "public")
+            }
+            Visibility::Protected => {
+                write!(f, "protected")
+            }
+            Visibility::Private => {
+                write!(f, "private")
+            }
+        }
+    }
+}
+
+impl FromStr for Visibility {
+    type Err = JodinError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &*s.to_lowercase() {
+            "public" | "pu" => Ok(Visibility::Public),
+            "protected" | "pro" => Ok(Visibility::Protected),
+            "private" | "pri" => Ok(Visibility::Private),
+            _ => Err(JodinErrorType::LexerError(s.to_string()).into()),
         }
     }
 }

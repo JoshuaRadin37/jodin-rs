@@ -6,6 +6,7 @@ use itertools::Itertools;
 use crate::ast::tags::TagTools;
 use crate::ast::JodinNodeType;
 use crate::ast::{CompoundType, JodinNode};
+use crate::compilation::incremental::unit::TranslationUnit;
 use crate::core::error::{JodinErrorType, JodinResult};
 use crate::core::identifier::Identifier;
 use crate::core::privacy::{Visibility, VisibilityTag};
@@ -35,6 +36,19 @@ impl<'nodes> TypeResolutionTool {
         Self {
             env: TypeEnvironmentManager::new(),
         }
+    }
+
+    /// Create a new type resolution tool
+    pub fn with_translation_units(units: &[TranslationUnit]) -> Self {
+        let mut tool = Self {
+            env: TypeEnvironmentManager::new(),
+        };
+        for unit in units {
+            let type_id = &unit.name;
+            let jtype = &unit.jtype;
+            tool.env.set_variable_type(type_id, jtype);
+        }
+        tool
     }
 
     pub fn visit(&mut self, tree: &'nodes mut JodinNode) -> JodinResult<()> {

@@ -17,10 +17,11 @@ categories = ["compilers"]
 lalrpop = "0.19.6"
 
 [features]
-default = ["jodin_vm_compiler"]
+default = ["jodin_vm_compiler", "incremental"]
 strict = []
 c_compiler = []
 jodin_vm_compiler = []
+incremental = []
 
 [dependencies]
 regex = "1.5.4"
@@ -41,3 +42,4 @@ rand = "0.8.4"
 strum = "0.23"
 strum_macros = "0.23"
 thiserror = "1.0.30"
+static_assertions = "1.1.0"
