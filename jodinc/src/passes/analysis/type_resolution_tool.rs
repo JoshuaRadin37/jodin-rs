@@ -46,7 +46,7 @@ impl<'nodes> TypeResolutionTool {
         for unit in units {
             let type_id = &unit.name;
             let jtype = &unit.jtype;
-            tool.env.set_variable_type(type_id, jtype);
+            tool.env.set_variable_type(type_id, jtype.clone());
         }
         tool
     }

@@ -32,11 +32,14 @@ pub fn analyze(tree: JodinNode) -> JodinResult<(JodinNode, TypeEnvironment)> {
     Ok((tree, environment))
 }
 
-pub fn analyze_with_preload<I>(tree: JodinNode, ids: I) -> JodinResult<(JodinNode, TypeEnvironment)>
+pub fn analyze_with_preload<'t, I>(
+    tree: JodinNode,
+    ids: I,
+) -> JodinResult<(JodinNode, TypeEnvironment)>
 where
-    I: IntoIterator<Item = TranslationUnit>,
+    I: IntoIterator<Item = &'t TranslationUnit>,
 {
-    let units = ids.into_iter().collect::<Vec<_>>();
+    let units = ids.into_iter().cloned().collect::<Vec<_>>();
     let mut identifier_tool = IdentityResolutionTool::with_translation_units(&units);
     let (mut tree, _id_resolver) = identifier_tool.resolve_identities(tree)?;
 

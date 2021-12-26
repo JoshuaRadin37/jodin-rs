@@ -2,6 +2,7 @@
 
 use crate::JodinError;
 use std::error::Error;
+use std::io;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -14,6 +15,12 @@ pub enum IncrementalCompilationError {
 
 impl From<JodinError> for IncrementalCompilationError {
     fn from(e: JodinError) -> Self {
+        IncrementalCompilationError::Other(Box::new(e))
+    }
+}
+
+impl From<io::Error> for IncrementalCompilationError {
+    fn from(e: io::Error) -> Self {
         IncrementalCompilationError::Other(Box::new(e))
     }
 }

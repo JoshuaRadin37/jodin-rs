@@ -7,14 +7,16 @@ use crate::core::privacy::Visibility;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::Field;
 use crate::parsing::parse_type;
-use std::borrow::Borrow;
-use std::fmt::{format, Display, Formatter};
-use std::ops::Deref;
-use std::str::FromStr;
 use jodin_asm::mvp::bytecode::Assembly;
+use std::borrow::Borrow;
+use std::fmt::{format, Debug, Display, Formatter};
+use std::io;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 /// A translation unit is the smallest public facing unit
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TranslationUnit(Field<IntermediateType>);
 
 /// The separator between each translation unit within a compilation
@@ -125,16 +127,37 @@ pub fn join_translation_units<S: AsRef<str>, I: IntoIterator<Item = S>>(iterator
     )
 }
 
-//! The compilation objects are what's produced by the compiler, and can also be interpreted by the
-//! incremental compiler to get the the translation units
+/// The compilation objects are what's produced by the compiler, and can also be interpreted by the
+/// incremental compiler to get the the translation units
 pub struct CompilationObject {
     magic_number: u64,
+    pub file_location: PathBuf,
     /// The module that the translation units are part of
     pub module: Identifier,
     /// The public/protected translation units of the object
     pub units: Vec<TranslationUnit>,
     /// The assembly in the compilation object
-    pub jasm: Assembly
+    pub jasm: Assembly,
+}
+
+impl<R: io::Read> From<R> for CompilationObject {
+    fn from(readable: R) -> Self {
+        todo!()
+    }
+}
+
+impl Debug for CompilationObject {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompilationObject")
+            .field("location", &self.file_location)
+            .field("module", &self.module)
+            .finish_non_exhaustive()
+    }
+}
+
+pub trait Incremental {
+    fn translation_units(&self) -> Vec<TranslationUnit>;
+    fn representative_path(&self) -> PathBuf;
 }
 
 #[cfg(test)]

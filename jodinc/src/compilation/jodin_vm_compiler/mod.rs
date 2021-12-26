@@ -9,10 +9,10 @@ use crate::{JodinNode, JodinResult};
 use jodin_asm::asm_version::Version;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
 use std::collections::VecDeque;
-use std::fmt::{write, Display, Formatter, Write};
+use std::fmt::{write, Display, Formatter, Write as fmtWrite};
 use std::fs::File;
 use std::io;
-use std::io::stdout;
+use std::io::{stdout, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI32;
@@ -80,13 +80,34 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
 
 pub struct ModuleCompiler {
     writer: PaddedWriter<Box<dyn io::Write + 'static>>,
+    target_path: Option<PathBuf>,
 }
 
 impl ModuleCompiler {
-    pub fn new<W: io::Write + 'static>(writer: W) -> Self {
+    pub fn new<W: io::Write + 'static, O: Into<Option<PathBuf>>>(writer: W, path: O) -> Self {
         ModuleCompiler {
             writer: PaddedWriter::new(Box::new(writer)),
+            target_path: path.into(),
         }
+    }
+
+    pub fn writer_mut(&mut self) -> &mut PaddedWriter<impl io::Write> {
+        &mut self.writer
+    }
+
+    /// Gets the target path, if it exists, for the module compler
+    pub fn target_path(&self) -> Option<&Path> {
+        self.target_path.as_ref().map(|pb| pb.as_path())
+    }
+}
+
+impl io::Write for ModuleCompiler {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.writer.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
     }
 }
 
@@ -99,10 +120,14 @@ impl<'j> Module<'j> {
     /// Creates a compiler that
     pub fn compiler<P: AsRef<Path>>(&self, base_directory: P) -> ModuleCompiler {
         let mut buffer = PathBuf::from(base_directory.as_ref());
-        for c in &self.identifier {
-            buffer.push(c);
+        if !self.identifier.is_empty() {
+            for c in &self.identifier {
+                buffer.push(c);
+            }
+        } else {
+            buffer.push("__lib__");
         }
-        buffer.set_extension(".jasm");
+        buffer.set_extension("jasm");
         let file = File::create(&buffer).expect(
             format!(
                 "Could not create compilation target file (target: {:?})",
@@ -110,13 +135,16 @@ impl<'j> Module<'j> {
             )
             .as_str(),
         );
-        ModuleCompiler::new(file)
+        ModuleCompiler::new(file, Some(buffer))
     }
 }
 
 impl<'j> Compilable<JodinVM> for Module<'j> {
     fn compile<W: io::Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        todo!()
+        for x in self.members {
+            writeln!(w, "{:#?}", x);
+        }
+        Ok(())
     }
 }
 
@@ -142,18 +170,28 @@ fn _split_by_module<'j>(tree: &'j JodinNode, current_module: &mut Module<'j>) ->
     match tree.inner() {
         JodinNodeType::InNamespace { namespace, inner } => {
             let namespace = namespace.resolved_id().unwrap();
-            let children = inner.direct_children();
+            let child = inner;
             let mut new_module = Module {
                 identifier: namespace.clone(),
                 members: vec![],
             };
-            for child in children {
-                output.extend(_split_by_module(child, &mut new_module));
-            }
+            output.extend(_split_by_module(child, &mut new_module));
             output.push_front(new_module);
         }
-        _other => {
+        JodinNodeType::TopLevelDeclarations { decs } => {
+            for dec in decs {
+                output.extend(_split_by_module(dec, current_module));
+            }
+        }
+        JodinNodeType::FunctionDefinition { .. } | JodinNodeType::CompoundTypeDefinition { .. } => {
+            debug!("{:?} added to module {:?}", tree, current_module.identifier);
             current_module.members.push(tree);
+        }
+        _ => {
+            debug!(
+                "{:?} wasn't added to module {:?}",
+                tree, current_module.identifier
+            );
         }
     }
     output.into()

@@ -96,6 +96,7 @@ pub mod core;
 pub mod error_reporting;
 pub mod parsing;
 pub mod passes;
+pub mod test_runner;
 pub mod utility;
 
 /// processes the jodin node tree
