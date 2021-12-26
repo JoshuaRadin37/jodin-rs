@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Trace);
+    init_logging(LevelFilter::Debug);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
             in lib;

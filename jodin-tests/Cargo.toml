@@ -3,9 +3,6 @@ name = "jodin-tests"
 version = "0.1.0"
 edition = "2021"
 
-[env]
-TEST_TARGET_DIR = { value = "target/test_runner"  }
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 jodin-asm = { path = "../jodin-asm" }
