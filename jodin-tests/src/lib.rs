@@ -11,7 +11,7 @@ fn fibonacci() {
     init_logging(LevelFilter::Trace);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
-            in lib
+            in lib;
             fn fibonacci(n: int) -> int {
                 if (n < 2) {
                     return n;

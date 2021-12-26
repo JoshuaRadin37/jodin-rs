@@ -381,7 +381,7 @@ JumpStatement: ParseResult = {
 }
 
 
-pub JodinFile: JodinResult<JodinNode> = TopLevelDeclarations;
+pub JodinFile: JodinResult<JodinNode> = { TopLevelDeclarations, SpecialInNamespace }
 
 pub TopLevelDeclarations: JodinResult<JodinNode> = {
     <decs:TopLevelDeclarationsList> => JodinNodeType::TopLevelDeclarations {decs: decs? }.into_result()
@@ -403,7 +403,6 @@ pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<TraitDefinition>,
     WithVisibility<FunctionDefinition>,
     InNamespace,
-    ";" => JodinNodeType::Empty.into_result()
 };
 
 InNamespace: JodinResult<JodinNode> = {
@@ -414,6 +413,15 @@ InNamespace: JodinResult<JodinNode> = {
         }.into_result()
     },
     "in" <id:Identifier> "{" <decs:TopLevelDeclarations> "}" => {
+        JodinNodeType::InNamespace {
+            namespace: JodinNodeType::Identifier(id).into(),
+            inner: decs?
+        }.into_result()
+    }
+}
+
+SpecialInNamespace: JodinResult<JodinNode> = {
+    "in" <id:Identifier> ";" <decs:TopLevelDeclarations> => {
         JodinNodeType::InNamespace {
             namespace: JodinNodeType::Identifier(id).into(),
             inner: decs?
