@@ -138,6 +138,8 @@ pub enum JodinErrorType {
     /// The type environment is no longer available
     #[error("The type environment is no longer available")]
     TypeEnvironmentUnavailable,
+    #[error("Invalid tree type given to compiler (expected: {0})")]
+    InvalidTreeTypeGivenToCompiler(String),
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.

@@ -267,6 +267,18 @@ where
     }
 }
 
+impl InsertAsm<&str> for AssemblyBlock {
+    fn insert_asm_at_position(&mut self, index: usize, asm: &str) -> bool {
+        self.insert_asm_at_position(index, Asm::label(asm))
+    }
+}
+
+impl InsertAsm<String> for AssemblyBlock {
+    fn insert_asm_at_position(&mut self, index: usize, asm: String) -> bool {
+        self.insert_asm_at_position(index, Asm::label(asm))
+    }
+}
+
 pub struct SeperatedAsm<A1, A2>
 where
     AssemblyBlock: InsertAsm<A1>,

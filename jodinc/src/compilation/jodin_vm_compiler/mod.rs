@@ -22,7 +22,9 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI32;
 
 pub mod asm_block;
+mod expression_compiler;
 mod function_compiler;
+mod statement_compiler;
 
 /// The jodin compiler
 pub struct JodinVM(Version);
@@ -321,6 +323,11 @@ impl VariableUseTracker {
         num
     }
 
+    pub fn next_var_asm(&mut self, id: &Identifier) -> Asm {
+        let var = self.next_var(id);
+        Asm::SetVar(var as u64)
+    }
+
     pub fn get_id<I: Into<Identifier>>(&self, id: I) -> Option<usize> {
         self.id_to_var_number.get(&id.into()).copied()
     }
@@ -347,4 +354,8 @@ impl VariableUseTracker {
             self.unused_vars.push(removed);
         }
     }
+}
+
+pub fn invalid_tree_type(expected: impl AsRef<str>) -> JodinErrorType {
+    JodinErrorType::InvalidTreeTypeGivenToCompiler(expected.as_ref().to_string())
 }

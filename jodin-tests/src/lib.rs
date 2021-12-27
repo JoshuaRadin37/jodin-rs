@@ -24,6 +24,14 @@ fn fibonacci() {
                 if (n == 0) { return 1; }
                 return factorial(n - 1) * n;
             }
+            
+            fn max(a: int, b: int) -> int {
+                if (a < b) {
+                    return b;
+                } else {
+                    return a;
+                }
+            }
             "#,
     );
 
