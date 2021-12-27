@@ -495,7 +495,7 @@ impl IdentifierSetter {
         visibility_resolver: &Registry<Visibility>,
     ) -> JodinResult<()> {
         let has_id = tree.get_tag::<ResolvedIdentityTag>().is_ok();
-
+        let mut tags_to_add: Vec<Box<dyn Tag>> = vec![];
         match tree.inner_mut() {
             JodinNodeType::InNamespace { namespace, inner } => {
                 let namespace = namespace
@@ -549,6 +549,9 @@ impl IdentifierSetter {
                 self.resolve_type(return_type, id_resolver, visibility_resolver)?;
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 let name = Identifier::from(tag.absolute_id().this());
+
+                tags_to_add.push(Box::new(tag.clone()));
+
                 id_resolver.push_namespace(name);
 
                 for argument in arguments {
@@ -651,6 +654,9 @@ impl IdentifierSetter {
                     self.set_identities(child, id_resolver, visibility_resolver)?;
                 }
             }
+        }
+        for tag in tags_to_add {
+            tree.add_tag(tag);
         }
         Ok(())
     }

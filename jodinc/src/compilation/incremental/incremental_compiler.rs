@@ -11,7 +11,7 @@ use crate::compilation::{
 use crate::compilation_settings::CompilationSettings;
 use crate::parsing::parse_program;
 use crate::passes::analysis::analyze_with_preload;
-use crate::{optimize, JodinError, JodinNode};
+use crate::{optimize, JodinError, JodinNode, JodinResult};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::fs::{File, FileType};
@@ -26,7 +26,8 @@ pub struct IncrementalCompiler {
 }
 
 impl IncrementalCompiler {
-    pub fn new<P: AsRef<Path>>(output_path: P, settings: CompilationSettings) -> Self {
+    pub fn new<P: AsRef<Path>>(output_path: P, mut settings: CompilationSettings) -> Self {
+        settings.target_directory = output_path.as_ref().to_path_buf();
         Self {
             object_path: vec![],
             output_directory: output_path.as_ref().to_path_buf(),
@@ -37,28 +38,15 @@ impl IncrementalCompiler {
     }
 
     /// Compiles a single input into a compilation objects
-    pub fn compile_to_object<S: AsRef<str>>(
-        &mut self,
-        input: S,
-    ) -> Result<Vec<CompilationObject>, JodinError> {
+    pub fn compile_to_object<S: AsRef<str>>(&mut self, input: S) -> Result<(), JodinError> {
         let parsed = parse_program(input)?;
         let (analyzed, _env) = analyze_with_preload(parsed, &self.translation_units)?;
 
         let optimized = optimize(analyzed)?;
-        let split_by_module = split_by_module(&optimized);
 
-        let mut objects = vec![];
-        for module in split_by_module {
-            if !module.members.is_empty() {
-                let mut compiler: ModuleCompiler = module.compiler(self.output_directory.clone());
-                module.compile(&Context::new(), compiler.writer_mut())?;
-                if let Some(target) = compiler.target_path() {
-                    let file = File::open(target)?;
-                    objects.push(CompilationObject::from(file))
-                }
-            }
-        }
-        Ok(objects)
+        let mut compiler = JodinVMCompiler::default();
+
+        compiler.compile(&optimized, &self.compilation_settings)
     }
 
     /// Add an incremental object to the compiler

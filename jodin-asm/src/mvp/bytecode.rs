@@ -90,6 +90,13 @@ impl Asm {
         Self::Push(value.into())
     }
 
+    pub fn goto(lbl: impl AsRef<str>) -> Self {
+        Self::Goto(AsmLocation::Label(lbl.as_ref().to_string()))
+    }
+    pub fn cond_goto(lbl: impl AsRef<str>) -> Self {
+        Self::CondGoto(AsmLocation::Label(lbl.as_ref().to_string()))
+    }
+
     pub fn native_method<S: AsRef<str>, I: Into<Option<usize>>>(native: S, args: I) -> Self {
         let args = args.into().unwrap_or(0);
         Self::NativeMethod(native.as_ref().to_string(), args)
@@ -111,6 +118,12 @@ pub trait Encode {
 }
 
 impl Encode for Assembly {
+    fn encode(self) -> Bytecode {
+        bincode::serialize(&self).unwrap()
+    }
+}
+
+impl Encode for Asm {
     fn encode(self) -> Bytecode {
         bincode::serialize(&self).unwrap()
     }

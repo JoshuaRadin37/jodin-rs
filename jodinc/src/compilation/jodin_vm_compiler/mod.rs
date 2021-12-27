@@ -1,16 +1,20 @@
 use crate::ast::tags::TagTools;
 use crate::ast::JodinNodeType;
 use crate::compilation::jodin_vm_compiler::asm_block::AssemblyBlock;
+use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
 use crate::compilation::{Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target};
 use crate::compilation_settings::CompilationSettings;
+use crate::core::error::JodinErrorType;
 use crate::core::identifier::{Identifiable, Identifier};
 use crate::utility::Tree;
-use crate::{JodinNode, JodinResult};
+use crate::{JodinError, JodinNode, JodinResult};
 use jodin_asm::asm_version::Version;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
-use std::collections::VecDeque;
+use std::borrow::Borrow;
+use std::collections::{HashMap, VecDeque};
 use std::fmt::{write, Display, Formatter, Write as fmtWrite};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
+use std::hash::Hash;
 use std::io;
 use std::io::{stdout, Write};
 use std::marker::PhantomData;
@@ -18,6 +22,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI32;
 
 pub mod asm_block;
+mod function_compiler;
 
 /// The jodin compiler
 pub struct JodinVM(Version);
@@ -64,8 +69,14 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
             info!("Compiling module {:?}", module.identifier);
             match &mut self.writer_override {
                 None => {
-                    let mut compiler = module.compiler(&settings.target_directory);
-                    module.compile(&context, &mut compiler.writer)?;
+                    let mut m_compiler = module.compiler(&settings.target_directory);
+                    for member in module.members {
+                        info!("Compiling {:?}", member);
+                        let resolved_id = member.resolved_id()?;
+                        let mut m_compiler =
+                            m_compiler.translation_object_compiler(resolved_id.this());
+                        m_compiler.compile(member, settings)?;
+                    }
                 }
                 Some(s) => {
                     let mut writer = PaddedWriter::new(s);
@@ -79,35 +90,60 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
 }
 
 pub struct ModuleCompiler {
-    writer: PaddedWriter<Box<dyn io::Write + 'static>>,
-    target_path: Option<PathBuf>,
+    dir_path: PathBuf,
 }
 
 impl ModuleCompiler {
-    pub fn new<W: io::Write + 'static, O: Into<Option<PathBuf>>>(writer: W, path: O) -> Self {
+    pub fn new<O: AsRef<Path>>(path: O) -> Self {
         ModuleCompiler {
-            writer: PaddedWriter::new(Box::new(writer)),
-            target_path: path.into(),
+            dir_path: path.as_ref().to_path_buf(),
         }
     }
 
-    pub fn writer_mut(&mut self) -> &mut PaddedWriter<impl io::Write> {
-        &mut self.writer
-    }
-
-    /// Gets the target path, if it exists, for the module compler
-    pub fn target_path(&self) -> Option<&Path> {
-        self.target_path.as_ref().map(|pb| pb.as_path())
+    pub fn translation_object_compiler(
+        &self,
+        target: impl AsRef<str>,
+    ) -> TranslationObjectCompiler {
+        TranslationObjectCompiler {
+            module_compiler: self,
+            relative_path: PathBuf::from(target.as_ref()),
+        }
     }
 }
 
-impl io::Write for ModuleCompiler {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.writer.write(buf)
-    }
+pub struct TranslationObjectCompiler<'m> {
+    module_compiler: &'m ModuleCompiler,
+    relative_path: PathBuf,
+}
 
-    fn flush(&mut self) -> io::Result<()> {
-        self.writer.flush()
+impl<'m> TranslationObjectCompiler<'m> {
+    /// Get the target path of the translation object
+    pub fn object_path(&self) -> PathBuf {
+        PathBuf::from_iter(&[&self.module_compiler.dir_path, &self.relative_path])
+            .with_extension("jobj")
+    }
+}
+
+impl Compiler<JodinVM> for TranslationObjectCompiler<'_> {
+    fn compile(&mut self, tree: &JodinNode, settings: &CompilationSettings) -> JodinResult<()> {
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(self.object_path())?;
+
+        let ref mut w = PaddedWriter::new(file);
+        match tree.r#type() {
+            JodinNodeType::FunctionDefinition { .. } => {
+                writeln!(w, "# Compiled: {}", tree.resolved_id().unwrap())?;
+                let mut compiler = FunctionCompiler::default();
+                let block = compiler.create_compilable(tree)?;
+                block.compile(&Context::new(), w);
+                writeln!(w, "{:#?}", tree)?;
+                Ok(())
+            }
+            _ => return Err(JodinError::new(JodinErrorType::IllegalTreeType)),
+        }
     }
 }
 
@@ -124,18 +160,11 @@ impl<'j> Module<'j> {
             for c in &self.identifier {
                 buffer.push(c);
             }
-        } else {
-            buffer.push("__lib__");
         }
-        buffer.set_extension("jasm");
-        let file = File::create(&buffer).expect(
-            format!(
-                "Could not create compilation target file (target: {:?})",
-                buffer
-            )
-            .as_str(),
-        );
-        ModuleCompiler::new(file, Some(buffer))
+        if !self.members.is_empty() {
+            std::fs::create_dir_all(&buffer);
+        }
+        ModuleCompiler::new(buffer)
     }
 }
 
@@ -268,6 +297,54 @@ mod tests {
                 eprintln!("{}", e);
                 panic!("Fib failed to compile")
             }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct VariableUseTracker {
+    next_variable: usize,
+    unused_vars: Vec<usize>,
+    id_to_var_number: HashMap<Identifier, usize>,
+}
+
+impl VariableUseTracker {
+    pub fn next_var(&mut self, id: &Identifier) -> usize {
+        let num = if self.unused_vars.is_empty() {
+            let next = self.next_variable;
+            self.next_variable += 1;
+            next
+        } else {
+            self.unused_vars.pop().unwrap()
+        };
+        self.id_to_var_number.insert(id.clone(), num);
+        num
+    }
+
+    pub fn get_id<I: Into<Identifier>>(&self, id: I) -> Option<usize> {
+        self.id_to_var_number.get(&id.into()).copied()
+    }
+
+    pub fn contains_id<I: Into<Identifier>>(&self, id: I) -> bool {
+        self.id_to_var_number.contains_key(&id.into())
+    }
+
+    /// Clears a variable regardless of whether it's set or not
+    pub fn clear_var(&mut self, var: usize) {
+        if let Some((id, _)) = self.id_to_var_number.iter().find(|&(_, &val)| val == var) {
+            let id = id.clone();
+            self.clear_id(&id)
+        }
+    }
+
+    /// Clears an identifier, returning a var to the unused pool
+    pub fn clear_id<Q>(&mut self, id: &Q)
+    where
+        Identifier: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        if let Some(removed) = self.id_to_var_number.remove(id) {
+            self.unused_vars.push(removed);
         }
     }
 }

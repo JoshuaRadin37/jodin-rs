@@ -8,16 +8,21 @@ use std::path::PathBuf;
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Debug);
+    init_logging(LevelFilter::Info);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
-            in lib;
+            
             fn fibonacci(n: int) -> int {
                 if (n < 2) {
                     return n;
                 } else {
-                    return lib::fibonacci(n - 1) + lib::fibonacci(n - 2);
+                    return fibonacci(n - 1) + fibonacci(n - 2);
                 }
+            }
+            
+            fn factorial(n: int) -> int {
+                if (n == 0) { return 1; }
+                return factorial(n - 1) * n;
             }
             "#,
     );

@@ -95,6 +95,11 @@ impl JodinNode {
         &*self.jodin_node_type
     }
 
+    /// Gets the inner type of the node.
+    pub fn r#type(&self) -> &JodinNodeType {
+        &*self.jodin_node_type
+    }
+
     /// A mutable reference to the inner type of the node.
     pub fn inner_mut(&mut self) -> &mut JodinNodeType {
         &mut *self.jodin_node_type

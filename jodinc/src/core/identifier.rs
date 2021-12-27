@@ -4,8 +4,10 @@
 use crate::utility::IntoBox;
 use itertools::Itertools;
 use std::array::IntoIter;
+use std::borrow::Borrow;
 use std::cmp::{min, Ordering};
 use std::collections::{Bound, VecDeque};
+use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::{FromIterator, FusedIterator};
 use std::ops::{Add, Div, Index, Range, RangeBounds, Shl, Shr};
@@ -260,6 +262,13 @@ impl Identifier {
         }
         let ids: Vec<_> = self.into_iter().collect();
         Some(Identifier::from_iter(&ids[start..=end]))
+    }
+
+    /// Gets an OS compatible version of the toString of this identifier
+    pub fn os_compat(&self) -> Option<OsString> {
+        let as_string = self.to_string().replace("::", "_");
+
+        OsString::try_from(as_string).ok()
     }
 }
 

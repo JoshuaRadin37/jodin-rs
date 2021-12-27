@@ -203,6 +203,24 @@ impl TagTools for JodinNode {
     }
 }
 
+impl Tag for Box<dyn Tag> {
+    fn tag_type(&self) -> String {
+        (**self).tag_type()
+    }
+
+    fn max_of_this_tag(&self) -> u32 {
+        (**self).max_of_this_tag()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        (**self).as_any()
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        (**self).as_any_mut()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::ast::tags::{DummyTag, Tag, TagUtilities};
