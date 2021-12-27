@@ -373,7 +373,13 @@ where
         let as_asm = asm.get_asm();
         let mut new_labels = HashMap::new();
         for (index, asm) in as_asm.into_iter().enumerate() {
-            if let Asm::Label(asm_label) = &asm {
+            let label = match &asm {
+                Asm::Label(lbl) => Some(lbl),
+                Asm::PublicLabel(lbl) => Some(lbl),
+                _ => None,
+            };
+
+            if let Some(asm_label) = label {
                 let label_index = start_index + index;
                 match self.label_to_instruction.entry(asm_label.clone()) {
                     Entry::Occupied(_) => {

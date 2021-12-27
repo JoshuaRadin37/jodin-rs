@@ -15,6 +15,8 @@ pub const PTR_SIZE: usize = std::mem::size_of::<usize>();
 #[non_exhaustive]
 pub enum Asm {
     Label(String),
+    /// A public facing label
+    PublicLabel(String),
 
     Nop,
     Halt,
@@ -28,8 +30,7 @@ pub enum Asm {
     /// Clears the stack
     Clear,
 
-    /// Pops the top most value on the stack and saves it to the next available variable number
-    NextVar(u64),
+    /// Pops the top most value on the stack and saves it to the variable number
     SetVar(u64),
     GetVar(u64),
     ClearVar(u64),

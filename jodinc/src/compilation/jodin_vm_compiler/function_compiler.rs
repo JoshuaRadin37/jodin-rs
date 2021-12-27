@@ -38,6 +38,7 @@ impl FunctionCompiler {
 impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<AssemblyBlock> {
         let mut output = AssemblyBlock::with_id(tree.resolved_id().unwrap());
+        output.insert_asm(Asm::PublicLabel(tree.resolved_id().unwrap().to_string()));
         output.insert_asm(temp_label("__func_params__"));
         let (return_type, args, block) = {
             if let JodinNodeType::FunctionDefinition {

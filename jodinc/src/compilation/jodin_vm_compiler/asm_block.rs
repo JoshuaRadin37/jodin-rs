@@ -3,8 +3,10 @@
 use crate::compilation::{Compilable, Context, JodinVM, PaddedWriter};
 use crate::core::identifier::Identifier;
 use crate::JodinResult;
+use itertools::Itertools;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode};
 use jodin_asm::mvp::location::AsmLocation;
+use std::collections::HashSet;
 use std::fmt::{format, Debug, Display, Formatter};
 use std::io::Write;
 
@@ -55,6 +57,7 @@ impl AssemblyBlock {
                 .map(|s| Identifier::new(s))
                 .unwrap_or(Identifier::empty()),
         )
+        .remove_unused()
     }
 
     fn _normalize(&self, current_namespace: &Identifier) -> Assembly {
@@ -353,5 +356,34 @@ impl Compilable<JodinVM> for Asm {
             writeln!(w, "{:?}", byte)?;
         }
         Ok(())
+    }
+}
+
+trait RemoveUnused {
+    fn remove_unused(self) -> Self;
+}
+
+impl RemoveUnused for Assembly {
+    fn remove_unused(mut self) -> Self {
+        let mut found_labels = HashSet::<String>::new();
+        let mut used_labels = HashSet::<String>::new();
+        for x in &self {
+            if let Asm::Label(lbl) = x {
+                found_labels.insert(lbl.clone());
+            } else if let Asm::Goto(AsmLocation::Label(lbl)) = x {
+                used_labels.insert(lbl.clone());
+            } else if let Asm::CondGoto(AsmLocation::Label(lbl)) = x {
+                used_labels.insert(lbl.clone());
+            }
+        }
+
+        let unused = found_labels
+            .difference(&used_labels)
+            .collect::<HashSet<_>>();
+        self.retain(|asm| match asm {
+            Asm::Label(lbl) => !unused.contains(lbl),
+            _ => true,
+        });
+        self
     }
 }
