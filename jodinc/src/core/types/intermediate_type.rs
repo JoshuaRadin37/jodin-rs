@@ -250,7 +250,7 @@ impl IntermediateType {
         })
     }
 
-    /// Get this type indexed (only works on array types)
+    /// Get this type called (only works on function types)
     pub fn get_called(&self) -> JodinResult<IntermediateType> {
         let Self {
             is_const,
@@ -271,6 +271,16 @@ impl IntermediateType {
             generics,
             tails,
         })
+    }
+
+    /// Checks whether this type is specifically `void` or `const void`
+    pub fn is_void(&self) -> bool {
+        match self.type_specifier {
+            TypeSpecifier::Primitive(Primitive::Void) => {
+                self.tails.is_empty() && self.generics.is_empty()
+            }
+            _ => false,
+        }
     }
 
     fn pop_last_tail(&self) -> (Self, Option<TypeTail>) {

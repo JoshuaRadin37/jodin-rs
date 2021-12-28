@@ -23,6 +23,7 @@ use crate::core::types::intermediate_type::TypeSpecifier;
 use crate::core::types::primitives::Primitive;
 use crate::passes::analysis::ResolvedIdentityTag;
 use crate::utility::Visitor;
+use jodin_asm::mvp::value::Value;
 use num_traits::{Num, PrimInt};
 use regex::Regex;
 use std::collections::HashMap;
@@ -434,6 +435,32 @@ impl TryFrom<Literal> for i64 {
             Literal::Long(b) => Ok(b),
             v => Err(JodinErrorType::IncorrectLiteralTypeWithLiteral(v).into()),
         }
+    }
+}
+
+impl Into<Value> for Literal {
+    fn into(self) -> Value {
+        match self {
+            Literal::String(s) => Value::Str(s),
+            Literal::Char(c) => Value::Byte(c as u8),
+            Literal::Boolean(b) => Value::Byte(b.into()),
+            Literal::Float(f) => Value::Float(f as f64),
+            Literal::Double(d) => Value::Float(d),
+            Literal::Byte(v) => Value::Integer(v as i64),
+            Literal::Short(v) => Value::Integer(v as i64),
+            Literal::Int(v) => Value::Integer(v as i64),
+            Literal::Long(v) => Value::Integer(v as i64),
+            Literal::UnsignedByte(b) => Value::Byte(b),
+            Literal::UnsignedShort(v) => Value::UInteger(v as u64),
+            Literal::UnsignedInt(v) => Value::UInteger(v as u64),
+            Literal::UnsignedLong(v) => Value::UInteger(v as u64),
+        }
+    }
+}
+
+impl Into<Value> for &Literal {
+    fn into(self) -> Value {
+        (*self).clone().into()
     }
 }
 

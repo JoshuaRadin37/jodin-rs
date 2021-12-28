@@ -72,8 +72,11 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
 
         output.insert_asm(Asm::goto(rel_label("__func_end__")));
         output.insert_asm(Asm::label(rel_label("__func_end__")));
-        output.insert_asm(Asm::Push(Value::Empty));
-        output.insert_asm(Asm::Return);
+
+        if return_type.is_void() {
+            output.insert_asm(Asm::Push(Value::Empty));
+            output.insert_asm(Asm::Return);
+        }
         Ok(output)
     }
 }

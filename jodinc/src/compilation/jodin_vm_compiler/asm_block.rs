@@ -6,6 +6,7 @@ use crate::JodinResult;
 use itertools::Itertools;
 use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode};
 use jodin_asm::mvp::location::AsmLocation;
+use jodin_rs_vm::core_traits::GetAsm;
 use std::collections::HashSet;
 use std::fmt::{format, Debug, Display, Formatter};
 use std::io::Write;
@@ -24,6 +25,16 @@ pub const REMOVE_LABEL_MARKER: char = '#';
 pub struct AssemblyBlock {
     pub name: Option<String>,
     assembly: Vec<AssemblyBlockComponent>,
+}
+
+#[macro_export]
+macro_rules! jasm {
+    ($($asm:expr),*) => {
+        {
+            let asm = vec![$($asm),*];
+            $crate::compilation::jodin_vm_compiler::AssemblyBlock::from(asm)
+        }
+    };
 }
 
 impl AssemblyBlock {
@@ -151,6 +162,22 @@ impl AssemblyBlock {
     }
 }
 
+impl From<Asm> for AssemblyBlock {
+    fn from(a: Asm) -> Self {
+        let mut output = AssemblyBlock::new(None);
+        output.insert_asm(a);
+        output
+    }
+}
+
+impl From<Assembly> for AssemblyBlock {
+    fn from(a: Assembly) -> Self {
+        let mut output = AssemblyBlock::new(None);
+        output.insert_asm(a);
+        output
+    }
+}
+
 /// Creates a label instruction with the [`RELATIVE_LABEL_MARKER`](RELATIVE_LABEL_MARKER) proceeding
 /// it.
 pub fn rel_label<S: AsRef<str>>(relative: S) -> String {
@@ -239,6 +266,21 @@ impl InsertAsm<Asm> for AssemblyBlock {
         }
         self.assembly
             .insert(index, AssemblyBlockComponent::SingleInstruction(asm));
+        true
+    }
+}
+
+impl<A> InsertAsm<Vec<A>> for AssemblyBlock
+where
+    AssemblyBlock: InsertAsm<A>,
+{
+    fn insert_asm_at_position(&mut self, index: usize, mut asm: Vec<A>) -> bool {
+        asm.reverse();
+        for asm in asm {
+            if !self.insert_asm_at_position(index, asm) {
+                return false;
+            }
+        }
         true
     }
 }
