@@ -1,6 +1,7 @@
 use crate::compilation::incremental::incremental_compiler::IncrementalCompiler;
 use crate::compilation_settings::CompilationSettings;
 use jodin_common::identifier::Identifier;
+use jodin_common::unit::CompilationObject;
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
@@ -181,7 +182,7 @@ impl ProjectBuilder {
     }
 
     /// Compiles then executes
-    pub fn execute(&self, function: Identifier) -> Result<(u32, String, String), Box<dyn Error>> {
+    pub fn execute(self, function: Identifier) -> Result<(u32, String, String), Box<dyn Error>> {
         let path = self.compile()?;
         let mut stdout = Vec::<u8>::new();
         let mut stderr = Vec::<u8>::new();
@@ -192,12 +193,13 @@ impl ProjectBuilder {
             .with_stderr(&mut stderr)
             .build();
 
-        let file = FsFile::open(path)?;
-        virtual_machine.load(file);
+        let obj = CompilationObject::try_from(path)?;
+        virtual_machine.load(obj);
         let start = function
             .os_compat_str()
             .ok_or("Function name incompatible")?;
         let result = virtual_machine.run(&start)?;
+        drop(virtual_machine);
         Ok((
             result,
             String::from_utf8(stdout)?,

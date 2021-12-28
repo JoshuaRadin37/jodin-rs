@@ -112,8 +112,7 @@ impl<'path> IncrementalDirectory<'path> {
                     Ok(dir_child) => match dir_child.file_type()? {
                         fs if fs.is_dir() => dir_stack.push_back(dir_child.path()),
                         fs if fs.is_file() => {
-                            let file = File::open(dir_child.path())?;
-                            let obj = CompilationObject::from(file);
+                            let obj = CompilationObject::try_from(dir_child.path())?;
                             output.push(obj);
                         }
                         _ => unreachable!(),

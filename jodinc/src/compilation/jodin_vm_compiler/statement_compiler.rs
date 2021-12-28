@@ -65,8 +65,6 @@ impl StatementCompiler {
             Asm::goto(rel_label("__end_if__")),
             Asm::label(rel_label("__end_if__")),
         ];
-
-        println!("{:#?}", asm);
         Ok(asm)
 
         // output.insert_before_label(Asm::goto(rel_label("if_end")), rel_label("true_end"));

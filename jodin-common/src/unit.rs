@@ -6,10 +6,16 @@ use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::Field;
 use crate::error::{JodinError, JodinErrorType};
 use crate::identifier::Identifier;
-use crate::mvp::bytecode::Assembly;
+use crate::mvp::bytecode::{Assembly, GetAsm};
+use anyhow::anyhow;
+use bytemuck::{
+    cast, cast_slice, from_bytes, pod_align_to, try_cast, try_cast_slice, try_from_bytes,
+};
 use std::borrow::Borrow;
 use std::fmt::{format, Debug, Display, Formatter};
+use std::fs::File;
 use std::io;
+use std::io::Read;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -140,9 +146,39 @@ pub struct CompilationObject {
     pub jasm: Assembly,
 }
 
-impl<R: io::Read> From<R> for CompilationObject {
-    fn from(readable: R) -> Self {
+impl TryFrom<&[u8]> for CompilationObject {
+    type Error = JodinError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let magic_num = *from_bytes::<u64>(&value[0..8]);
+
         todo!()
+    }
+}
+
+impl TryFrom<PathBuf> for CompilationObject {
+    type Error = JodinError;
+
+    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+        CompilationObject::try_from(value.as_path())
+    }
+}
+
+impl TryFrom<&Path> for CompilationObject {
+    type Error = JodinError;
+
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        if value.is_file() {
+            let mut read = File::open(value)?;
+            let mut buffer = vec![0u8; 0];
+            read.read_to_end(&mut buffer)?;
+            Self::try_from(&*buffer)
+        } else {
+            Err(anyhow!(
+                "{:?} is a directory and not be made directly into an CompilationObject",
+                value
+            ))?
+        }
     }
 }
 
@@ -152,6 +188,12 @@ impl Debug for CompilationObject {
             .field("location", &self.file_location)
             .field("module", &self.module)
             .finish_non_exhaustive()
+    }
+}
+
+impl GetAsm for CompilationObject {
+    fn get_asm(&self) -> Assembly {
+        self.jasm.clone()
     }
 }
 

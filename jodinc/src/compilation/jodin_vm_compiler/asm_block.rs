@@ -77,6 +77,7 @@ impl AssemblyBlock {
 
     /// Normalizes the block into standard assembly. Relatives `@<label>` and removes `#<labels>`.
     pub fn normalize(&self) -> Assembly {
+        println!("{:#?}", self);
         self._normalize(
             &self
                 .name
@@ -84,6 +85,7 @@ impl AssemblyBlock {
                 .map(|s| Identifier::new(s))
                 .unwrap_or(Identifier::empty()),
         )
+
         // .remove_unused()
     }
 
@@ -302,16 +304,20 @@ where
 }
 
 impl InsertAsm<AssemblyBlock> for AssemblyBlock {
-    fn insert_asm(&mut self, asm: AssemblyBlock) {
-        self.assembly.push(AssemblyBlockComponent::Block(asm));
-    }
-
     fn insert_asm_at_position(&mut self, index: usize, asm: AssemblyBlock) -> bool {
         if index > self.len() {
             return false;
         }
-        self.assembly
-            .insert(index, AssemblyBlockComponent::Block(asm));
+        if asm.name.is_some() {
+            self.assembly
+                .insert(index, AssemblyBlockComponent::Block(asm));
+        } else {
+            let instructions = asm.assembly;
+            for comp in instructions.into_iter().rev() {
+                self.assembly.insert(index, comp);
+            }
+        }
+
         true
     }
 }

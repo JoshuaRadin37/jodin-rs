@@ -175,12 +175,6 @@ impl GetAsm for &Assembly {
     }
 }
 
-impl GetAsm for CompilationObject {
-    fn get_asm(&self) -> Assembly {
-        todo!()
-    }
-}
-
 impl<GB: GetBytecode> GetAsm for GB {
     fn get_asm(&self) -> Vec<Asm> {
         let bytecode = self.get_bytecode().expect("Could not get bytecode");

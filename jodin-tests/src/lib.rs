@@ -1,7 +1,10 @@
 #![cfg(test)]
 
-use jodin_asm::{default_logging, init_logging};
-use jodin_common::test_runner::ProjectBuilder;
+use jodin_common::init_logging;
+use jodin_rs_vm::core_traits::VirtualMachine;
+use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
+use jodin_rs_vm::vm::{VMBuilder, VM};
+use jodinc::test_runner::ProjectBuilder;
 use log::LevelFilter;
 use std::error::Error;
 use std::path::PathBuf;
@@ -34,6 +37,12 @@ fn fibonacci() {
                     return a;
                 }
             }
+            
+            fn main() -> int {
+                
+                return 0;
+            }
+
             "#,
     );
 
@@ -43,4 +52,11 @@ fn fibonacci() {
             panic!("{}", e)
         }
     };
+
+    let mut vm = VMBuilder::new()
+        .memory(MinimumMemory::default())
+        .alu(MinimumALU)
+        .build();
+
+    assert_eq!(vm.run("main").unwrap(), 0);
 }

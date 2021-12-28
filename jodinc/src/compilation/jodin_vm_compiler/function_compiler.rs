@@ -77,6 +77,7 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
             output.insert_asm(Asm::Push(Value::Empty));
             output.insert_asm(Asm::Return);
         }
+
         Ok(output)
     }
 }
