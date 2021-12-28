@@ -29,25 +29,28 @@ pub struct AssemblyBlock {
 
 #[macro_export]
 macro_rules! jasm {
-    ($($asm:expr),*) => {
+     ($name:ident : $($asm:expr),* $(,)?) => {
+        {
+            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
+
+            let mut output = AssemblyBlock::new(Some(&stringify!($name).to_string()));
+            $(
+                output.insert_asm($asm);
+            )*
+            output
+        }
+    };
+    ($($asm:expr),* $(,)?) => {
         {
             use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
             let mut output = AssemblyBlock::new(None);
             $(
                 output.insert_asm($asm);
             )*
+            output
         }
     };
-    ($name:ident: $($asm:expr),*) => {
-        {
-            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
 
-            let mut output = AssemblyBlock::new(Some($name));
-            $(
-                output.insert_asm($asm);
-            )*
-        }
-    };
 }
 
 impl AssemblyBlock {
@@ -81,7 +84,7 @@ impl AssemblyBlock {
                 .map(|s| Identifier::new(s))
                 .unwrap_or(Identifier::empty()),
         )
-        .remove_unused()
+        // .remove_unused()
     }
 
     fn _normalize(&self, current_namespace: &Identifier) -> Assembly {

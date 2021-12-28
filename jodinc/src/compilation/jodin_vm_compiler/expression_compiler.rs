@@ -9,7 +9,9 @@ use crate::core::error::JodinErrorType;
 use crate::core::operator::Operator;
 use crate::{jasm, JodinNode, JodinResult};
 use jodin_asm::mvp::bytecode::{Asm, Assembly};
+use jodin_asm::mvp::location::AsmLocation;
 use jodin_asm::mvp::value::Value;
+use jodin_rs_vm::function_names::CALL;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -33,11 +35,27 @@ impl ExpressionCompiler {
             JodinNodeType::Binop { .. } => {
                 output.insert_asm(self.binop(tree)?);
             }
-            _ => {
-                return Err(JodinErrorType::InvalidTreeTypeGivenToCompiler(
-                    "Type not used in expression".to_string(),
-                )
-                .into())
+            JodinNodeType::Call {
+                called,
+                generics_instance: _,
+                arguments,
+            } => {
+                // todo: Need to decide if theres a way to call a function without always having to
+                // todo: rely on the call method
+                let mut arg_count = 0;
+                for arg in arguments.iter().rev() {
+                    output.insert_asm(self.expr(arg)?);
+                    arg_count += 1;
+                }
+
+                let called = self.expr(called)?;
+                let message = Asm::Push(Value::Str(CALL.to_string()));
+                output.insert_asm(message);
+                output.insert_asm(called);
+                output.insert_asm(Asm::SendMessage);
+            }
+            e => {
+                panic!("Illegal node type given for expr: {:#?}", e)
             }
         }
         if output.len() == 0 {
