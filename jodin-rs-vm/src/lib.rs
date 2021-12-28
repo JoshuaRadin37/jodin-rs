@@ -46,6 +46,7 @@ use std::io::{stderr, stdin, stdout, Read, Write};
 
 pub mod core_traits;
 pub mod error;
+pub mod fault;
 pub mod function_names;
 pub mod mvp;
 pub mod vm;
