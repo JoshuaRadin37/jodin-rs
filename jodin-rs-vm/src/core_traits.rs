@@ -1,10 +1,12 @@
 //! The core traits are the traits the define the different core functionalities of the virtual machine
 
 use crate::error::VMError;
+use crate::fault::Fault;
 use crate::vm::VM;
-use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode, Decode};
-use jodin_asm::mvp::error::BytecodeError;
-use jodin_asm::mvp::value::Value;
+use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode, Decode, GetAsm};
+use jodin_common::mvp::error::BytecodeError;
+use jodin_common::mvp::value::Value;
+use jodin_common::unit::CompilationObject;
 use log::Level;
 use num_traits::PrimInt;
 use std::cell::RefCell;
@@ -28,34 +30,9 @@ pub trait VirtualMachine {
 
     /// Runs the VM starting at a label
     fn run(&mut self, start_label: &str) -> Result<u32, VMError>;
-}
 
-pub trait GetAsm {
-    fn get_asm(&self) -> Assembly;
-}
-
-impl GetAsm for Assembly {
-    fn get_asm(&self) -> Assembly {
-        self.clone()
-    }
-}
-
-impl GetAsm for &Assembly {
-    fn get_asm(&self) -> Assembly {
-        (*self).clone()
-    }
-}
-
-/// You can get bytecode from this object.
-pub trait GetBytecode {
-    fn get_bytecode(&self) -> Result<Bytecode, BytecodeError>;
-}
-
-impl<GB: GetBytecode> GetAsm for GB {
-    fn get_asm(&self) -> Vec<Asm> {
-        let bytecode = self.get_bytecode().expect("Could not get bytecode");
-        bytecode.decode()
-    }
+    /// Forces the VM to encounter a fault
+    fn fault(&mut self, fault: Fault);
 }
 
 /// Memory defines a way of storing and getting variables.
@@ -83,6 +60,8 @@ pub trait MemoryTrait: Debug {
 
     fn push(&mut self, value: Value);
     fn pop(&mut self) -> Option<Value>;
+    fn take_stack(&mut self) -> Vec<Value>;
+    fn replace_stack(&mut self, stack: Vec<Value>);
 }
 
 /// This defines the way that arithmetics should be performed.

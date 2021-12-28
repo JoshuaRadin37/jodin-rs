@@ -22,7 +22,4 @@
 //!
 //! [#74]: https://github.com/joshradin/jodin-rs/issues/74
 
-pub mod error;
-pub use error::IncrementalCompilationError as Error;
 pub mod incremental_compiler;
-pub mod unit;

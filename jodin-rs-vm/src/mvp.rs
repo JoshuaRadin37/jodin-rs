@@ -1,6 +1,6 @@
 use crate::{ArithmeticsTrait, MemoryTrait};
-use jodin_asm::mvp::error::BytecodeError;
-use jodin_asm::mvp::value::Value;
+use jodin_common::mvp::error::BytecodeError;
+use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -53,6 +53,13 @@ impl MemoryTrait for MinimumMemory {
 
     fn pop(&mut self) -> Option<Value> {
         self.stack.pop()
+    }
+
+    fn take_stack(&mut self) -> Vec<Value> {
+        std::mem::replace(&mut self.stack, Vec::new())
+    }
+    fn replace_stack(&mut self, stack: Vec<Value>) {
+        std::mem::replace(&mut self.stack, stack);
     }
 }
 

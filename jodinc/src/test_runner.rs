@@ -1,9 +1,13 @@
 use crate::compilation::incremental::incremental_compiler::IncrementalCompiler;
 use crate::compilation_settings::CompilationSettings;
-use crate::test_runner::ProjectBuilderInput::{Directory, File, Raw};
+use jodin_common::identifier::Identifier;
+use jodin_rs_vm::core_traits::VirtualMachine;
+use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
+use jodin_rs_vm::vm::VMBuilder;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::File as FsFile;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -34,21 +38,36 @@ impl ProjectBuilder {
     }
 
     pub fn use_string<S: AsRef<str>>(mut self, s: S) -> Self {
-        if std::mem::replace(&mut self.input, Some(Raw(s.as_ref().to_string()))).is_some() {
+        if std::mem::replace(
+            &mut self.input,
+            Some(ProjectBuilderInput::Raw(s.as_ref().to_string())),
+        )
+        .is_some()
+        {
             panic!("Input already set")
         }
         self
     }
 
     pub fn use_file<P: AsRef<Path>>(mut self, s: P) -> Self {
-        if std::mem::replace(&mut self.input, Some(File(s.as_ref().to_path_buf()))).is_some() {
+        if std::mem::replace(
+            &mut self.input,
+            Some(ProjectBuilderInput::File(s.as_ref().to_path_buf())),
+        )
+        .is_some()
+        {
             panic!("Input already set")
         }
         self
     }
 
     pub fn use_dir<P: AsRef<Path>>(mut self, s: P) -> Self {
-        if std::mem::replace(&mut self.input, Some(Directory(s.as_ref().to_path_buf()))).is_some() {
+        if std::mem::replace(
+            &mut self.input,
+            Some(ProjectBuilderInput::Directory(s.as_ref().to_path_buf())),
+        )
+        .is_some()
+        {
             panic!("Input already set")
         }
         self
@@ -141,11 +160,11 @@ impl ProjectBuilder {
             None => {
                 panic!("Input must be given for project builder");
             }
-            Some(Raw(s)) => {
+            Some(ProjectBuilderInput::Raw(s)) => {
                 debug!("Compiling a string...");
                 compiler.compile_to_object(s)?;
             }
-            Some(File(p)) => {
+            Some(ProjectBuilderInput::File(p)) => {
                 let reading_file = std::fs::File::open(p)?;
                 let mut buffer = Vec::new();
                 let mut buffered_reader = BufReader::new(reading_file);
@@ -153,11 +172,36 @@ impl ProjectBuilder {
                 let as_string = String::from_utf8(buffer)?;
                 compiler.compile_to_object(as_string)?;
             }
-            Some(Directory(p)) => {
+            Some(ProjectBuilderInput::Directory(p)) => {
                 todo!()
             }
         }
 
         Ok(output_path)
+    }
+
+    /// Compiles then executes
+    pub fn execute(&self, function: Identifier) -> Result<(u32, String, String), Box<dyn Error>> {
+        let path = self.compile()?;
+        let mut stdout = Vec::<u8>::new();
+        let mut stderr = Vec::<u8>::new();
+        let mut virtual_machine = VMBuilder::new()
+            .memory(MinimumMemory::default())
+            .alu(MinimumALU)
+            .with_stdout(&mut stdout)
+            .with_stderr(&mut stderr)
+            .build();
+
+        let file = FsFile::open(path)?;
+        virtual_machine.load(file);
+        let start = function
+            .os_compat_str()
+            .ok_or("Function name incompatible")?;
+        let result = virtual_machine.run(&start)?;
+        Ok((
+            result,
+            String::from_utf8(stdout)?,
+            String::from_utf8(stderr)?,
+        ))
     }
 }

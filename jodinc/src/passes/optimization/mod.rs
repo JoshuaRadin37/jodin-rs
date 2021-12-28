@@ -1,7 +1,7 @@
 //! Contains different passes that can affect the structure of the AST
 
-use crate::ast::JodinNode;
-use crate::core::error::JodinResult;
+use jodin_common::ast::JodinNode;
+use jodin_common::error::JodinResult;
 
 mod constant_expressions;
 

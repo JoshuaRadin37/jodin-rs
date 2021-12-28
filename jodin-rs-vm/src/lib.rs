@@ -32,11 +32,11 @@ extern crate jodin_asm_derive;
 #[macro_use]
 extern crate log;
 
-use crate::core_traits::{ArithmeticsTrait, GetAsm, MemoryTrait, VirtualMachine};
+use crate::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
 use crate::function_names::{CALL, RECEIVE_MESSAGE};
-use jodin_asm::mvp::bytecode::{Asm, Assembly, Decode};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_asm::mvp::value::Value;
+use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
+use jodin_common::mvp::location::AsmLocation;
+use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

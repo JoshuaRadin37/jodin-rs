@@ -1,7 +1,7 @@
-use jodin_asm::mvp::bytecode::{Asm, Assembly};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_asm::mvp::value::Value;
 use jodin_asm::{default_logging, init_logging};
+use jodin_common::mvp::bytecode::{Asm, Assembly};
+use jodin_common::mvp::location::AsmLocation;
+use jodin_common::mvp::value::Value;
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::function_names::RECEIVE_MESSAGE;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};

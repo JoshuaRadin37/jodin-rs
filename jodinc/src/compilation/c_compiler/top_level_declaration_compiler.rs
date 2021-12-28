@@ -1,9 +1,9 @@
-use crate::ast::{JodinNode, JodinNodeType};
 use crate::compilation::c_compiler::components::TranslationUnit;
 use crate::compilation::c_compiler::{CType, CTypeCompiler, CValidIdentifier, FunctionCompiler};
 use crate::compilation::{MicroCompiler, C99};
-use crate::core::error::JodinResult;
-use crate::passes::analysis::ResolvedIdentityTag;
+use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::core::tags::ResolvedIdentityTag;
+use jodin_common::error::JodinResult;
 
 /// Compiles top level declarations in Jodin
 pub struct TopLevelDeclarationCompiler;

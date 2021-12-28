@@ -36,6 +36,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
+
+[[package]]
 name = "ascii-canvas"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -123,12 +129,6 @@ name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
-
-[[package]]
-name = "bytes"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4872d67bab6358e59559027aa3b9157c53d9358c51423c17554809a8858e0f8"
 
 [[package]]
 name = "cc"
@@ -312,26 +312,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
-name = "jodin-asm"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "bitfield",
- "byteorder",
- "bytes",
- "log",
- "num",
- "num-derive",
- "num-traits",
- "paris",
- "serde",
- "serde_derive",
- "simplelog",
- "smallvec",
- "thiserror",
-]
-
-[[package]]
 name = "jodin-asm-derive"
 version = "0.0.0"
 dependencies = [
@@ -341,14 +321,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "jodin-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "backtrace",
+ "bincode",
+ "bitfield",
+ "byteorder",
+ "itertools",
+ "lalrpop-util",
+ "lazy_static",
+ "log",
+ "num-derive",
+ "num-traits",
+ "rand",
+ "regex",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "simplelog",
+ "static_assertions",
+ "strum",
+ "strum_macros",
+ "thiserror",
+]
+
+[[package]]
 name = "jodin-rs-vm"
 version = "0.1.0"
 dependencies = [
  "bitfield",
  "byteorder",
  "itertools",
- "jodin-asm",
  "jodin-asm-derive",
+ "jodin-common",
  "lazy_static",
  "log",
  "num",
@@ -364,7 +371,7 @@ dependencies = [
 name = "jodin-tests"
 version = "0.1.0"
 dependencies = [
- "jodin-asm",
+ "jodin-common",
  "jodin-rs-vm",
  "jodinc",
  "log",
@@ -374,12 +381,13 @@ dependencies = [
 name = "jodinc"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "backtrace",
  "clap",
  "either",
  "glob",
  "itertools",
- "jodin-asm",
+ "jodin-common",
  "jodin-rs-vm",
  "lalrpop",
  "lalrpop-util",

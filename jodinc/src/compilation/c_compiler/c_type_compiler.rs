@@ -1,10 +1,10 @@
-use crate::ast::{JodinNode, JodinNodeType};
 use crate::compilation::c_compiler::{
     CType, CTypeDeclarator, CTypeSpecifier, CValidIdentifier, TranslationUnit,
 };
 use crate::compilation::{MicroCompiler, C99};
-use crate::core::error::{JodinErrorType, JodinResult};
-use crate::passes::analysis::ResolvedIdentityTag;
+use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::core::tags::ResolvedIdentityTag;
+use jodin_common::error::{JodinErrorType, JodinResult};
 
 /// Compile any type declaration into a c type declaration
 pub struct CTypeCompiler;

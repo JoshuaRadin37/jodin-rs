@@ -1,15 +1,15 @@
 //! The statement compiler
 
-use crate::ast::JodinNodeType;
 use crate::compilation::jodin_vm_compiler::asm_block::{rel_label, AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::{JodinVMCompiler, VariableUseTracker};
 use crate::compilation::{JodinVM, MicroCompiler};
-use crate::core::error::JodinErrorType;
 use crate::parsing::Tok::As;
 use crate::{jasm, JodinError, JodinNode, JodinResult};
-use jodin_asm::mvp::bytecode::Asm;
-use jodin_asm::mvp::value::Value;
+use jodin_common::ast::JodinNodeType;
+use jodin_common::error::JodinErrorType;
+use jodin_common::mvp::bytecode::Asm;
+use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::os::macos::raw::stat;
 use std::rc::Rc;

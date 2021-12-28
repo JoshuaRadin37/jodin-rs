@@ -62,11 +62,11 @@ extern crate log;
 #[macro_use]
 extern crate static_assertions;
 
-use crate::ast::JodinNode;
-use crate::core::error::{JodinError, JodinResult};
-use crate::core::types::type_environment::TypeEnvironment;
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
+use jodin_common::ast::JodinNode;
+use jodin_common::core::types::type_environment::TypeEnvironment;
+use jodin_common::error::{JodinError, JodinResult};
 use std::fs::File;
 
 #[macro_export]
@@ -88,16 +88,13 @@ macro_rules! id {
     };
 }
 
-pub mod ast;
 pub mod cli;
 pub mod compilation;
 pub mod compilation_settings;
-pub mod core;
 pub mod error_reporting;
 pub mod parsing;
 pub mod passes;
 pub mod test_runner;
-pub mod utility;
 
 /// processes the jodin node tree
 pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {

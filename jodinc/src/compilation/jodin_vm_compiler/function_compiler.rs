@@ -1,18 +1,18 @@
 //! The micro-compiler for functions
 
-use crate::ast::tags::TagTools;
-use crate::ast::JodinNodeType;
 use crate::compilation::jodin_vm_compiler::asm_block::{
     rel_label, temp_label, AssemblyBlock, InsertAsm,
 };
 use crate::compilation::jodin_vm_compiler::statement_compiler::StatementCompiler;
 use crate::compilation::jodin_vm_compiler::{invalid_tree_type, VariableUseTracker};
 use crate::compilation::{JodinVM, MicroCompiler};
-use crate::core::error::JodinErrorType;
 use crate::{JodinError, JodinNode, JodinResult};
-use jodin_asm::mvp::bytecode::{Asm, Assembly};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_asm::mvp::value::Value;
+use jodin_common::ast::JodinNodeType;
+use jodin_common::core::tags::TagTools;
+use jodin_common::error::JodinErrorType;
+use jodin_common::mvp::bytecode::{Asm, Assembly};
+use jodin_common::mvp::location::AsmLocation;
+use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::rc::Rc;
 

@@ -5,7 +5,7 @@ edition = "2021"
 
 
 [dependencies]
-jodin-asm = { path = "../jodin-asm" }
+jodin-common = { path = "../jodin-common" }
 jodinc = { path = "../jodinc" }
 jodin-rs-vm= { path = "../jodin-rs-vm" }
 log = "0.4.14"

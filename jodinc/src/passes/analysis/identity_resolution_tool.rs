@@ -1,17 +1,17 @@
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
-use crate::core::identifier::Identifier;
-use crate::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
+use jodin_common::identifier::Identifier;
 
-use crate::ast::JodinNodeType;
-use crate::ast::{CompoundType, JodinNode};
+use jodin_common::ast::JodinNodeType;
+use jodin_common::ast::{CompoundType, JodinNode};
 
-use crate::ast::tags::Tag;
-use crate::ast::tags::TagTools;
-use crate::compilation::incremental::unit::TranslationUnit;
-use crate::core::import::{Import, ImportType};
-use crate::core::privacy::{Visibility, VisibilityTag};
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-use crate::utility::Tree;
+use jodin_common::core::import::{Import, ImportType};
+use jodin_common::core::privacy::{Visibility, VisibilityTag};
+use jodin_common::core::tags::TagTools;
+use jodin_common::core::tags::{ResolvedIdentityTag, Tag};
+use jodin_common::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use jodin_common::unit::TranslationUnit;
+use jodin_common::utility::Tree;
 use std::any::Any;
 use std::cmp::Ordering;
 use std::process::id;
@@ -76,67 +76,6 @@ impl IdentityResolutionTool {
     }
 }
 
-/// This tag adds a resolved [Identifier](crate::core::identifier::Identifier) to a node. This resolved
-/// identifier is absolute.
-#[derive(Debug, Clone)]
-pub struct ResolvedIdentityTag(Identifier);
-
-impl ResolvedIdentityTag {
-    /// The absolute identifier of the tag.
-    pub fn absolute_id(&self) -> &Identifier {
-        &self.0
-    }
-
-    /// Creates a new tag from an identifier-like value.
-    pub fn new<I: Into<Identifier>>(id: I) -> Self {
-        ResolvedIdentityTag(id.into())
-    }
-}
-
-impl Tag for ResolvedIdentityTag {
-    fn tag_type(&self) -> String {
-        String::from("ResolvedId")
-    }
-
-    fn tag_info(&self) -> String {
-        format!("[Resolved '{}']", self.absolute_id())
-    }
-
-    fn max_of_this_tag(&self) -> u32 {
-        1
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-/// A tag that assigns an identifier to an individual block.
-#[derive(Debug)]
-pub struct BlockIdentifierTag(usize);
-
-impl BlockIdentifierTag {
-    /// Creates a new block identifier
-    ///
-    /// # Arguments
-    ///
-    /// * `val`: The value to use as the base for the identifier
-    ///
-    /// returns: BlockIdentifierTag
-    pub fn new(val: usize) -> Self {
-        Self(val)
-    }
-
-    /// Gets the block number of the tag
-    pub fn block_num(&self) -> usize {
-        self.0
-    }
-}
-
 /// Attach to a tag to disable identifier mangling
 #[derive(Debug)]
 pub struct NoMangle;
@@ -162,24 +101,6 @@ impl Tag for NoMangle {
 #[derive(Debug)]
 pub struct IdentifierCreator {
     block_num: Vec<usize>,
-}
-
-impl Tag for BlockIdentifierTag {
-    fn tag_type(&self) -> String {
-        "BlockNum".to_string()
-    }
-
-    fn max_of_this_tag(&self) -> u32 {
-        1
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl IdentifierCreator {
@@ -232,7 +153,7 @@ impl IdentifierCreator {
                     let vis = tag.visibility().clone();
                     visibility_registry.update_absolute_identity(&abs, vis)?;
                 }
-                let tag = ResolvedIdentityTag(abs);
+                let tag = ResolvedIdentityTag::new(abs);
                 tree.add_tag(tag)?;
             }
             JodinNodeType::VarDeclarations {

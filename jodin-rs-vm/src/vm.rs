@@ -1,11 +1,13 @@
 use crate::error::VMError;
-use crate::{ArithmeticsTrait, GetAsm, MemoryTrait, VirtualMachine, CALL, RECEIVE_MESSAGE};
-use jodin_asm::mvp::bytecode::{Asm, Assembly, Decode};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_asm::mvp::value::Value;
+use crate::fault::{Fault, FaultHandle, FaultJumpTable};
+use crate::{ArithmeticsTrait, MemoryTrait, VirtualMachine, CALL, RECEIVE_MESSAGE};
+use jodin_common::error::JodinErrorType;
+use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
+use jodin_common::mvp::location::AsmLocation;
+use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{stderr, stdin, stdout, Read, Write};
 use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -28,6 +30,11 @@ where
     stderr: Box<dyn Write + 'l>,
 
     next_anonymous_function: AtomicU64,
+
+    faults: VecDeque<Fault>,
+    handler: Option<FaultHandle>,
+
+    fault_table: FaultJumpTable,
 }
 
 impl<'l, M, A> VM<'l, M, A>
@@ -241,6 +248,10 @@ where
         self.counter_stack.pop();
         self.counter_stack.push(pc);
     }
+
+    pub fn in_fault(&self) -> bool {
+        self.handler.is_some()
+    }
 }
 
 impl<M, A> VirtualMachine for VM<'_, M, A>
@@ -255,7 +266,7 @@ where
     ) -> Result<usize, VMError> {
         let mut next_instruction = instruction_pointer + 1;
         match bytecode {
-            Asm::Label(_) | Asm::Nop => {}
+            Asm::Label(_) | Asm::PublicLabel(_) | Asm::Nop => {}
             Asm::Return => {
                 self.counter_stack.pop();
                 let next = self
@@ -400,18 +411,50 @@ where
         self.cont = true;
         let start_counter = self.label_to_instruction[start_label];
         self.counter_stack.push(start_counter);
-        while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
-            let pc = self.program_counter();
-            let ref instruction = self.instructions[pc].clone();
-            trace!("0x{:016X}: {:?}", pc, instruction);
-            let next = self.interpret_instruction(instruction, pc)?;
-            self.set_program_counter(next);
+        loop {
+            while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
+                let pc = self.program_counter();
+                let ref instruction = self.instructions[pc].clone();
+                trace!("0x{:016X}: {:?}", pc, instruction);
+                let next = self.interpret_instruction(instruction, pc)?;
+                self.set_program_counter(next);
+            }
+
+            match std::mem::replace(&mut self.handler, None) {
+                None => break,
+                Some(handle) => {
+                    todo!("Found handle")
+                }
+            }
         }
         match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
         }
+    }
+
+    fn fault(&mut self, fault: Fault) {
+        let target = self.fault_table.get_fault_jump(&fault);
+
+        let saved_counter = std::mem::replace(&mut self.counter_stack, vec![0]);
+        let saved_stack = self.memory.take_stack();
+
+        let next_pc = match &target {
+            Value::Function(AsmLocation::Label(s)) => {
+                match self.label_to_instruction.entry(s.clone()) {
+                    Entry::Occupied(v) => *v.get(),
+                    Entry::Vacant(_) => {
+                        self.fault(Fault::DoubleFault);
+                        return;
+                    }
+                }
+            }
+            v => panic!("Invalid value for fault jump target (value = {:?})", v),
+        };
+        let handle = FaultHandle::new(saved_counter, saved_stack, fault, target);
+        self.handler = Some(handle);
+        self.counter_stack.push(next_pc);
     }
 }
 
@@ -443,6 +486,10 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             stdout,
             stderr,
             next_anonymous_function: Default::default(),
+
+            faults: VecDeque::new(),
+            handler: None,
+            fault_table: Default::default(),
         }
     }
 }

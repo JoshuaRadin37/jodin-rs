@@ -1,14 +1,15 @@
 //! Different modules that make up the parsing mechanisms for jodin. The parsing system is based
 //! off of the pest crate.
 
-use crate::ast::{JodinNode, JodinNodeType};
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
+use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
 use std::fmt::{Display, Formatter};
 
-use crate::core::operator::Operator;
+use jodin_common::core::operator::Operator;
 
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::utility::Flatten;
+use anyhow::anyhow;
+use jodin_common::core::types::intermediate_type::IntermediateType;
+use jodin_common::utility::Flatten;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::FromStr;
@@ -357,31 +358,33 @@ type ParseResult = JodinResult<JodinNode>;
 /// Parse an expression into a parse result
 pub fn parse_expression<S: AsRef<str>>(expr: S) -> ParseResult {
     Flatten::flatten(
-        parse!(jodin_grammar::ExpressionParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+        parse!(jodin_grammar::ExpressionParser, expr.as_ref())
+            .map_err(|e| JodinError::from(anyhow!("{}", e))),
     )
 }
 
 pub fn parse_type<S: AsRef<str>>(expr: S) -> JodinResult<IntermediateType> {
     parse!(jodin_grammar::CanonicalTypeParser, expr.as_ref())
-        .map_err(|e| JodinError::new(JodinErrorType::LexerError("Couldn't parse".to_string())))
+        .map_err(|e| JodinError::from(anyhow!("{}", e)))
 }
 
 pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
     Flatten::flatten(
-        parse!(jodin_grammar::JodinFileParser, expr.as_ref()).map_err(|e| JodinError::from(e)),
+        parse!(jodin_grammar::JodinFileParser, expr.as_ref())
+            .map_err(|e| JodinError::from(anyhow!("{}", e))),
     )
 }
 
 #[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
-    use crate::ast::{JodinNode, JodinNodeType};
-    use crate::core::identifier::Identifier;
-    use crate::core::literal::Literal;
-    use crate::core::operator::Operator;
-    use crate::core::types::primitives::Primitive;
-    use crate::core::types::Type;
     use crate::parsing::{JodinLexer, Tok};
+    use jodin_common::ast::{JodinNode, JodinNodeType};
+    use jodin_common::core::literal::Literal;
+    use jodin_common::core::operator::Operator;
+    use jodin_common::core::types::primitives::Primitive;
+    use jodin_common::core::types::Type;
+    use jodin_common::identifier::Identifier;
     use std::iter::FromIterator;
     use std::str::FromStr;
 

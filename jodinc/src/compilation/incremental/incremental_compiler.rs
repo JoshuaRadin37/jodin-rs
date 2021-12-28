@@ -1,7 +1,5 @@
 //! The incremental compiler uses an internal compiler that individually compiles parse nodes
 
-use crate::compilation::incremental::unit::{CompilationObject, Incremental, TranslationUnit};
-use crate::compilation::incremental::Error;
 use crate::compilation::jodin_vm_compiler::{
     split_by_module, CompiledModule, JodinVMCompiler, Module, ModuleCompiler,
 };
@@ -12,6 +10,7 @@ use crate::compilation_settings::CompilationSettings;
 use crate::parsing::parse_program;
 use crate::passes::analysis::analyze_with_preload;
 use crate::{optimize, JodinError, JodinNode, JodinResult};
+use jodin_common::unit::{CompilationObject, Incremental, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::fs::{File, FileType};
@@ -101,7 +100,7 @@ impl<'path> IncrementalDirectory<'path> {
     }
 
     /// Converts this directory into a vector of modules
-    pub fn to_modules(&self) -> Result<Vec<CompilationObject>, Error> {
+    pub fn to_modules(&self) -> Result<Vec<CompilationObject>, JodinError> {
         let mut output = vec![];
         let mut dir_stack = VecDeque::new();
         dir_stack.push_front(self.dir_path.to_path_buf());

@@ -1,12 +1,12 @@
 //! Contains supporting code for inserting and creating assembly code for the compiler
 
 use crate::compilation::{Compilable, Context, JodinVM, PaddedWriter};
-use crate::core::identifier::Identifier;
 use crate::JodinResult;
 use itertools::Itertools;
-use jodin_asm::mvp::bytecode::{Asm, Assembly, Bytecode};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_rs_vm::core_traits::GetAsm;
+use jodin_common::identifier::Identifier;
+use jodin_common::mvp::bytecode::GetAsm;
+use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode};
+use jodin_common::mvp::location::AsmLocation;
 use std::collections::HashSet;
 use std::fmt::{format, Debug, Display, Formatter};
 use std::io::Write;
@@ -407,7 +407,7 @@ impl Compilable<JodinVM> for AssemblyBlock {
 
 impl Compilable<JodinVM> for Asm {
     fn compile<W: Write>(self, _context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        use jodin_asm::mvp::bytecode::Encode;
+        use jodin_common::mvp::bytecode::Encode;
         // let encoded = self.encode();
         let encoded = Some(self);
         for byte in encoded {

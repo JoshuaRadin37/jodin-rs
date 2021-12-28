@@ -1,5 +1,5 @@
 use jodin_asm::init_logging;
-use jodinc::core::error::JodinError;
+use jodin_common::error::JodinError;
 use jodinc::parsing::parse_program;
 use jodinc::process_jodin_node;
 use log::LevelFilter;

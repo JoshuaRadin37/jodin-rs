@@ -1,16 +1,16 @@
 //! The expression compiler
 
-use crate::ast::tags::TagTools;
-use crate::ast::JodinNodeType;
 use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::VariableUseTracker;
 use crate::compilation::{JodinVM, MicroCompiler};
-use crate::core::error::JodinErrorType;
-use crate::core::operator::Operator;
 use crate::{jasm, JodinNode, JodinResult};
-use jodin_asm::mvp::bytecode::{Asm, Assembly};
-use jodin_asm::mvp::location::AsmLocation;
-use jodin_asm::mvp::value::Value;
+use jodin_common::ast::JodinNodeType;
+use jodin_common::core::operator::Operator;
+use jodin_common::core::tags::TagTools;
+use jodin_common::error::JodinErrorType;
+use jodin_common::mvp::bytecode::{Asm, Assembly};
+use jodin_common::mvp::location::AsmLocation;
+use jodin_common::mvp::value::Value;
 use jodin_rs_vm::function_names::CALL;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -69,12 +69,13 @@ impl ExpressionCompiler {
             JodinNodeType::Literal(l) => Ok(AssemblyBlock::from(Asm::Push(l.into()))),
             JodinNodeType::Identifier(..) => {
                 let id = tree.resolved_id()?;
-                let var = self
-                    .0
-                    .borrow()
-                    .get_id(id)
-                    .expect(format!("id {:?} not set", id).as_str());
-                Ok(AssemblyBlock::from(Asm::GetVar(var as u64)))
+                let var = self.0.borrow().get_id(id);
+                match var {
+                    None => Ok(AssemblyBlock::from(Asm::GetSymbol(
+                        id.os_compat().unwrap().to_str().unwrap().to_string(),
+                    ))),
+                    Some(v) => Ok(AssemblyBlock::from(Asm::GetVar(v as u64))),
+                }
             }
             JodinNodeType::ConstructorCall { .. } => {
                 todo!()

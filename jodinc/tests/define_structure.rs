@@ -1,18 +1,18 @@
 use jodin_asm::init_logging;
-use jodinc::ast::tags::TagTools;
-use jodinc::core::error::JodinResult;
-use jodinc::core::identifier::Identifier;
-use jodinc::core::identifier_resolution::IdentifierResolver;
-use jodinc::core::privacy::Visibility;
-use jodinc::core::types::intermediate_type::IntermediateType;
-use jodinc::core::types::primitives::Primitive;
-use jodinc::core::types::resolved_type::{
+use jodin_common::core::identifier_resolution::IdentifierResolver;
+use jodin_common::core::privacy::Visibility;
+use jodin_common::core::tags::TagTools;
+use jodin_common::core::types::intermediate_type::IntermediateType;
+use jodin_common::core::types::primitives::Primitive;
+use jodin_common::core::types::resolved_type::{
     ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
 };
-use jodinc::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
+use jodin_common::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
+use jodin_common::error::JodinResult;
+use jodin_common::identifier::Identifier;
+use jodin_common::utility::Visitor;
 use jodinc::parsing::parse_program;
 use jodinc::process_jodin_node;
-use jodinc::utility::Visitor;
 use log::LevelFilter;
 use logos::internal::CallbackResult;
 use std::error::Error;

@@ -8,9 +8,9 @@ use std::io;
 
 // pub use c_compiler::{C99Compiler, C99};
 
-use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
-use crate::core::error::JodinResult;
+use jodin_common::ast::JodinNode;
+use jodin_common::error::JodinResult;
 
 #[cfg(feature = "c_compiler")]
 pub mod c_compiler;

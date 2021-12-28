@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use jodin_asm::{default_logging, init_logging};
-use jodinc::test_runner::ProjectBuilder;
+use jodin_common::test_runner::ProjectBuilder;
 use log::LevelFilter;
 use std::error::Error;
 use std::path::PathBuf;

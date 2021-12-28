@@ -1,9 +1,9 @@
 //! The C Compiler for Jodin
 
-use crate::ast::JodinNode;
 use crate::compilation::{Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target};
 use crate::compilation_settings::CompilationSettings;
-use crate::core::error::JodinResult;
+use jodin_common::ast::JodinNode;
+use jodin_common::error::JodinResult;
 
 mod c_type_compiler;
 mod function_compiler;
@@ -16,9 +16,10 @@ pub use statement_compiler::StatementCompiler;
 pub use top_level_declaration_compiler::TopLevelDeclarationCompiler;
 
 mod components;
+pub mod dependency_graph;
+
 pub use components::*;
 
-use crate::core::dependency_graph::{DependencyGraph, DependencyInfo};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::Write;

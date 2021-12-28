@@ -3,18 +3,18 @@ use std::env::var;
 
 use itertools::Itertools;
 
-use crate::ast::tags::TagTools;
-use crate::ast::JodinNodeType;
-use crate::ast::{CompoundType, JodinNode};
-use crate::compilation::incremental::unit::TranslationUnit;
-use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::identifier::Identifier;
-use crate::core::privacy::{Visibility, VisibilityTag};
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::structure::Structure;
-use crate::core::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
-use crate::core::types::Field;
-use crate::utility::Tree;
+use jodin_common::ast::JodinNodeType;
+use jodin_common::ast::{CompoundType, JodinNode};
+use jodin_common::core::privacy::{Visibility, VisibilityTag};
+use jodin_common::core::tags::TagTools;
+use jodin_common::core::types::intermediate_type::IntermediateType;
+use jodin_common::core::types::structure::Structure;
+use jodin_common::core::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
+use jodin_common::core::types::Field;
+use jodin_common::error::{JodinErrorType, JodinResult};
+use jodin_common::identifier::Identifier;
+use jodin_common::unit::TranslationUnit;
+use jodin_common::utility::Tree;
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd)]
 enum AdvTypeResolutionTarget {

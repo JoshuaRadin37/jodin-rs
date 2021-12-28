@@ -1,4 +1,4 @@
-use crate::core::identifier::Identifier;
+use jodin_common::identifier::Identifier;
 use std::iter::FromIterator;
 
 /// Creates dependency tags
