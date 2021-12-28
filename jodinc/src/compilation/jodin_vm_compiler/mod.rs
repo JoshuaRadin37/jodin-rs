@@ -320,6 +320,7 @@ impl VariableUseTracker {
             self.unused_vars.pop().unwrap()
         };
         self.id_to_var_number.insert(id.clone(), num);
+        info!("Set id {} to var #{}", id, num);
         num
     }
 

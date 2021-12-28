@@ -69,9 +69,9 @@ impl StatementCompiler {
         compiled_expression.insert_asm(Asm::Not);
 
         if else_block.is_some() {
-            compiled_expression.insert_asm(Asm::cond_goto(rel_label("false_start")));
+            output.insert_asm(Asm::cond_goto(rel_label("false_start")));
         } else {
-            compiled_expression.insert_asm(Asm::cond_goto(rel_label("if_end")));
+            output.insert_asm(Asm::cond_goto(rel_label("if_end")));
         }
 
         output.insert_before_label(compiled_expression, rel_label("true_start"));

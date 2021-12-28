@@ -27,6 +27,8 @@ pub enum Asm {
     CondGoto(AsmLocation),
 
     Push(Value),
+    /// Pops the top of the stack
+    Pop,
     /// Clears the stack
     Clear,
 
@@ -58,12 +60,22 @@ pub enum Asm {
     /// Get the remainder of two values
     Remainder,
 
+    /// Checks if top of stack is greater than 0
+    GT0,
+
     /// & two values on the stack
     And,
     /// | two values on the stack
     Not,
     /// ! a value on the stack
     Or,
+
+    /// Pop the top of the stack and makes the popped value either be
+    /// a 1u8 or a 0u8.
+    ///
+    /// - !0 -> 1
+    /// - 0 -> 0
+    Boolify,
 
     /// Enables the _dynamic_ aspect in this location. Pops 3 values from the stack.
     /// The first is the object being sent a message. The second is the "name" of the message.

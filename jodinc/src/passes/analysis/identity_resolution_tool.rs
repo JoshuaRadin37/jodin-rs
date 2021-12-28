@@ -601,16 +601,18 @@ impl IdentifierSetter {
 
                 id_resolver.pop_namespace();
             }
-            JodinNodeType::WhileStatement { cond: _, statement } => {
+            JodinNodeType::WhileStatement { cond, statement } => {
+                self.set_identities(cond, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
             }
             JodinNodeType::IfStatement {
-                cond: _,
+                cond,
                 statement,
                 else_statement,
             } => {
+                self.set_identities(cond, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
@@ -622,9 +624,10 @@ impl IdentifierSetter {
                 }
             }
             JodinNodeType::SwitchStatement {
-                to_switch: _,
+                to_switch,
                 labeled_statements,
             } => {
+                self.set_identities(to_switch, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 for statement in labeled_statements {
                     self.set_identities(statement, id_resolver, visibility_resolver)?;
@@ -633,14 +636,20 @@ impl IdentifierSetter {
             }
             JodinNodeType::ForStatement {
                 init,
-                cond: _,
-                delta: _,
+                cond,
+                delta,
                 statement,
             } => {
                 self.start_block(id_resolver);
 
                 if let Some(init) = init {
                     self.set_identities(init, id_resolver, visibility_resolver)?;
+                }
+                if let Some(cond) = cond {
+                    self.set_identities(cond, id_resolver, visibility_resolver)?;
+                }
+                if let Some(delta) = delta {
+                    self.set_identities(delta, id_resolver, visibility_resolver)?;
                 }
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
 

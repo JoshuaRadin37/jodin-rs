@@ -21,7 +21,7 @@ pub const RELATIVE_LABEL_MARKER: char = '@';
 pub const REMOVE_LABEL_MARKER: char = '#';
 
 /// An assembly block marks the scope of local labels
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AssemblyBlock {
     pub name: Option<String>,
     assembly: Vec<AssemblyBlockComponent>,
@@ -31,8 +31,21 @@ pub struct AssemblyBlock {
 macro_rules! jasm {
     ($($asm:expr),*) => {
         {
-            let asm = vec![$($asm),*];
-            $crate::compilation::jodin_vm_compiler::AssemblyBlock::from(asm)
+            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
+            let mut output = AssemblyBlock::new(None);
+            $(
+                output.insert_asm($asm);
+            )*
+        }
+    };
+    ($name:ident: $($asm:expr),*) => {
+        {
+            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
+
+            let mut output = AssemblyBlock::new(Some($name));
+            $(
+                output.insert_asm($asm);
+            )*
         }
     };
 }
