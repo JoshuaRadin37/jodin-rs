@@ -1,3 +1,4 @@
+use crate::core_traits::VMLoadable;
 use crate::error::VMError;
 use crate::fault::{Fault, FaultHandle, FaultJumpTable};
 use crate::{ArithmeticsTrait, MemoryTrait, VirtualMachine, CALL, RECEIVE_MESSAGE};
@@ -8,8 +9,10 @@ use jodin_common::mvp::value::Value;
 use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
+use std::ffi::OsStr;
 use std::io::{stderr, stdin, stdout, Read, Write};
 use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct VM<'l, M, A>
@@ -200,7 +203,7 @@ where
     }
 
     fn program_counter(&self) -> usize {
-        *self.counter_stack.last().unwrap()
+        self.counter_stack.last().copied().unwrap_or(0)
     }
 
     fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) -> Option<usize> {
@@ -421,7 +424,7 @@ where
         info!("Created new labels = {:?}", new_labels);
     }
 
-    fn load_static<A: GetAsm>(&mut self, asm: A) {
+    fn load_static<Assembly: GetAsm>(&mut self, asm: Assembly) {
         let start_index = self.instructions.len();
         let label = "@@STATIC".to_string();
         self.label_to_instruction.insert(label.clone(), start_index);
@@ -439,7 +442,7 @@ where
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
                 let ref instruction = self.instructions[pc].clone();
-                trace!("0x{:016X}: {:?}", pc, instruction);
+                info!(target: "virtual_machine", "0x{:016X}: {:?}", pc, instruction);
                 let next = self.interpret_instruction(instruction, pc)?;
                 self.set_program_counter(next);
             }
@@ -447,8 +450,8 @@ where
             match std::mem::replace(&mut self.handler, None) {
                 None => break,
                 Some(handle) => {
-                    todo!("Found handle");
                     self.kernel_mode = false;
+                    self.end_fault(handle);
                 }
             }
         }
@@ -499,6 +502,7 @@ pub struct VMBuilder<'l, A, M> {
     stdin: Box<dyn Read + 'l>,
     stdout: Box<dyn Write + 'l>,
     stderr: Box<dyn Write + 'l>,
+    object_path: Vec<PathBuf>,
 }
 
 impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
@@ -509,8 +513,9 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             stdin,
             stdout,
             stderr,
+            object_path,
         } = self;
-        VM {
+        let mut vm = VM {
             memory: memory.expect("Memory module must be set"),
             alu: arithmetic.expect("Arithmetic module must be set"),
             cont: false,
@@ -525,7 +530,9 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             handler: None,
             fault_table: Default::default(),
             kernel_mode: false,
-        }
+        };
+        for obj_path in object_path {}
+        vm
     }
 }
 
@@ -537,6 +544,7 @@ impl<'l, A, M> VMBuilder<'l, A, M> {
             stdin: Box::new(stdin()),
             stdout: Box::new(stdout()),
             stderr: Box::new(stderr()),
+            object_path: vec![],
         }
     }
 
@@ -552,6 +560,12 @@ impl<'l, A, M> VMBuilder<'l, A, M> {
 
     pub fn with_stderr<W: Write + 'l>(mut self, writer: W) -> Self {
         self.stderr = Box::new(writer);
+        self
+    }
+
+    pub fn object_path<P: AsRef<OsStr>>(mut self, path: P) -> Self {
+        let as_path = PathBuf::from(path.as_ref());
+        self.object_path.push(as_path);
         self
     }
 }

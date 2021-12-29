@@ -88,3 +88,19 @@ pub trait ArithmeticsTrait {
     fn shift_left(&self, a: Value, b: Value) -> Value;
     fn shift_right(&self, a: Value, b: Value) -> Value;
 }
+
+/// Defines objects that can be loaded into the VM. Prefer to use this trait when running the VM.
+pub trait VMLoadable: GetAsm {
+    fn load_into_vm<VM>(self, vm: &mut VM)
+    where
+        VM: VirtualMachine;
+}
+
+impl<A: GetAsm> VMLoadable for A {
+    fn load_into_vm<VM>(self, vm: &mut VM)
+    where
+        VM: VirtualMachine,
+    {
+        vm.load(self);
+    }
+}
