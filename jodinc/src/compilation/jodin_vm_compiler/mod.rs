@@ -1,6 +1,6 @@
 use crate::compilation::jodin_vm_compiler::asm_block::AssemblyBlock;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
-use crate::{JodinError, JodinNode, JodinResult};
+use crate::{jasm, JodinError, JodinNode, JodinResult};
 use jodin_common::asm_version::Version;
 use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::{
@@ -83,6 +83,9 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
                             builder.translation_object_compiler(resolved_id.this());
                         object_compiler.compile(member, settings)?;
                     }
+                    let static_obj: CompilationObject = module.static_object(&builder);
+                    let ref mut writer = static_obj.writer();
+                    Compilable::<JodinVM>::compile(static_obj, &context, writer)?;
                 }
                 Some(s) => {
                     let mut writer = PaddedWriter::new(s);
@@ -117,6 +120,20 @@ impl ObjectCompilerBuilder {
             module_compiler: self,
             relative_path: PathBuf::from(target.as_ref()),
         }
+    }
+
+    /// Create a path relative to the directory used by this object compiler builder
+    pub fn relative_path<'a>(
+        &self,
+        path: impl AsRef<Path>,
+        extension: impl Into<Option<&'a str>>,
+    ) -> PathBuf {
+        let mut output = self.dir_path.clone();
+        output.push(path);
+        if let Some(ext) = extension.into() {
+            output.set_extension(ext);
+        }
+        output
     }
 }
 
@@ -191,6 +208,7 @@ impl<'j> Module<'j> {
         ObjectCompilerBuilder::new(&self.identifier, buffer)
     }
 
+    /// Objects are individually compilable parts of jodin
     pub fn objects(&self) -> impl IntoIterator<Item = &JodinNode> {
         self.members
             .iter()
@@ -199,11 +217,33 @@ impl<'j> Module<'j> {
                 | JodinNodeType::CompoundTypeDefinition { .. } => true,
                 _ => false,
             })
-            .map(|node| *node)
+            .map(|&node| node)
     }
 
-    pub fn declarations(&self) -> Vec<&JodinNode> {
-        vec![]
+    /// Declarations aren't individually compilable
+    pub fn declarations(&self) -> impl IntoIterator<Item = &JodinNode> {
+        self.members
+            .iter()
+            .filter(|&&node| match node.r#type() {
+                JodinNodeType::ExternDeclaration { .. } | JodinNodeType::VarDeclarations { .. } => {
+                    true
+                }
+                _ => false,
+            })
+            .map(|&node| node)
+    }
+
+    /// Creates the compilation object
+    pub fn static_object(&self, builder: &ObjectCompilerBuilder) -> CompilationObject {
+        let path = self.static_object_path(|s| builder.relative_path(s, "jobj"));
+        CompilationObject::new(path, self.identifier.clone(), vec![], jasm![].normalize())
+    }
+
+    fn static_object_path<F>(&self, path_builder: F) -> PathBuf
+    where
+        F: Fn(&str) -> PathBuf,
+    {
+        (path_builder)("static")
     }
 }
 

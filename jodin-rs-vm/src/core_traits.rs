@@ -33,6 +33,11 @@ pub trait VirtualMachine {
 
     /// Forces the VM to encounter a fault
     fn fault(&mut self, fault: Fault);
+
+    /// Checks whether the virtual machine is in kernel mode.
+    ///
+    /// The VM should only enter kernel mode while processing a fault or loading `static.jobj` files.
+    fn is_kernel_mode(&self) -> bool;
 }
 
 /// Memory defines a way of storing and getting variables.

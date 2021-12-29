@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub enum Fault {
     /// The following symbol is missing
     MissingSymbol(String),
+    /// A fault occurred in a fault
     DoubleFault,
 }
 
@@ -22,10 +23,10 @@ impl Fault {
 }
 
 pub struct FaultHandle {
-    stored_pc: Vec<usize>,
-    stored_stack: Vec<Value>,
-    fault: Fault,
-    target_function: Value,
+    pub stored_pc: Vec<usize>,
+    pub stored_stack: Vec<Value>,
+    pub fault: Fault,
+    pub target_function: Value,
 }
 
 impl FaultHandle {

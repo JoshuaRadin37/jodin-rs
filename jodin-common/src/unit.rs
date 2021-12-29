@@ -163,6 +163,11 @@ impl CompilationObject {
             jasm,
         }
     }
+
+    pub fn writer(&self) -> PaddedWriter<File> {
+        let file = File::create(&self.file_location).unwrap();
+        PaddedWriter::new(file)
+    }
 }
 
 impl<T: Target> Compilable<T> for CompilationObject {

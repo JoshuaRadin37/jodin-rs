@@ -21,8 +21,8 @@ pub enum Asm {
     PublicLabel(String),
 
     Nop,
-    Halt,
 
+    Halt,
     /// Always go to this location
     Goto(AsmLocation),
     /// Go to this location if the value on the stack is NOT 0.
@@ -41,8 +41,13 @@ pub enum Asm {
     /// Clears variable #
     ClearVar(u64),
 
-    /// Push some value associated with a symbol. Symbols are created at load time
+    /// Push some value associated with a symbol.
     GetSymbol(String),
+    /// Pops the top of the stack and sets it to symbol.
+    ///
+    /// # Warning
+    /// Only works while VM is in "kernel" mode
+    SetSymbol(String),
 
     /// Gets an attribute from a dictionary.
     GetAttribute(String),

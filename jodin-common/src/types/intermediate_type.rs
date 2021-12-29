@@ -9,7 +9,7 @@
 //! # Examples
 //!
 //! A function pointer that takes in two integer pointers as input and an integer as an output would be
-//! defined as `int (int*, int*)` in jodin. This would results in an `IntermediateType` with this value:
+//! defined as `fn(*int, *int) -> int` in jodin. This would results in an `IntermediateType` with this value:
 //! ```
 //! use jodin_common::types::intermediate_type::*;
 //! use jodin_common::types::primitives::Primitive;

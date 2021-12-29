@@ -31,10 +31,10 @@ where
 
     next_anonymous_function: AtomicU64,
 
-    faults: VecDeque<Fault>,
     handler: Option<FaultHandle>,
 
     fault_table: FaultJumpTable,
+    kernel_mode: bool,
 }
 
 impl<'l, M, A> VM<'l, M, A>
@@ -252,6 +252,20 @@ where
     pub fn in_fault(&self) -> bool {
         self.handler.is_some()
     }
+
+    fn end_fault(&mut self, handle: FaultHandle) {
+        let FaultHandle {
+            stored_pc,
+            stored_stack,
+            fault: _,
+            target_function: _,
+        } = handle;
+
+        self.counter_stack = stored_pc;
+        self.memory.replace_stack(stored_stack);
+    }
+
+    fn handle_native_fault(&mut self, handle: &FaultHandle) {}
 }
 
 impl<M, A> VirtualMachine for VM<'_, M, A>
@@ -423,7 +437,8 @@ where
             match std::mem::replace(&mut self.handler, None) {
                 None => break,
                 Some(handle) => {
-                    todo!("Found handle")
+                    todo!("Found handle");
+                    self.kernel_mode = false;
                 }
             }
         }
@@ -439,6 +454,7 @@ where
 
         let saved_counter = std::mem::replace(&mut self.counter_stack, vec![0]);
         let saved_stack = self.memory.take_stack();
+        let handle = FaultHandle::new(saved_counter, saved_stack, fault, target.clone());
 
         let next_pc = match &target {
             Value::Function(AsmLocation::Label(s)) => {
@@ -450,11 +466,20 @@ where
                     }
                 }
             }
+            Value::Native => {
+                self.kernel_mode = true;
+                self.handle_native_fault(&handle);
+                0
+            }
             v => panic!("Invalid value for fault jump target (value = {:?})", v),
         };
-        let handle = FaultHandle::new(saved_counter, saved_stack, fault, target);
         self.handler = Some(handle);
         self.counter_stack.push(next_pc);
+        self.kernel_mode = true;
+    }
+
+    fn is_kernel_mode(&self) -> bool {
+        self.kernel_mode
     }
 }
 
@@ -487,9 +512,9 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             stderr,
             next_anonymous_function: Default::default(),
 
-            faults: VecDeque::new(),
             handler: None,
             fault_table: Default::default(),
+            kernel_mode: false,
         }
     }
 }
