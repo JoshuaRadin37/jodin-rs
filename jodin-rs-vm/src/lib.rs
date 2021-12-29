@@ -45,9 +45,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::io::{stderr, stdin, stdout, Read, Write};
 
 pub mod core_traits;
+pub use core_traits::*;
 pub mod error;
 pub mod fault;
 pub mod function_names;
 pub mod kernel;
+pub mod loadables;
 pub mod mvp;
 pub mod vm;

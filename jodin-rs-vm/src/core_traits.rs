@@ -90,8 +90,17 @@ pub trait ArithmeticsTrait {
 }
 
 /// Defines objects that can be loaded into the VM. Prefer to use this trait when running the VM.
-pub trait VMLoadable: GetAsm {
+pub trait VMLoadable {
     fn load_into_vm<VM>(self, vm: &mut VM)
+    where
+        VM: VirtualMachine;
+}
+
+/// Defines objects that can be loaded into the VM. Prefer to use this trait when running the VM.
+///
+/// Loading this can fail, however.
+pub trait VMTryLoadable {
+    fn try_load_into_vm<VM>(self, vm: &mut VM) -> Result<(), VMError>
     where
         VM: VirtualMachine;
 }
@@ -102,5 +111,15 @@ impl<A: GetAsm> VMLoadable for A {
         VM: VirtualMachine,
     {
         vm.load(self);
+    }
+}
+
+impl<V: VMLoadable> VMTryLoadable for V {
+    fn try_load_into_vm<VM>(self, vm: &mut VM) -> Result<(), VMError>
+    where
+        VM: VirtualMachine,
+    {
+        self.load_into_vm(vm);
+        Ok(())
     }
 }

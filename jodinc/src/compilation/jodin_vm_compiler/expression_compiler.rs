@@ -8,6 +8,7 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::operator::Operator;
 use jodin_common::core::tags::TagTools;
+use jodin_common::core::NATIVE_OBJECT;
 use jodin_common::error::JodinErrorType;
 use jodin_common::mvp::bytecode::{Asm, Assembly};
 use jodin_common::mvp::location::AsmLocation;
@@ -49,10 +50,22 @@ impl ExpressionCompiler {
                     arg_count += 1;
                 }
 
-                let called = self.expr(called)?;
+                let mut called_asm = self.expr(called)?;
+                if let JodinNodeType::Identifier(id) = called.r#type() {
+                    if id == NATIVE_OBJECT {
+                        output.insert_asm(jasm![
+                            Asm::Push(Value::Native),
+                            Asm::Push(Value::Str("invoke".to_string())),
+                            Asm::Push(Value::Native),
+                            Asm::SendMessage
+                        ]);
+                        return Ok(output);
+                    }
+                }
+
                 let message = Asm::Push(Value::Str(CALL.to_string()));
                 output.insert_asm(message);
-                output.insert_asm(called);
+                output.insert_asm(called_asm);
                 output.insert_asm(Asm::SendMessage);
             }
             e => {

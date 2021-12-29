@@ -10,6 +10,7 @@ use jodin_common::core::import::{Import, ImportType};
 use jodin_common::core::privacy::{Visibility, VisibilityTag};
 use jodin_common::core::tags::TagTools;
 use jodin_common::core::tags::{ResolvedIdentityTag, Tag};
+use jodin_common::core::NATIVE_OBJECT;
 use jodin_common::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use jodin_common::types::StorageModifier;
 use jodin_common::unit::TranslationUnit;
@@ -29,20 +30,19 @@ pub struct IdentityResolutionTool {
 impl IdentityResolutionTool {
     /// Creates a new id resolution tool.
     pub fn new() -> Self {
-        Self {
-            creator: IdentifierCreator::new(),
-            setter: IdentifierSetter::new(),
-            visibility: Registry::new(),
-        }
-    }
-
-    /// Creates a new id resolution tool.
-    pub fn with_translation_units(units: &[TranslationUnit]) -> Self {
-        let mut output = Self {
+        let mut tool = Self {
             creator: IdentifierCreator::new(),
             setter: IdentifierSetter::new(),
             visibility: Registry::new(),
         };
+        tool.visibility
+            .insert_with_identifier(Visibility::Public, Identifier::from(NATIVE_OBJECT));
+        tool
+    }
+
+    /// Creates a new id resolution tool.
+    pub fn with_translation_units(units: &[TranslationUnit]) -> Self {
+        let mut output = Self::new();
         for unit in units {
             let vis = unit.vis.clone();
             let id = unit.name.clone();
@@ -474,7 +474,7 @@ impl IdentifierSetter {
                 }
             }
             JodinNodeType::Identifier(id) => {
-                if !has_id {
+                if !has_id && id.to_string() != NATIVE_OBJECT {
                     debug!(
                         "Attempting to find {} from {}",
                         id,
@@ -486,6 +486,8 @@ impl IdentifierSetter {
                     let resolved_tag = ResolvedIdentityTag::new(resolved);
 
                     tree.add_tag(resolved_tag)?;
+                } else if id.to_string() == NATIVE_OBJECT {
+                    tree.add_tag(ResolvedIdentityTag::new(NATIVE_OBJECT))?;
                 }
             }
             JodinNodeType::FunctionDefinition {

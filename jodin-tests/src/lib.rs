@@ -16,8 +16,7 @@ fn fibonacci() {
     init_logging(LevelFilter::Info);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
-            extern const print: fn(*char);
-             
+            
             fn fibonacci(n: int) -> int {
                 if (n < 2) {
                     return n;
@@ -39,6 +38,10 @@ fn fibonacci() {
                 } else {
                     return a;
                 }
+            }
+            
+            fn print(value: int) {
+                __NATIVE("print", value);
             }
             
             fn main() -> int {
@@ -67,6 +70,7 @@ fn fibonacci() {
     let mut vm = VMBuilder::new()
         .memory(MinimumMemory::default())
         .alu(MinimumALU)
+        .object_path(dir)
         .build();
 
     assert_eq!(vm.run("main").unwrap(), 0);

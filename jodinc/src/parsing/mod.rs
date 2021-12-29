@@ -184,7 +184,7 @@ pub enum Tok<'input> {
     Colon,
     #[token("?")]
     Qmark,
-    #[regex(r"__\w+", priority = 100)]
+    #[regex(r"\$\w+", priority = 100)]
     SpecialKeyword(&'input str),
     #[token("++")]
     Increment,

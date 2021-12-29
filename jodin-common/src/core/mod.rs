@@ -8,3 +8,5 @@ pub mod literal;
 pub mod operator;
 pub mod privacy;
 pub mod tags;
+
+pub static NATIVE_OBJECT: &str = "__NATIVE";
