@@ -418,7 +418,7 @@ where
             }
             self.instructions.push(asm);
         }
-        debug!("Created new labels = {:?}", new_labels);
+        info!("Created new labels = {:?}", new_labels);
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
