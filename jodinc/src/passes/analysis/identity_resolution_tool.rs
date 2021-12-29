@@ -5,11 +5,13 @@ use jodin_common::identifier::Identifier;
 use jodin_common::ast::JodinNodeType;
 use jodin_common::ast::{CompoundType, JodinNode};
 
+use anyhow::anyhow;
 use jodin_common::core::import::{Import, ImportType};
 use jodin_common::core::privacy::{Visibility, VisibilityTag};
 use jodin_common::core::tags::TagTools;
 use jodin_common::core::tags::{ResolvedIdentityTag, Tag};
 use jodin_common::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use jodin_common::core::types::StorageModifier;
 use jodin_common::unit::TranslationUnit;
 use jodin_common::utility::Tree;
 use std::any::Any;
@@ -418,6 +420,31 @@ impl IdentifierSetter {
         let has_id = tree.get_tag::<ResolvedIdentityTag>().is_ok();
         let mut tags_to_add: Vec<Box<dyn Tag>> = vec![];
         match tree.inner_mut() {
+            JodinNodeType::ExternDeclaration { declaration } => {
+                self.set_identities(declaration, id_resolver, visibility_resolver)?;
+                debug!("Settings id for extern dec from {:?}", declaration);
+                if let JodinNodeType::StoreVariable {
+                    storage_type: StorageModifier::Const,
+                    name,
+                    var_type: _,
+                    maybe_initial_value: _,
+                } = declaration.r#type()
+                {
+                    if let JodinNodeType::Identifier(_) = name.r#type() {
+                        tags_to_add.push(Box::new(ResolvedIdentityTag::new(name.resolved_id()?)))
+                    } else {
+                        Err(anyhow!(
+                            "Given is not an identifier (given= {:?})",
+                            name.r#type()
+                        ))?
+                    }
+                } else {
+                    Err(anyhow!(
+                        "Extern declaration must be const (given= {:?})",
+                        declaration.r#type()
+                    ))?
+                }
+            }
             JodinNodeType::InNamespace { namespace, inner } => {
                 let namespace = namespace
                     .get_tag::<ResolvedIdentityTag>()

@@ -18,8 +18,8 @@ impl Version {
         for (index, byte) in version_string_full.bytes().enumerate() {
             let mult = index as u64 + 1;
             let pow = u32::wrapping_sub(31, index as u32);
-            let add = (byte as u64).pow(pow) * mult;
-            sum += add;
+            let add = u64::wrapping_mul((byte as u64).wrapping_pow(pow), mult);
+            sum = u64::wrapping_add(sum, add);
         }
         sum
     }

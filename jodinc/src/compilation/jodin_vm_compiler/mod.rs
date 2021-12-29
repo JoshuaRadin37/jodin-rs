@@ -21,6 +21,7 @@ use std::hash::Hash;
 use std::io;
 use std::io::{stdout, Write};
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicI32;
 
@@ -74,13 +75,13 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
             info!("Compiling module {:?}", module.identifier);
             match &mut self.writer_override {
                 None => {
-                    let mut m_compiler = module.compiler(&settings.target_directory);
-                    for member in module.members {
+                    let mut builder = module.builder(&settings.target_directory);
+                    for member in module.objects() {
                         info!("Compiling {:?}", member);
                         let resolved_id = member.resolved_id()?;
-                        let mut m_compiler =
-                            m_compiler.translation_object_compiler(resolved_id.this());
-                        m_compiler.compile(member, settings)?;
+                        let mut object_compiler =
+                            builder.translation_object_compiler(resolved_id.this());
+                        object_compiler.compile(member, settings)?;
                     }
                 }
                 Some(s) => {
@@ -94,14 +95,14 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
     }
 }
 
-pub struct ModuleCompiler {
+pub struct ObjectCompilerBuilder {
     dir_path: PathBuf,
     module_id: Identifier,
 }
 
-impl ModuleCompiler {
+impl ObjectCompilerBuilder {
     pub fn new<O: AsRef<Path>>(id: &Identifier, path: O) -> Self {
-        ModuleCompiler {
+        ObjectCompilerBuilder {
             dir_path: path.as_ref().to_path_buf(),
             module_id: id.clone(),
         }
@@ -119,7 +120,7 @@ impl ModuleCompiler {
 }
 
 pub struct TranslationObjectCompiler<'m> {
-    module_compiler: &'m ModuleCompiler,
+    module_compiler: &'m ObjectCompilerBuilder,
     relative_path: PathBuf,
 }
 
@@ -133,16 +134,20 @@ impl<'m> TranslationObjectCompiler<'m> {
 
 impl Compiler<JodinVM> for TranslationObjectCompiler<'_> {
     fn compile(&mut self, tree: &JodinNode, settings: &CompilationSettings) -> JodinResult<()> {
-        let file = OpenOptions::new()
+        let as_obj = self.create_compilable(tree)?;
+        let mut buffer = Vec::<u8>::new();
+
+        let mut w = PaddedWriter::new(&mut buffer);
+        Compilable::<JodinVM>::compile(as_obj, &Context::new(), &mut w)?;
+
+        let mut file = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(self.object_path())?;
-
-        let ref mut w = PaddedWriter::new(file);
-        let as_obj = self.create_compilable(tree)?;
-
-        Compilable::<JodinVM>::compile(as_obj, &Context::new(), w)
+        file.write_all(&*buffer)?;
+        file.flush()?;
+        Ok(())
     }
 }
 
@@ -172,7 +177,7 @@ pub struct Module<'j> {
 
 impl<'j> Module<'j> {
     /// Creates a compiler that
-    pub fn compiler<P: AsRef<Path>>(&self, base_directory: P) -> ModuleCompiler {
+    pub fn builder<P: AsRef<Path>>(&self, base_directory: P) -> ObjectCompilerBuilder {
         let mut buffer = PathBuf::from(base_directory.as_ref());
         if !self.identifier.is_empty() {
             for c in &self.identifier {
@@ -182,7 +187,22 @@ impl<'j> Module<'j> {
         if !self.members.is_empty() {
             std::fs::create_dir_all(&buffer);
         }
-        ModuleCompiler::new(&self.identifier, buffer)
+        ObjectCompilerBuilder::new(&self.identifier, buffer)
+    }
+
+    pub fn objects(&self) -> impl IntoIterator<Item = &JodinNode> {
+        self.members
+            .iter()
+            .filter(|&&node| match node.r#type() {
+                JodinNodeType::FunctionDefinition { .. }
+                | JodinNodeType::CompoundTypeDefinition { .. } => true,
+                _ => false,
+            })
+            .map(|node| *node)
+    }
+
+    pub fn declarations(&self) -> Vec<&JodinNode> {
+        vec![]
     }
 }
 
@@ -316,6 +336,7 @@ mod tests {
             }
             Err(e) => {
                 eprintln!("{}", e);
+                eprintln!("{:?}", e.backtrace());
                 panic!("Fib failed to compile")
             }
         }

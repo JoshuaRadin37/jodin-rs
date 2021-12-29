@@ -154,7 +154,12 @@ pub struct JodinError {
 
 impl Display for JodinError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.error_type)
+        if f.alternate() {
+            writeln!(f, "Error: {}", self.error_type)?;
+            write!(f, "Backtrace: {:?}", self.backtrace)
+        } else {
+            write!(f, "{}", self.error_type)
+        }
     }
 }
 

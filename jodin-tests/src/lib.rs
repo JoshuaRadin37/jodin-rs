@@ -1,6 +1,8 @@
 #![cfg(test)]
 
+use jodin_common::error::JodinError;
 use jodin_common::init_logging;
+use jodin_common::mvp::bytecode::Asm::Push;
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::{VMBuilder, VM};
@@ -50,7 +52,15 @@ fn fibonacci() {
     let dir = match builder.compile() {
         Ok(d) => d,
         Err(e) => {
-            panic!("{}", e)
+            match e.downcast::<JodinError>() {
+                Ok(e) => {
+                    panic!("{:#}", e)
+                }
+                Err(e) => {
+                    panic!("{}", e)
+                }
+            }
+            panic!()
         }
     };
 
