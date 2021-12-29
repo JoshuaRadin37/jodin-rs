@@ -2,10 +2,10 @@
 //!
 //! They're actually traits btw
 
-use crate::core::types::generic_context::GenericParameter;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::traits::JTrait;
 use crate::identifier::Identifier;
+use crate::types::generic_context::GenericParameter;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::traits::JTrait;
 
 /// Functions are traits
 pub trait FunctionTrait {

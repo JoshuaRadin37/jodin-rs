@@ -16,11 +16,11 @@
 //! 9. `unsigned long`
 
 use crate::core::operator::{NumType, TryConstEvaluation};
-use crate::core::types::intermediate_type::TypeSpecifier;
-use crate::core::types::primitives::Primitive;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
 use crate::mvp::value::Value;
+use crate::types::intermediate_type::TypeSpecifier;
+use crate::types::primitives::Primitive;
 use crate::utility::Visitor;
 use num_traits::{Num, PrimInt};
 use regex::Regex;

@@ -4,11 +4,11 @@ use crate::identifier::Identifier;
 
 use crate::ast::{JodinNode, JodinNodeType};
 use crate::core::literal::Literal;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{BuildType, JodinType, Type};
 use crate::error::{JodinError, JodinResult};
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{BuildType, JodinType, Type};
 use crate::utility::Visitor;
 use std::fmt::{Display, Formatter};
 use strum_macros::EnumIter;

@@ -1,9 +1,9 @@
 //! Create a generic context for something to exist in
 
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{JodinType, Type};
 use crate::error::JodinResult;
 use crate::identifier::Identifier;
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{JodinType, Type};
 use std::fmt::{Display, Formatter};
 
 /// A single generic parameter in a generic instance declaration

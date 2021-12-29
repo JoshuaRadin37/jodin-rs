@@ -6,8 +6,8 @@ pub use identity_resolution_tool::IdentityResolutionTool;
 use jodin_common::ast::JodinNode;
 pub use jodin_common::core::tags::BlockIdentifierTag;
 pub use jodin_common::core::tags::ResolvedIdentityTag;
-use jodin_common::core::types::type_environment::TypeEnvironment;
 use jodin_common::error::JodinResult;
+use jodin_common::types::type_environment::TypeEnvironment;
 
 use crate::passes::analysis::type_resolution_tool::TypeResolutionTool;
 use jodin_common::unit::TranslationUnit;

@@ -10,9 +10,9 @@ use std::collections::HashMap;
 
 use crate::core::literal::{ConstantCast, Literal};
 use crate::core::operator::TryConstEvaluation;
-use crate::core::types::intermediate_type::TypeSpecifier;
-use crate::core::types::primitives::Primitive;
 use crate::identifier::Identifier;
+use crate::types::intermediate_type::TypeSpecifier;
+use crate::types::primitives::Primitive;
 use num_traits::AsPrimitive;
 use std::fmt::{Debug, Formatter, Pointer};
 use std::ops::{Deref, Index};

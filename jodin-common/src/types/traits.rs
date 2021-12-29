@@ -1,12 +1,12 @@
 //! Traits are interfaces
 
-use crate::core::types::generic_context::GenericParameter;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{get_type_id, Field, JodinType, Type};
 use crate::error::JodinResult;
 use crate::identifier::Identifier;
+use crate::types::generic_context::GenericParameter;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{get_type_id, Field, JodinType, Type};
 use crate::utility::Visitor;
 use itertools::Itertools;
 use std::fmt::{DebugStruct, Display, Formatter};

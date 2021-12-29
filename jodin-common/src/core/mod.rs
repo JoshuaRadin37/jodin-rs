@@ -8,4 +8,3 @@ pub mod literal;
 pub mod operator;
 pub mod privacy;
 pub mod tags;
-pub mod types;

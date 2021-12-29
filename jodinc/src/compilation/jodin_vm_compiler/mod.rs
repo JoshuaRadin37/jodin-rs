@@ -86,7 +86,8 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
                 }
                 Some(s) => {
                     let mut writer = PaddedWriter::new(s);
-                    module.compile(&context, &mut writer)?;
+                    // module.compile(&context, &mut writer)?;
+                    todo!()
                 }
             };
         }
@@ -204,20 +205,6 @@ impl<'j> Module<'j> {
     pub fn declarations(&self) -> Vec<&JodinNode> {
         vec![]
     }
-}
-
-impl<'j> Compilable<JodinVM> for Module<'j> {
-    fn compile<W: io::Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        for x in self.members {
-            writeln!(w, "{:#?}", x);
-        }
-        Ok(())
-    }
-}
-
-pub struct CompiledModule {
-    pub identifier: Identifier,
-    pub assembly: Assembly,
 }
 
 /// Splits a parse tree by module

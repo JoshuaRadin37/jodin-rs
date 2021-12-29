@@ -15,14 +15,14 @@ use std::sync::{Arc, LockResult, RwLock, TryLockError, TryLockResult, Weak};
 use crate::ast::{JodinNode, NodeReference};
 use strum::IntoEnumIterator;
 
-use crate::core::types::base_type::base_type;
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-use crate::core::types::primitives::Primitive;
-use crate::core::types::resolved_type::{ResolveType, ResolvedTypeBuilder, WeakResolvedType};
-use crate::core::types::traits::JTrait;
-use crate::core::types::{AsIntermediate, BuildType, JodinType, Type};
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
+use crate::types::base_type::base_type;
+use crate::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use crate::types::primitives::Primitive;
+use crate::types::resolved_type::{ResolveType, ResolvedTypeBuilder, WeakResolvedType};
+use crate::types::traits::JTrait;
+use crate::types::{AsIntermediate, BuildType, JodinType, Type};
 use crate::utility::Visitor;
 
 /// Stores a lot of information about types and related identifier

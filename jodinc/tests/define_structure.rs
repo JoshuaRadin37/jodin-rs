@@ -2,14 +2,14 @@ use jodin_asm::init_logging;
 use jodin_common::core::identifier_resolution::IdentifierResolver;
 use jodin_common::core::privacy::Visibility;
 use jodin_common::core::tags::TagTools;
-use jodin_common::core::types::intermediate_type::IntermediateType;
-use jodin_common::core::types::primitives::Primitive;
-use jodin_common::core::types::resolved_type::{
-    ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
-};
-use jodin_common::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodin_common::error::JodinResult;
 use jodin_common::identifier::Identifier;
+use jodin_common::types::intermediate_type::IntermediateType;
+use jodin_common::types::primitives::Primitive;
+use jodin_common::types::resolved_type::{
+    ResolveType, ResolvedType, ResolvedTypeFactory, WeakResolvedType,
+};
+use jodin_common::types::{AsIntermediate, Field, GetResolvedMember, JodinType};
 use jodin_common::utility::Visitor;
 use jodinc::parsing::parse_program;
 use jodinc::process_jodin_node;

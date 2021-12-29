@@ -5,12 +5,12 @@ use crate::error::JodinResult;
 use crate::identifier::Identifier;
 use std::sync::{Arc, Weak};
 
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::resolved_type::{
     BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
 };
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
 use crate::utility::Visitor;
 
 /// Contains a name and its fields

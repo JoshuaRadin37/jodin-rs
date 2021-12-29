@@ -9,11 +9,11 @@ use std::any::Any;
 
 use crate::ast::jodin_node::JodinNode;
 use crate::core::tags::Tag;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::StorageModifier;
 use crate::error::JodinResult;
 #[cfg(feature = "pest_parser")]
 use crate::parsing::JodinRule;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::StorageModifier;
 use crate::utility::{Acceptor, AcceptorMut, Visitor};
 
 /// The type of the compound

@@ -8,7 +8,7 @@ use std::fmt::{Display, Formatter};
 use jodin_common::core::operator::Operator;
 
 use anyhow::anyhow;
-use jodin_common::core::types::intermediate_type::IntermediateType;
+use jodin_common::types::intermediate_type::IntermediateType;
 use jodin_common::utility::Flatten;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
@@ -384,9 +384,9 @@ mod tests {
     use jodin_common::ast::{JodinNode, JodinNodeType};
     use jodin_common::core::literal::Literal;
     use jodin_common::core::operator::Operator;
-    use jodin_common::core::types::primitives::Primitive;
-    use jodin_common::core::types::Type;
     use jodin_common::identifier::Identifier;
+    use jodin_common::types::primitives::Primitive;
+    use jodin_common::types::Type;
     use std::iter::FromIterator;
     use std::str::FromStr;
 

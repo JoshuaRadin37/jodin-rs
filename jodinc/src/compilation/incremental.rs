@@ -23,7 +23,7 @@
 //! [#74]: https://github.com/joshradin/jodin-rs/issues/74
 
 use crate::compilation::jodin_vm_compiler::{
-    split_by_module, CompiledModule, JodinVMCompiler, Module, ObjectCompilerBuilder,
+    split_by_module, JodinVMCompiler, Module, ObjectCompilerBuilder,
 };
 use crate::compilation::JodinVM;
 use crate::parsing::parse_program;

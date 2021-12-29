@@ -1,11 +1,11 @@
 //! Types that are completely resolved. Formally known as big objects
 
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::traits::JTraitObject;
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{AsIntermediate, Field, GetResolvedMember, JodinType, Type};
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::traits::JTraitObject;
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{AsIntermediate, Field, GetResolvedMember, JodinType, Type};
 use crate::utility::Visitor;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;

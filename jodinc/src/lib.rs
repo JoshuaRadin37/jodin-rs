@@ -65,8 +65,8 @@ extern crate static_assertions;
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
 use jodin_common::ast::JodinNode;
-use jodin_common::core::types::type_environment::TypeEnvironment;
 use jodin_common::error::{JodinError, JodinResult};
+use jodin_common::types::type_environment::TypeEnvironment;
 use std::fs::File;
 
 #[macro_export]

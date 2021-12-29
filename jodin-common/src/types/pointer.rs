@@ -1,12 +1,12 @@
 //! Stores type information for the pointer type
 //!
 
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{JodinType, Type};
 use crate::error::JodinResult;
 use crate::identifier::Identifier;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{JodinType, Type};
 use crate::utility::Visitor;
 use std::sync::{Arc, Weak};
 

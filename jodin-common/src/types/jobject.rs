@@ -4,16 +4,16 @@
 
 use crate::core::identifier_resolution::Registry;
 use crate::core::privacy::Visibility;
-use crate::core::types::generic_context::{GenericParameter, Morph};
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::resolved_type::{ResolveType, WeakResolvedType};
-use crate::core::types::traits::JTraitObject;
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{
-    CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Member, Type,
-};
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::{Identifier, Namespaced};
+use crate::types::generic_context::{GenericParameter, Morph};
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
+use crate::types::traits::JTraitObject;
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{
+    CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Member, Type,
+};
 use crate::utility::Visitor;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;

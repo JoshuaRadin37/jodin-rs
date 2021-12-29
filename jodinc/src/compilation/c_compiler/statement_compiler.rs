@@ -4,9 +4,9 @@ use jodin_common::ast::{JodinNode, JodinNodeType};
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::literal::Literal;
 use jodin_common::core::tags::ResolvedIdentityTag;
-use jodin_common::core::types::TypeTag;
 use jodin_common::error::{JodinErrorType, JodinResult};
 use jodin_common::identifier::Identifier;
+use jodin_common::types::TypeTag;
 
 /// Compiles a statement into a list of c statements
 pub struct StatementCompiler {

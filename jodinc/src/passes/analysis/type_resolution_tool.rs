@@ -7,12 +7,12 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::ast::{CompoundType, JodinNode};
 use jodin_common::core::privacy::{Visibility, VisibilityTag};
 use jodin_common::core::tags::TagTools;
-use jodin_common::core::types::intermediate_type::IntermediateType;
-use jodin_common::core::types::structure::Structure;
-use jodin_common::core::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
-use jodin_common::core::types::Field;
 use jodin_common::error::{JodinErrorType, JodinResult};
 use jodin_common::identifier::Identifier;
+use jodin_common::types::intermediate_type::IntermediateType;
+use jodin_common::types::structure::Structure;
+use jodin_common::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
+use jodin_common::types::Field;
 use jodin_common::unit::TranslationUnit;
 use jodin_common::utility::Tree;
 

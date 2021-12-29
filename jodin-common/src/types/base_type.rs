@@ -1,9 +1,9 @@
 use crate::core::privacy::Visibility;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::traits::JTrait;
-use crate::core::types::Field;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::traits::JTrait;
+use crate::types::Field;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 static BASE_TYPE_GENERATED: AtomicBool = AtomicBool::new(false);

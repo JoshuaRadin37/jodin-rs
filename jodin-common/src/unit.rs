@@ -4,11 +4,11 @@
 use crate::asm_version::Version;
 use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::core::privacy::Visibility;
-use crate::core::types::intermediate_type::IntermediateType;
-use crate::core::types::Field;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
 use crate::mvp::bytecode::{Assembly, Encode, GetAsm};
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::Field;
 use anyhow::anyhow;
 use bytemuck::{
     bytes_of, cast, cast_slice, from_bytes, pod_align_to, try_cast, try_cast_slice, try_from_bytes,
@@ -240,8 +240,8 @@ pub trait Incremental {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::types::primitives::Primitive;
-    use crate::core::types::Type;
+    use crate::types::primitives::Primitive;
+    use crate::types::Type;
     use jodinc::core::types::primitives::Primitive;
     use jodinc::core::types::Type;
 

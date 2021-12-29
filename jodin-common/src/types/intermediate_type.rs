@@ -11,8 +11,8 @@
 //! A function pointer that takes in two integer pointers as input and an integer as an output would be
 //! defined as `int (int*, int*)` in jodin. This would results in an `IntermediateType` with this value:
 //! ```
-//! use jodin_common::core::types::intermediate_type::*;
-//! use jodin_common::core::types::primitives::Primitive;
+//! use jodin_common::types::intermediate_type::*;
+//! use jodin_common::types::primitives::Primitive;
 //! let i_type = IntermediateType {
 //!     is_const: false,
 //!     type_specifier: TypeSpecifier::Primitive(Primitive::Int),
@@ -47,17 +47,17 @@ use crate::ast::JodinNode;
 use itertools::Itertools;
 
 use crate::core::literal::ConstantCast;
-use crate::core::types::arrays::Array;
-use crate::core::types::generic_context::{GenericParameter, GenericParameterInstance};
-use crate::core::types::pointer::Pointer;
-use crate::core::types::primitives::Primitive;
-use crate::core::types::resolved_type::{
-    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
-};
-use crate::core::types::type_environment::TypeEnvironment;
-use crate::core::types::{AsIntermediate, Type};
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
+use crate::types::arrays::Array;
+use crate::types::generic_context::{GenericParameter, GenericParameterInstance};
+use crate::types::pointer::Pointer;
+use crate::types::primitives::Primitive;
+use crate::types::resolved_type::{
+    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
+};
+use crate::types::type_environment::TypeEnvironment;
+use crate::types::{AsIntermediate, Type};
 use crate::utility::Visitor;
 
 /// Contains data to represent types without storing any actual type information.

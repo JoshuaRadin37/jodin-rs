@@ -12,10 +12,10 @@ use jodin_common::ast::intermediate_type::{IntermediateType, TypeSpecifier, Type
 use jodin_common::compilation::{Compilable, Context, PaddedWriter};
 use jodin_common::core::literal::Literal;
 use jodin_common::core::operator::Operator;
-use jodin_common::core::types::intermediate_type::{IntermediateType, TypeSpecifier};
-use jodin_common::core::types::primitives::Primitive;
 use jodin_common::error::{JodinErrorType, JodinResult};
 use jodin_common::identifier::Identifier;
+use jodin_common::types::intermediate_type::{IntermediateType, TypeSpecifier};
+use jodin_common::types::primitives::Primitive;
 use std::fmt::Write;
 
 /// Represents a C translation Unit
