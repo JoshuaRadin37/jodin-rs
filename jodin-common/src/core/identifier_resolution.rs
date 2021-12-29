@@ -59,7 +59,7 @@ mod _hidden {
             let full_path = Identifier::new_concat(self.current_namespace_with_base(), namespace);
             self.tree.add_namespace(full_path.clone());
             self.current_namespace = Some(full_path.strip_highest_parent().unwrap());
-            info!(
+            debug!(
                 "Current namespace set to {}",
                 self.current_namespace_with_base()
             );
@@ -97,7 +97,7 @@ mod _hidden {
                 })?;
             }
             let resolved = resolved_set.into_iter().next().cloned().unwrap();
-            info!("Added used namespace: {:?}", resolved);
+            debug!("Added used namespace: {:?}", resolved);
             self.using_namespaces.push(resolved);
             Ok(())
         }
@@ -162,13 +162,13 @@ mod _hidden {
             path: Identifier,
             keep_highest_parent: bool,
         ) -> JodinResult<Identifier> {
-            info!("Attempting to resolve path {:?}...", path);
+            debug!("Attempting to resolve path {:?}...", path);
             let mut output = HashSet::new();
 
             let absolute_path = Identifier::new_concat(&self.base_namespace, &path);
             trace!("Checking path as absolute path: {:?}", absolute_path);
             if let Ok(val) = self.tree.get_from_absolute_identifier(&absolute_path) {
-                info!("Found absolute path: {}", absolute_path);
+                debug!("Found absolute path: {}", absolute_path);
                 output.insert(val);
             }
             if self.current_namespace.is_some() {
@@ -177,7 +177,7 @@ mod _hidden {
                 trace!("Checking path as relative path: {:?}", relative_path);
                 if relative_path != absolute_path {
                     if let Ok(val) = self.tree.get_from_absolute_identifier(&relative_path) {
-                        info!(
+                        debug!(
                             "Found relative path from {current}: {relative:?}",
                             current = self.current_namespace_with_base(),
                             relative = relative_path
@@ -191,7 +191,7 @@ mod _hidden {
                 let using_path = Identifier::new_concat(using, &path);
                 trace!("Checking path as relative path: {:?}", using_path);
                 if let Ok(id) = self.tree.get_from_absolute_identifier(&using_path) {
-                    info!(
+                    debug!(
                         "Found relative path from {current}: {relative:?}",
                         current = using,
                         relative = using_path
@@ -204,7 +204,7 @@ mod _hidden {
                 0 => Err(JodinErrorType::IdentifierDoesNotExist(path))?,
                 1 => {
                     let identifier = output.into_iter().next().cloned().unwrap();
-                    info!("Resolved {:?} -> {:?}", path, identifier);
+                    debug!("Resolved {:?} -> {:?}", path, identifier);
                     if !keep_highest_parent {
                         Ok(identifier.strip_highest_parent().unwrap())
                     } else {
@@ -410,7 +410,7 @@ impl<T: Namespaced> NamespaceTree<T> {
         base_namespace: &Identifier,
     ) -> HashSet<&Identifier> {
         //println!("Attempting to find namespace {}", path);
-        info!("Trying to find namespace {}", path);
+        debug!("Trying to find namespace {}", path);
         trace!(
             "Trying to find possible namespaces with id {:?} (from: {:?})",
             path,
@@ -421,12 +421,12 @@ impl<T: Namespaced> NamespaceTree<T> {
         }
         let mut output = HashSet::new();
         let abs_path = base_namespace / path;
-        info!("Searching for absolute namespace {}...", abs_path);
+        debug!("Searching for absolute namespace {}...", abs_path);
         if let Some(abs) = self.get_namespace_absolute(&abs_path) {
-            info!("Absolute found.");
+            debug!("Absolute found.");
             output.insert(abs.id());
         }
-        info!("Searching for a relative path...");
+        debug!("Searching for a relative path...");
         if let Some(current) = current_namespace {
             if let Some(current_node) = self.get_namespace_absolute(current) {
                 let mut iter: IdentifierIterator = path.into_iter();
@@ -448,7 +448,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 }
             }
         }
-        info!("Found possible namespaces: {:?}", output);
+        debug!("Found possible namespaces: {:?}", output);
         output
     }
 
@@ -773,7 +773,7 @@ impl Registry<Visibility> {
     /// assert!(!registry.is_visible(&Identifier::from_iter(["{base}", "namespace", "v2"]), &Identifier::from("{base}")));
     /// ```
     pub fn is_visible(&self, check_path: &Identifier, from_namespace: &Identifier) -> bool {
-        info!(
+        debug!(
             "Checking if {:?} is visible from {:?}",
             check_path, from_namespace
         );

@@ -1,5 +1,7 @@
 pub mod asm_version;
 pub mod ast;
+pub mod compilation;
+pub mod compilation_settings;
 pub mod core;
 pub mod error;
 pub mod identifier;

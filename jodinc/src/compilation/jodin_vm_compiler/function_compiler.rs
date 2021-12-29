@@ -5,9 +5,10 @@ use crate::compilation::jodin_vm_compiler::asm_block::{
 };
 use crate::compilation::jodin_vm_compiler::statement_compiler::StatementCompiler;
 use crate::compilation::jodin_vm_compiler::{invalid_tree_type, VariableUseTracker};
-use crate::compilation::{JodinVM, MicroCompiler};
+use crate::compilation::JodinVM;
 use crate::{JodinError, JodinNode, JodinResult};
 use jodin_common::ast::JodinNodeType;
+use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
 use jodin_common::mvp::bytecode::{Asm, Assembly};
@@ -70,7 +71,6 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
 
         output.insert_after_label(block, rel_label("__func_start__"));
 
-        output.insert_asm(Asm::goto(rel_label("__func_end__")));
         output.insert_asm(Asm::label(rel_label("__func_end__")));
 
         if return_type.is_void() {

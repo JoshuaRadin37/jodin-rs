@@ -14,7 +14,8 @@ fn fibonacci() {
     init_logging(LevelFilter::Info);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
-            
+            extern const print: fn(*char);
+             
             fn fibonacci(n: int) -> int {
                 if (n < 2) {
                     return n;
@@ -39,7 +40,7 @@ fn fibonacci() {
             }
             
             fn main() -> int {
-                
+                print(factorial(6));
                 return 0;
             }
 

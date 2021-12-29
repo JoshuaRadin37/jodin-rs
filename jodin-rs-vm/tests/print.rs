@@ -14,7 +14,7 @@ const BYE_WORLD: &str = "Goodbye, world!";
 #[test]
 fn hello_world() {
     init_logging(LevelFilter::Trace);
-    info!("Running hello world program");
+    debug!("Running hello world program");
     let mut buffer: Vec<u8> = Vec::new();
     let mut err_buffer: Vec<u8> = Vec::new();
     {

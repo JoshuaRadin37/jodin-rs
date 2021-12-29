@@ -403,6 +403,7 @@ pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<StructureDefinition>,
     WithVisibility<TraitDefinition>,
     WithVisibility<FunctionDefinition>,
+    WithVisibility<ExternDeclaration>,
     InNamespace,
 };
 
@@ -437,7 +438,7 @@ StorageModifier: StorageModifier ={
 }
 
 
-VariableDeclaration: ParseResult = {
+    VariableDeclaration: ParseResult = {
     <storage:StorageModifier> <id:SingleIdentifier> ":" <ty:CanonicalType> ";" => {
     JodinNodeType::StoreVariable {
         storage_type: storage,
@@ -486,8 +487,6 @@ ArrayInitializer: ParseResult = {
         }.into_result()
     }
 }
-
-
 
 BiOperator: Operator = {
     "t_operator",
@@ -576,6 +575,14 @@ pub TraitDefinition: ParseResult = {
             name,
             inheritance,
             members: defs.unwrap_vec()?
+        }.into_result()
+    }
+}
+
+pub ExternDeclaration: ParseResult = {
+    "extern" <dec:VariableDeclaration> => {
+        JodinNodeType::ExternDeclaration {
+            declaration: dec?
         }.into_result()
     }
 }
@@ -718,6 +725,7 @@ extern {
         "->" => Tok::Point,
         "fn" => Tok::FunctionPointer,
         "let" => Tok::Let,
-        "foreach" => Tok::Foreach
+        "foreach" => Tok::Foreach,
+        "extern" => Tok::Extern
     }
 }

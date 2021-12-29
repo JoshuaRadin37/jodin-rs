@@ -6,9 +6,10 @@ use std::ops::Deref;
 use regex::Regex;
 
 use crate::compilation::c_compiler::SeparableCompilable;
-use crate::compilation::{Compilable, Context, PaddedWriter, C99};
+use crate::compilation::C99;
 use itertools::Itertools;
 use jodin_common::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use jodin_common::compilation::{Compilable, Context, PaddedWriter};
 use jodin_common::core::literal::Literal;
 use jodin_common::core::operator::Operator;
 use jodin_common::core::types::intermediate_type::{IntermediateType, TypeSpecifier};

@@ -104,7 +104,7 @@ where
                 self.memory.push(cloned);
             }
             "@print_stack" => {
-                info!("memory: {:#?}", self.memory);
+                debug!("memory: {:#?}", self.memory);
             }
             _ => panic!("{:?} is not a native method", message),
         }
@@ -404,7 +404,7 @@ where
             }
             self.instructions.push(asm);
         }
-        info!("Created new labels = {:?}", new_labels);
+        debug!("Created new labels = {:?}", new_labels);
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {

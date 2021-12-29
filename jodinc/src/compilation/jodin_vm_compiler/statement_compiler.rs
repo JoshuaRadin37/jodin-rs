@@ -3,10 +3,11 @@
 use crate::compilation::jodin_vm_compiler::asm_block::{rel_label, AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::{JodinVMCompiler, VariableUseTracker};
-use crate::compilation::{JodinVM, MicroCompiler};
+use crate::compilation::JodinVM;
 use crate::parsing::Tok::As;
 use crate::{jasm, JodinError, JodinNode, JodinResult};
 use jodin_common::ast::JodinNodeType;
+use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 use jodin_common::mvp::bytecode::Asm;
 use jodin_common::mvp::value::Value;
@@ -111,6 +112,11 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                     let asm = self.create_compilable(expr)?;
                     block.insert_asm(asm);
                 }
+            }
+            JodinNodeType::Call { .. } => {
+                let mut expr_c = ExpressionCompiler::new(&self.tracker);
+                let expr = expr_c.create_compilable(tree)?;
+                block.insert_asm(expr);
             }
             JodinNodeType::ReturnValue { expression } => {
                 match expression {

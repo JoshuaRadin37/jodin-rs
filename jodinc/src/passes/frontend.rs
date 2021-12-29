@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
-use crate::compilation_settings::CompilationSettings;
 use jodin_common::ast::JodinNode;
+use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::error::JodinResult;
 
 /// A tool to turn files into a jodin node tree

@@ -202,9 +202,6 @@ pub enum Tok<'input> {
     Assign,
     #[regex(r"[+\-*/&%^|]=", maybe_assign_operator, priority = 10)]
     OpAssign(Operator),
-    #[regex(r"[a-zA-Z_]\w*")]
-    #[regex(r"@[a-zA-Z_]\w*", |lex| &lex.source()[1..])]
-    Identifier(&'input str),
     #[token("->")]
     Point,
     #[token("fn")]
@@ -213,6 +210,11 @@ pub enum Tok<'input> {
     Let,
     #[token("foreach")]
     Foreach,
+    #[token("extern")]
+    Extern,
+    #[regex(r"[a-zA-Z_]\w*")]
+    #[regex(r"@[a-zA-Z_]\w*", |lex| &lex.source()[1..])]
+    Identifier(&'input str),
     #[regex(r"//.*", logos::skip)]
     #[token("/*", comment)]
     Comment,

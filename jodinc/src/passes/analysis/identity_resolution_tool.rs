@@ -55,10 +55,10 @@ impl IdentityResolutionTool {
         &mut self,
         input: JodinNode,
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
-        info!("Creating absolute identifiers...");
+        debug!("Creating absolute identifiers...");
         let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
         //println!("Visibilities: {:#?}", self.visibility);
-        info!("Resolving identifiers...");
+        debug!("Resolving identifiers...");
         match self
             .setter
             .set_identities(&mut tree, &mut resolver, &self.visibility)
@@ -147,7 +147,7 @@ impl IdentifierCreator {
                 }
 
                 let abs = id_resolver.create_absolute_path(id);
-                info!("Created absolute identifier for use: {:?}", abs);
+                debug!("Created absolute identifier for use: {:?}", abs);
                 visibility_registry.insert_with_identifier(Visibility::Protected, abs.clone())?;
                 if let Ok(tag) = tree.get_tag::<VisibilityTag>() {
                     let vis = tag.visibility().clone();
@@ -448,14 +448,14 @@ impl IdentifierSetter {
             }
             JodinNodeType::Identifier(id) => {
                 if !has_id {
-                    info!(
+                    debug!(
                         "Attempting to find {} from {}",
                         id,
                         id_resolver.current_namespace()
                     );
                     let resolved =
                         self.try_get_absolute_identifier(id, id_resolver, visibility_resolver)?;
-                    info!("Found {}", resolved);
+                    debug!("Found {}", resolved);
                     let resolved_tag = ResolvedIdentityTag::new(resolved);
 
                     tree.add_tag(resolved_tag)?;
@@ -598,7 +598,7 @@ impl IdentifierSetter {
         visibility_registry: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
         let ref id_with_base = *id;
-        info!("Attempting to find absolute path {:?}", id);
+        debug!("Attempting to find absolute path {:?}", id);
         // first get alias if it exist
         let alias = self
             .aliases
@@ -606,7 +606,7 @@ impl IdentifierSetter {
             .ok()
             .filter(|&alias_id| {
                 let visibility = visibility_registry.get(alias_id).ok();
-                info!(
+                debug!(
                     "Found alias {:?} with visibility {:?}",
                     alias_id, visibility
                 );
@@ -642,7 +642,7 @@ impl IdentifierSetter {
             .ok()
             .filter(|resolved| {
                 let visibility = visibility_registry.get(resolved).ok();
-                info!("Found path {:?} with visibility {:?}", resolved, visibility);
+                debug!("Found path {:?} with visibility {:?}", resolved, visibility);
                 match visibility {
                     None => true,
                     Some(visibility) => {
@@ -765,7 +765,7 @@ impl IdentifierSetter {
                 }
             }
         }
-        info!("Imported {:?}", aliases);
+        debug!("Imported {:?}", aliases);
         Ok(aliases)
     }
 

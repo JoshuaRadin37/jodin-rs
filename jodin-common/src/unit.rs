@@ -1,21 +1,23 @@
 //! Am incremental compilation unit is a list of public/protected
 //! declarations
 
+use crate::asm_version::Version;
+use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::core::privacy::Visibility;
 use crate::core::types::intermediate_type::IntermediateType;
 use crate::core::types::Field;
-use crate::error::{JodinError, JodinErrorType};
+use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
-use crate::mvp::bytecode::{Assembly, GetAsm};
+use crate::mvp::bytecode::{Assembly, Encode, GetAsm};
 use anyhow::anyhow;
 use bytemuck::{
-    cast, cast_slice, from_bytes, pod_align_to, try_cast, try_cast_slice, try_from_bytes,
+    bytes_of, cast, cast_slice, from_bytes, pod_align_to, try_cast, try_cast_slice, try_from_bytes,
 };
 use std::borrow::Borrow;
 use std::fmt::{format, Debug, Display, Formatter};
 use std::fs::File;
 use std::io;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -144,6 +146,39 @@ pub struct CompilationObject {
     pub units: Vec<TranslationUnit>,
     /// The assembly in the compilation object
     pub jasm: Assembly,
+}
+
+impl CompilationObject {
+    pub fn new(
+        file_location: PathBuf,
+        module: Identifier,
+        units: Vec<TranslationUnit>,
+        jasm: Assembly,
+    ) -> Self {
+        CompilationObject {
+            magic_number: Version.to_magic_number(),
+            file_location,
+            module,
+            units,
+            jasm,
+        }
+    }
+}
+
+impl<T: Target> Compilable<T> for CompilationObject {
+    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+        let magic_num_as_bytes = bytes_of(&self.magic_number);
+        w.write_all(magic_num_as_bytes)?;
+        writeln!(w, "{}", &self.module)?;
+        write!(w, "{{")?;
+        for unit in &self.units {
+            write!(w, "{};", unit)?;
+        }
+        writeln!(w, "}}")?;
+        let encoded = self.jasm.encode();
+        w.write_all(&*encoded)?;
+        Ok(())
+    }
 }
 
 impl TryFrom<&[u8]> for CompilationObject {

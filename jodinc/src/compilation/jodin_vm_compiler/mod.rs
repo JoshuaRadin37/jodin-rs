@@ -1,14 +1,17 @@
 use crate::compilation::jodin_vm_compiler::asm_block::AssemblyBlock;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
-use crate::compilation::{Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target};
-use crate::compilation_settings::CompilationSettings;
 use crate::{JodinError, JodinNode, JodinResult};
 use jodin_common::asm_version::Version;
 use jodin_common::ast::JodinNodeType;
+use jodin_common::compilation::{
+    Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target,
+};
+use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
 use jodin_common::identifier::{Identifiable, Identifier};
 use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
+use jodin_common::unit::CompilationObject;
 use jodin_common::utility::Tree;
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
@@ -93,12 +96,14 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
 
 pub struct ModuleCompiler {
     dir_path: PathBuf,
+    module_id: Identifier,
 }
 
 impl ModuleCompiler {
-    pub fn new<O: AsRef<Path>>(path: O) -> Self {
+    pub fn new<O: AsRef<Path>>(id: &Identifier, path: O) -> Self {
         ModuleCompiler {
             dir_path: path.as_ref().to_path_buf(),
+            module_id: id.clone(),
         }
     }
 
@@ -135,14 +140,25 @@ impl Compiler<JodinVM> for TranslationObjectCompiler<'_> {
             .open(self.object_path())?;
 
         let ref mut w = PaddedWriter::new(file);
+        let as_obj = self.create_compilable(tree)?;
+
+        Compilable::<JodinVM>::compile(as_obj, &Context::new(), w)
+    }
+}
+
+impl MicroCompiler<JodinVM, CompilationObject> for TranslationObjectCompiler<'_> {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<CompilationObject> {
         match tree.r#type() {
             JodinNodeType::FunctionDefinition { .. } => {
-                writeln!(w, "# Compiled: {}", tree.resolved_id().unwrap())?;
                 let mut compiler = FunctionCompiler::default();
                 let block = compiler.create_compilable(tree)?;
-                block.compile(&Context::new(), w);
-                writeln!(w, "{:#?}", tree)?;
-                Ok(())
+                let obj = CompilationObject::new(
+                    self.object_path(),
+                    self.module_compiler.module_id.clone(),
+                    vec![],
+                    block.normalize(),
+                );
+                Ok(obj)
             }
             _ => return Err(JodinError::new(JodinErrorType::IllegalTreeType)),
         }
@@ -166,7 +182,7 @@ impl<'j> Module<'j> {
         if !self.members.is_empty() {
             std::fs::create_dir_all(&buffer);
         }
-        ModuleCompiler::new(buffer)
+        ModuleCompiler::new(&self.identifier, buffer)
     }
 }
 
@@ -214,7 +230,9 @@ fn _split_by_module<'j>(tree: &'j JodinNode, current_module: &mut Module<'j>) ->
                 output.extend(_split_by_module(dec, current_module));
             }
         }
-        JodinNodeType::FunctionDefinition { .. } | JodinNodeType::CompoundTypeDefinition { .. } => {
+        JodinNodeType::FunctionDefinition { .. }
+        | JodinNodeType::CompoundTypeDefinition { .. }
+        | JodinNodeType::ExternDeclaration { .. } => {
             debug!("{:?} added to module {:?}", tree, current_module.identifier);
             current_module.members.push(tree);
         }
@@ -256,11 +274,12 @@ impl Display for CompiledObject {
 #[cfg(test)]
 mod tests {
     use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
-    use crate::compilation::Compiler;
-    use crate::compilation_settings::CompilationSettings;
     use crate::parsing::parse_program;
     use crate::{process_jodin_node, JodinResult};
     use jodin_asm::init_logging;
+    use jodin_common::compilation::Compiler;
+    use jodin_common::compilation_settings::CompilationSettings;
+    use jodin_common::init_logging;
     use log::LevelFilter;
 
     #[test]
@@ -320,7 +339,7 @@ impl VariableUseTracker {
             self.unused_vars.pop().unwrap()
         };
         self.id_to_var_number.insert(id.clone(), num);
-        info!("Set id {} to var #{}", id, num);
+        debug!("Set id {} to var #{}", id, num);
         num
     }
 

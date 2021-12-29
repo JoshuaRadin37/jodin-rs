@@ -90,7 +90,6 @@ macro_rules! id {
 
 pub mod cli;
 pub mod compilation;
-pub mod compilation_settings;
 pub mod error_reporting;
 pub mod parsing;
 pub mod passes;

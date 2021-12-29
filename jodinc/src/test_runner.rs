@@ -1,5 +1,5 @@
-use crate::compilation::incremental::incremental_compiler::IncrementalCompiler;
-use crate::compilation_settings::CompilationSettings;
+use crate::compilation::incremental::IncrementalCompiler;
+use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::identifier::Identifier;
 use jodin_common::unit::CompilationObject;
 use jodin_rs_vm::core_traits::VirtualMachine;

@@ -12,7 +12,7 @@ use std::io::stdout;
 #[test]
 fn create_dict() {
     init_logging(LevelFilter::Trace);
-    info!("Creating dict");
+    debug!("Creating dict");
     let mut buffer: Vec<u8> = Vec::new();
     {
         let mut vm = VMBuilder::new()
@@ -50,7 +50,7 @@ fn create_dict() {
 #[test]
 fn dict_with_native_override() {
     init_logging(LevelFilter::Trace);
-    info!("Creating dict");
+    debug!("Creating dict");
     let mut buffer: Vec<u8> = Vec::new();
     {
         let mut vm = VMBuilder::new()

@@ -1,8 +1,9 @@
 use crate::compilation::c_compiler::{
     CType, CTypeDeclarator, CTypeSpecifier, CValidIdentifier, TranslationUnit,
 };
-use crate::compilation::{MicroCompiler, C99};
+use crate::compilation::C99;
 use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::tags::ResolvedIdentityTag;
 use jodin_common::error::{JodinErrorType, JodinResult};
 

@@ -1,8 +1,6 @@
-use crate::compilation::{
-    c_compiler::{CType, CValidIdentifier},
-    MicroCompiler,
-};
+use crate::compilation::c_compiler::{CType, CValidIdentifier};
 use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::tags::ResolvedIdentityTag;
 use jodin_common::error::{JodinErrorType, JodinResult};
 

@@ -2,9 +2,10 @@
 
 use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::VariableUseTracker;
-use crate::compilation::{JodinVM, MicroCompiler};
+use crate::compilation::JodinVM;
 use crate::{jasm, JodinNode, JodinResult};
 use jodin_common::ast::JodinNodeType;
+use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::operator::Operator;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
