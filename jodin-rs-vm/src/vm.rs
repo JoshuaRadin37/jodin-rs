@@ -421,6 +421,16 @@ where
         info!("Created new labels = {:?}", new_labels);
     }
 
+    fn load_static<A: GetAsm>(&mut self, asm: A) {
+        let start_index = self.instructions.len();
+        let label = "@@STATIC".to_string();
+        self.label_to_instruction.insert(label.clone(), start_index);
+        self.load(asm);
+        if self.run(&*label).expect("VM Error encountered") != 0 {
+            panic!("VM Failed")
+        }
+    }
+
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
         self.cont = true;
         let start_counter = self.label_to_instruction[start_label];

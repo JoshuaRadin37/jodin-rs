@@ -28,6 +28,9 @@ pub trait VirtualMachine {
     /// Loads some asm into a the virtual machine for future use
     fn load<A: GetAsm>(&mut self, asm: A);
 
+    /// Loads some asm into the virtual machine, then RUNS said ASM
+    fn load_static<A: GetAsm>(&mut self, asm: A);
+
     /// Runs the VM starting at a label
     fn run(&mut self, start_label: &str) -> Result<u32, VMError>;
 
