@@ -1,15 +1,16 @@
 //! Different modules that make up the parsing mechanisms for jodin. The parsing system is based
 //! off of the pest crate.
 
-use jodin_common::ast::{JodinNode, JodinNodeType};
-use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
+use crate::ast::{JodinNode, JodinNodeType};
+use crate::error::{JodinError, JodinErrorType, JodinResult};
 use std::fmt::{Display, Formatter};
 
-use jodin_common::core::operator::Operator;
+use crate::core::operator::Operator;
 
+use crate::types::intermediate_type::IntermediateType;
+use crate::utility::Flatten;
 use anyhow::anyhow;
-use jodin_common::types::intermediate_type::IntermediateType;
-use jodin_common::utility::Flatten;
+use lalrpop_util::lalrpop_mod;
 use logos::{Lexer, Logos, Skip, SpannedIter};
 use regex::Regex;
 use std::str::FromStr;
@@ -380,13 +381,13 @@ pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
 #[allow(unused_results)]
 mod tests {
     use super::jodin_grammar;
+    use crate::ast::{JodinNode, JodinNodeType};
+    use crate::core::literal::Literal;
+    use crate::core::operator::Operator;
+    use crate::identifier::Identifier;
     use crate::parsing::{JodinLexer, Tok};
-    use jodin_common::ast::{JodinNode, JodinNodeType};
-    use jodin_common::core::literal::Literal;
-    use jodin_common::core::operator::Operator;
-    use jodin_common::identifier::Identifier;
-    use jodin_common::types::primitives::Primitive;
-    use jodin_common::types::Type;
+    use crate::types::primitives::Primitive;
+    use crate::types::Type;
     use std::iter::FromIterator;
     use std::str::FromStr;
 

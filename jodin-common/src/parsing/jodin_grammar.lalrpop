@@ -1,16 +1,16 @@
-use jodin_common::identifier::Identifier;
-use jodin_common::error::{JodinResult};
-use jodin_common::core::literal::Literal;
+use crate::identifier::Identifier;
+use crate::error::{JodinResult};
+use crate::core::literal::Literal;
 
-use jodin_common::core::operator::Operator;
-use jodin_common::ast::{JodinNode, JodinNodeType, CompoundType};
-use jodin_common::core::tags::LabeledStatementTag;
-use jodin_common::types::intermediate_type::IntermediateType;
-use jodin_common::types::primitives::Primitive;
-use jodin_common::types::StorageModifier;
+use crate::core::operator::Operator;
+use crate::ast::{JodinNode, JodinNodeType, CompoundType};
+use crate::core::tags::LabeledStatementTag;
+use crate::types::intermediate_type::IntermediateType;
+use crate::types::primitives::Primitive;
+use crate::types::StorageModifier;
 
 use crate::parsing::Tok;
-use jodin_common::core::privacy::{Visibility, VisibilityTag};
+use crate::core::privacy::{Visibility, VisibilityTag};
 
 
 use super::UnwrapVector;
@@ -649,7 +649,7 @@ DerefOp<Op>: Operator = <op:Op> => if let Tok::Operator(op) = op {
 
 extern {
     type Location = usize;
-    type Error = jodin_common::error::JodinError;
+    type Error = crate::error::JodinError;
 
     enum Tok<'input> {
         "t_constant" => Tok::Constant(<&'input str>),

@@ -6,6 +6,7 @@ pub mod core;
 pub mod error;
 pub mod identifier;
 pub mod mvp;
+pub mod parsing;
 pub mod types;
 pub mod unit;
 pub mod utility;

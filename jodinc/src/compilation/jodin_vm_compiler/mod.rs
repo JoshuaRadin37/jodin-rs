@@ -370,12 +370,12 @@ impl Display for CompiledObject {
 #[cfg(test)]
 mod tests {
     use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
-    use crate::parsing::parse_program;
     use crate::{process_jodin_node, JodinResult};
     use jodin_asm::init_logging;
     use jodin_common::compilation::Compiler;
     use jodin_common::compilation_settings::CompilationSettings;
     use jodin_common::init_logging;
+    use jodin_common::parsing::parse_program;
     use log::LevelFilter;
 
     #[test]

@@ -26,13 +26,13 @@ use crate::compilation::jodin_vm_compiler::{
     split_by_module, JodinVMCompiler, Module, ObjectCompilerBuilder,
 };
 use crate::compilation::JodinVM;
-use crate::parsing::parse_program;
 use crate::passes::analysis::analyze_with_preload;
 use crate::{optimize, JodinError, JodinNode, JodinResult};
 use jodin_common::compilation::{
     execute_compiler, Compilable, Compiler, Context, PaddedWriter, Target,
 };
 use jodin_common::compilation_settings::CompilationSettings;
+use jodin_common::parsing::parse_program;
 use jodin_common::unit::{CompilationObject, Incremental, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
