@@ -17,6 +17,7 @@ use jodin_rs_vm::function_names::CALL;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+#[derive(Default)]
 pub struct ExpressionCompiler(Rc<RefCell<VariableUseTracker>>);
 
 impl ExpressionCompiler {

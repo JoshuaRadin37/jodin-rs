@@ -553,7 +553,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 }
             }
             if !found {
-                warn!(
+                debug!(
                     "Couldn't find identifier with namespace path: {:?}",
                     Identifier::from_iter(namespaces)
                 );
@@ -568,7 +568,7 @@ impl<T: Namespaced> NamespaceTree<T> {
                 return Ok(value);
             }
         }
-        warn!("{} is not an identifier.", path);
+        debug!("{} is not an identifier.", path);
         Err(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
     }
 

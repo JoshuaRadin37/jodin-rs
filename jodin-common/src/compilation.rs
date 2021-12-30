@@ -156,7 +156,9 @@ impl<W: io::Write> io::Write for PaddedWriter<W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         for &c in buf {
             if self.pad_next {
-                write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
+                if self.count > 0 {
+                    write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
+                }
                 self.pad_next = false;
             }
 
@@ -165,8 +167,8 @@ impl<W: io::Write> io::Write for PaddedWriter<W> {
                     writeln!(self.writer)?;
                     self.pad_next = true;
                 }
-                c => {
-                    write!(self.writer, "{}", c)?;
+                _ => {
+                    self.writer.write(&[c])?;
                 }
             }
         }
@@ -177,25 +179,4 @@ impl<W: io::Write> io::Write for PaddedWriter<W> {
     fn flush(&mut self) -> io::Result<()> {
         self.writer.flush()
     }
-
-    // fn write_str(&mut self, s: &str) -> std::io::Result {
-    //     for c in s.chars() {
-    //         if self.pad_next {
-    //             write!(self.writer, "{}", self.pad_string.repeat(self.count))?;
-    //             self.pad_next = false;
-    //         }
-    //
-    //         match c {
-    //             '\n' => {
-    //                 writeln!(self.writer)?;
-    //                 self.pad_next = true;
-    //             }
-    //             c => {
-    //                 write!(self.writer, "{}", c)?;
-    //             }
-    //         }
-    //     }
-    //
-    //     Ok(())
-    // }
 }

@@ -6,7 +6,7 @@ use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::core::privacy::Visibility;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
-use crate::mvp::bytecode::{Assembly, Encode, GetAsm};
+use crate::mvp::bytecode::{Assembly, Bytecode, Decode, Encode, GetAsm};
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::Field;
 use anyhow::anyhow;
@@ -16,11 +16,11 @@ use bytemuck::{
 use std::borrow::Borrow;
 use std::fmt::{format, Debug, Display, Formatter};
 use std::fs::File;
-use std::io;
-use std::io::{Read, Write};
+use std::io::{BufRead, Read, Write};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use std::{io, mem};
 
 /// A translation unit is the smallest public facing unit
 #[derive(Debug, PartialEq, Clone)]
@@ -137,6 +137,7 @@ pub fn join_translation_units<S: AsRef<str>, I: IntoIterator<Item = S>>(iterator
 
 /// The compilation objects are what's produced by the compiler, and can also be interpreted by the
 /// incremental compiler to get the the translation units
+#[derive(Debug)]
 pub struct CompilationObject {
     magic_number: u64,
     pub file_location: PathBuf,
@@ -170,10 +171,23 @@ impl CompilationObject {
     }
 }
 
+impl Display for CompilationObject {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompilationObject")
+            .field("location", &self.file_location)
+            .field("units", &self.units.len())
+            .field("instructions", &self.jasm.len())
+            .finish()
+    }
+}
+
 impl<T: Target> Compilable<T> for CompilationObject {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        let magic_num_as_bytes = bytes_of(&self.magic_number);
-        w.write_all(magic_num_as_bytes)?;
+        let magic_num_as_bytes = self.magic_number.to_be_bytes();
+        trace!("Wrote magic num {:?} to file", magic_num_as_bytes);
+        w.write_all(&magic_num_as_bytes)?;
+        writeln!(w)?;
+        writeln!(w, "{:?}", &self.file_location)?;
         writeln!(w, "{}", &self.module)?;
         write!(w, "{{")?;
         for unit in &self.units {
@@ -190,9 +204,67 @@ impl TryFrom<&[u8]> for CompilationObject {
     type Error = JodinError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let magic_num = *from_bytes::<u64>(&value[0..8]);
+        let mut bytes = [0u8; mem::size_of::<u64>()];
+        bytes.copy_from_slice(&value[0..8]);
+        let magic_num = u64::from_be_bytes(bytes);
+        if !Version.verify_magic_number(magic_num) {
+            return Err(anyhow!(
+                "Incorrect magic number for for {} (found: {}, expected: {})",
+                Version.version_string(),
+                magic_num,
+                Version.to_magic_number()
+            )
+            .into());
+        }
 
-        todo!()
+        let translation_unit_start_index = value
+            .iter()
+            .position(|&p| p == b'{')
+            .ok_or(anyhow!("No position found for {{"))?;
+        let translation_unit_end_offset = value
+            .iter()
+            .skip(translation_unit_start_index)
+            .position(|&p| p == b'}')
+            .ok_or(anyhow!("No position found for }}"))?;
+
+        let translation_units_end = translation_unit_start_index + translation_unit_end_offset;
+        let translation_unit_string =
+            &value[translation_unit_start_index + 1..(translation_units_end)];
+        let translation_unit_string = String::from_utf8(translation_unit_string.to_vec())?;
+        let tu_strings: Vec<&str> = translation_unit_string
+            .trim()
+            .split(UNIT_SEPARATOR)
+            .filter(|&s| !s.is_empty())
+            .collect();
+        debug!("Translation Unit Strings: {:#?}", tu_strings);
+        let mut translation_units: Vec<TranslationUnit> = vec![];
+        for translation_unit_string in tu_strings {
+            info!("unit: {:?}", translation_unit_string);
+            let field_split_vec = translation_unit_string
+                .split(FIELD_SEPARATOR)
+                .collect::<Vec<_>>();
+            if let &[name, jtype, visibility] = &*field_split_vec {
+                let id: Identifier = name.parse().unwrap();
+                let jtype: IntermediateType = jtype.parse()?;
+                let visibility: Visibility = visibility.parse()?;
+
+                translation_units.push(TranslationUnit::new(visibility, jtype, id));
+            }
+        }
+
+        let header_bytes = value[8..translation_unit_start_index].to_vec();
+        /// Header should be in utf-8
+        let header = String::from_utf8(header_bytes)?;
+        let mut split = header.lines();
+        let file_location: PathBuf = PathBuf::from(split.next().unwrap());
+        let module: Identifier = Identifier::from(split.next().unwrap());
+
+        let bytecode_raw = &value[translation_units_end + 1..];
+        let bytecode: Bytecode = Bytecode::from(bytecode_raw);
+        let assembly: Assembly = bytecode.decode();
+        let output = CompilationObject::new(file_location, module, translation_units, assembly);
+        info!("Generated {}", output);
+        Ok(output)
     }
 }
 
@@ -209,9 +281,7 @@ impl TryFrom<&Path> for CompilationObject {
 
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
         if value.is_file() {
-            let mut read = File::open(value)?;
-            let mut buffer = vec![0u8; 0];
-            read.read_to_end(&mut buffer)?;
+            let mut buffer = std::fs::read(value)?;
             Self::try_from(&*buffer)
         } else {
             Err(anyhow!(
@@ -219,15 +289,6 @@ impl TryFrom<&Path> for CompilationObject {
                 value
             ))?
         }
-    }
-}
-
-impl Debug for CompilationObject {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CompilationObject")
-            .field("location", &self.file_location)
-            .field("module", &self.module)
-            .finish_non_exhaustive()
     }
 }
 

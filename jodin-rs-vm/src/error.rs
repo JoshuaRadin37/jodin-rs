@@ -1,3 +1,4 @@
+use jodin_common::error::JodinError;
 use jodin_common::mvp::value::Value;
 use std::error::Error as StdError;
 use std::io;
@@ -15,6 +16,8 @@ pub enum VMError {
     WrongFileType,
     #[error("IO Error: {0}")]
     IoError(io::Error),
+    #[error("Jodin error: {0}")]
+    JodinError(#[from] JodinError),
     #[error(transparent)]
     Other(#[from] Box<dyn StdError>),
 }

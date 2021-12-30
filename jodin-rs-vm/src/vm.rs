@@ -1,7 +1,7 @@
 use crate::core_traits::VMLoadable;
 use crate::error::VMError;
 use crate::fault::{Fault, FaultHandle, FaultJumpTable};
-use crate::{ArithmeticsTrait, MemoryTrait, VirtualMachine, CALL, RECEIVE_MESSAGE};
+use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, RECEIVE_MESSAGE};
 use jodin_common::error::JodinErrorType;
 use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
 use jodin_common::mvp::location::AsmLocation;
@@ -127,7 +127,7 @@ where
             Value::Integer(_) => {}
             Value::UInteger(_) => {}
             Value::Str(_) => {}
-            Value::Dictionary { dict } => {
+            Value::Dictionary(dict) => {
                 if let Some(mut receive_msg) = dict.get(RECEIVE_MESSAGE).cloned() {
                     if receive_msg != Value::Native {
                         return self.send_message(&mut receive_msg, CALL, args);
@@ -304,12 +304,12 @@ where
             Asm::GetAttribute(attr) => {
                 let dict = self.memory.pop().expect("No value found on stack");
                 let val = match dict {
-                    Value::Dictionary { mut dict } => {
+                    Value::Dictionary(mut dict) => {
                         dict.remove(attr.as_str()).expect("Attribute must exist")
                     }
                     Value::Reference(refr) => {
                         let inner = refr.borrow();
-                        if let Value::Dictionary { dict } = &*inner {
+                        if let Value::Dictionary(dict) = &*inner {
                             dict.get(attr.as_str())
                                 .expect("Attribute must exist")
                                 .clone()
@@ -506,7 +506,7 @@ pub struct VMBuilder<'l, A, M> {
 }
 
 impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
-    pub fn build(self) -> VM<'l, M, A> {
+    pub fn build(self) -> Result<VM<'l, M, A>, VMError> {
         let VMBuilder {
             arithmetic,
             memory,
@@ -531,8 +531,10 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             fault_table: Default::default(),
             kernel_mode: false,
         };
-        for obj_path in object_path {}
-        vm
+        for obj_path in object_path {
+            obj_path.try_load_into_vm(&mut vm)?;
+        }
+        Ok(vm)
     }
 }
 

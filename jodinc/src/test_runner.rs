@@ -191,7 +191,7 @@ impl ProjectBuilder {
             .alu(MinimumALU)
             .with_stdout(&mut stdout)
             .with_stderr(&mut stderr)
-            .build();
+            .build()?;
 
         let obj = CompilationObject::try_from(path)?;
         virtual_machine.load(obj);

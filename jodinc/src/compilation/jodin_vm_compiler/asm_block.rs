@@ -78,7 +78,6 @@ impl AssemblyBlock {
 
     /// Normalizes the block into standard assembly. Relatives `@<label>` and removes `#<labels>`.
     pub fn normalize(&self) -> Assembly {
-        println!("{:#?}", self);
         self._normalize(
             &self
                 .name

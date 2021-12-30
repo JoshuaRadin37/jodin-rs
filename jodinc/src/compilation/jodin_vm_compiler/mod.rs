@@ -1,17 +1,21 @@
-use crate::compilation::jodin_vm_compiler::asm_block::AssemblyBlock;
+use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
+use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
 use crate::{jasm, JodinError, JodinNode, JodinResult};
+use anyhow::anyhow;
 use jodin_common::asm_version::Version;
 use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::{
     Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target,
 };
 use jodin_common::compilation_settings::CompilationSettings;
+use jodin_common::core::privacy::VisibilityTag;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
 use jodin_common::identifier::{Identifiable, Identifier};
 use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
-use jodin_common::unit::CompilationObject;
+use jodin_common::types::StorageModifier;
+use jodin_common::unit::{CompilationObject, TranslationUnit};
 use jodin_common::utility::Tree;
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
@@ -77,13 +81,13 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
                 None => {
                     let mut builder = module.builder(&settings.target_directory);
                     for member in module.objects() {
-                        info!("Compiling {:?}", member);
                         let resolved_id = member.resolved_id()?;
+                        info!("Compiling {:?}", resolved_id);
                         let mut object_compiler =
                             builder.translation_object_compiler(resolved_id.this());
                         object_compiler.compile(member, settings)?;
                     }
-                    let static_obj: CompilationObject = module.static_object(&builder);
+                    let static_obj: CompilationObject = module.static_object(&builder)?;
                     let ref mut writer = static_obj.writer();
                     Compilable::<JodinVM>::compile(static_obj, &context, writer)?;
                 }
@@ -225,7 +229,7 @@ impl<'j> Module<'j> {
         self.members
             .iter()
             .filter(|&&node| match node.r#type() {
-                JodinNodeType::ExternDeclaration { .. } | JodinNodeType::VarDeclarations { .. } => {
+                JodinNodeType::ExternDeclaration { .. } | JodinNodeType::StoreVariable { .. } => {
                     true
                 }
                 _ => false,
@@ -234,9 +238,54 @@ impl<'j> Module<'j> {
     }
 
     /// Creates the compilation object
-    pub fn static_object(&self, builder: &ObjectCompilerBuilder) -> CompilationObject {
+    pub fn static_object(&self, builder: &ObjectCompilerBuilder) -> JodinResult<CompilationObject> {
+        info!("Creating static object for module {:?}", &builder.module_id);
         let path = self.static_object_path(|s| builder.relative_path(s, "jobj"));
-        CompilationObject::new(path, self.identifier.clone(), vec![], jasm![].normalize())
+        let mut block = jasm![];
+        let mut translation_units = vec![];
+        for tree in self.declarations() {
+            match tree.r#type() {
+                JodinNodeType::StoreVariable {
+                    storage_type: _,
+                    name,
+                    var_type: _,
+                    maybe_initial_value,
+                } => {
+                    let name = name.resolved_id()?;
+                    let value = maybe_initial_value
+                        .as_ref()
+                        .ok_or(anyhow!("Non-extern values must be initialized to a value"))?;
+                    let mut expr_c = ExpressionCompiler::default();
+                    block.insert_asm(jasm![
+                        expr_c.create_compilable(value)?,
+                        Asm::SetSymbol(name.os_compat_str().unwrap())
+                    ]);
+                }
+                JodinNodeType::ExternDeclaration { declaration } => match declaration.r#type() {
+                    JodinNodeType::StoreVariable {
+                        storage_type: StorageModifier::Const,
+                        name,
+                        var_type,
+                        maybe_initial_value: Option::None,
+                    } => {
+                        let vis = name.get_tag::<VisibilityTag>()?.visibility().clone();
+                        let name = name.resolved_id()?;
+                        let unit = TranslationUnit::new(vis, var_type.clone(), name);
+                        translation_units.push(unit);
+                    }
+                    _ => {}
+                },
+                t => {
+                    info!("found bad type for static-object: {:?}", t)
+                }
+            }
+        }
+        Ok(CompilationObject::new(
+            path,
+            self.identifier.clone(),
+            translation_units,
+            block.normalize(),
+        ))
     }
 
     fn static_object_path<F>(&self, path_builder: F) -> PathBuf

@@ -71,7 +71,8 @@ fn fibonacci() {
         .memory(MinimumMemory::default())
         .alu(MinimumALU)
         .object_path(dir)
-        .build();
+        .build()
+        .expect("Should be able to build");
 
     assert_eq!(vm.run("main").unwrap(), 0);
 }

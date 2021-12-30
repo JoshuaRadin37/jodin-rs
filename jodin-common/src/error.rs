@@ -13,6 +13,7 @@ use std::char::ParseCharError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
+use std::string::FromUtf8Error;
 
 use crate::ast::JodinNode;
 use crate::core::literal::Literal;
@@ -141,7 +142,9 @@ pub enum JodinErrorType {
     #[error("Given invalid string for incremental compilation (string: {0:?})")]
     InvalidCompilationUnit(String),
     #[error(transparent)]
-    AnyHowError(anyhow::Error),
+    AnyHowError(#[from] anyhow::Error),
+    #[error(transparent)]
+    UTF8Error(#[from] FromUtf8Error),
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
@@ -202,15 +205,9 @@ impl JodinError {
     }
 }
 
-impl From<JodinErrorType> for JodinError {
-    fn from(e: JodinErrorType) -> Self {
-        JodinError::new(e)
-    }
-}
-
-impl From<anyhow::Error> for JodinError {
-    fn from(e: anyhow::Error) -> Self {
-        JodinError::new(JodinErrorType::AnyHowError(e))
+impl<E: Into<JodinErrorType>> From<E> for JodinError {
+    fn from(e: E) -> Self {
+        JodinError::new(e.into())
     }
 }
 

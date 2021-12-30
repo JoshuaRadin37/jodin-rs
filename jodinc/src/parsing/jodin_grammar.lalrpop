@@ -440,7 +440,7 @@ StorageModifier: StorageModifier ={
 }
 
 
-    VariableDeclaration: ParseResult = {
+VariableDeclaration: ParseResult = {
     <storage:StorageModifier> <id:SingleIdentifier> ":" <ty:CanonicalType> ";" => {
     JodinNodeType::StoreVariable {
         storage_type: storage,

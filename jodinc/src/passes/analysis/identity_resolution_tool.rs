@@ -654,7 +654,7 @@ impl IdentifierSetter {
                             );
                             true
                         } else {
-                            warn!(
+                            debug!(
                                 "Path {:?} ({:?}) is not visible from {:?}",
                                 alias_id,
                                 visibility,
@@ -687,7 +687,7 @@ impl IdentifierSetter {
                             );
                             true
                         } else {
-                            warn!(
+                            debug!(
                                 "Path {:?} ({:?}) is not visible from {:?}",
                                 resolved,
                                 visibility,

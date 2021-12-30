@@ -105,14 +105,14 @@ pub trait VMTryLoadable {
         VM: VirtualMachine;
 }
 
-impl<A: GetAsm> VMLoadable for A {
-    fn load_into_vm<VM>(self, vm: &mut VM)
-    where
-        VM: VirtualMachine,
-    {
-        vm.load(self);
-    }
-}
+// impl<A: GetAsm> VMLoadable for A {
+//     fn load_into_vm<VM>(self, vm: &mut VM)
+//     where
+//         VM: VirtualMachine,
+//     {
+//         vm.load(self);
+//     }
+// }
 
 impl<V: VMLoadable> VMTryLoadable for V {
     fn try_load_into_vm<VM>(self, vm: &mut VM) -> Result<(), VMError>

@@ -2,21 +2,21 @@
 
 use crate::error::VMError;
 use crate::{VMTryLoadable, VirtualMachine};
+use jodin_common::unit::CompilationObject;
 use std::borrow::Borrow;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// A regular file
 #[derive(Debug)]
-pub struct RegularFile(File);
+pub struct RegularFile(PathBuf);
 
-impl TryFrom<File> for RegularFile {
+impl TryFrom<&Path> for RegularFile {
     type Error = VMError;
 
-    fn try_from(value: File) -> Result<Self, Self::Error> {
-        let metadata = value.metadata()?;
-        if metadata.is_file() {
-            Ok(RegularFile(value))
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        if value.is_file() {
+            Ok(RegularFile(value.to_path_buf()))
         } else {
             Err(VMError::WrongFileType)
         }
@@ -28,7 +28,26 @@ impl VMTryLoadable for RegularFile {
     where
         VM: VirtualMachine,
     {
-        todo!()
+        if let Some(ext) = self.0.extension() {
+            if ext == "jobj" {
+                let compilable = CompilationObject::try_from(self.0.as_path())?;
+                if self
+                    .0
+                    .file_name()
+                    .ok_or(VMError::WrongFileType)?
+                    .to_str()
+                    .unwrap()
+                    .starts_with("static")
+                {
+                    vm.load_static(compilable);
+                } else {
+                    vm.load(compilable);
+                }
+                return Ok(());
+            }
+        }
+
+        return Err(VMError::WrongFileType);
     }
 }
 
@@ -36,12 +55,12 @@ impl VMTryLoadable for RegularFile {
 #[derive(Debug)]
 pub struct Directory(PathBuf);
 
-impl TryFrom<PathBuf> for Directory {
+impl TryFrom<&Path> for Directory {
     type Error = VMError;
 
-    fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
         if value.is_dir() {
-            Ok(Directory(value))
+            Ok(Directory(value.to_path_buf()))
         } else {
             Err(VMError::WrongFileType)
         }
@@ -83,13 +102,10 @@ impl TryFrom<&Path> for FileSystemNode {
     type Error = VMError;
 
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
-        let node = File::open(value)?;
         if value.is_dir() {
-            Ok(FileSystemNode::Dir(Directory::try_from(
-                value.to_path_buf(),
-            )?))
+            Ok(FileSystemNode::Dir(Directory::try_from(value)?))
         } else if value.is_file() {
-            Ok(FileSystemNode::File(RegularFile::try_from(node)?))
+            Ok(FileSystemNode::File(RegularFile::try_from(value)?))
         } else {
             Err(VMError::WrongFileType)
         }
@@ -108,7 +124,7 @@ impl VMTryLoadable for FileSystemNode {
     }
 }
 
-impl VMTryLoadable for &Path {
+impl VMTryLoadable for PathBuf {
     fn try_load_into_vm<VM>(self, vm: &mut VM) -> Result<(), VMError>
     where
         VM: VirtualMachine,

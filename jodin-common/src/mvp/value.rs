@@ -14,9 +14,7 @@ pub enum Value {
     Integer(i64),
     UInteger(u64),
     Str(String),
-    Dictionary {
-        dict: HashMap<String, Value>,
-    },
+    Dictionary(HashMap<String, Value>),
     Array(Vec<Value>),
     Reference(Box<RefCell<Value>>),
     Bytecode(Bytecode),
@@ -61,9 +59,7 @@ impl Value {
     }
 
     pub fn new_dict() -> Self {
-        Value::Dictionary {
-            dict: Default::default(),
-        }
+        Value::Dictionary(Default::default())
     }
 
     pub fn into_reference(self) -> Self {
@@ -141,9 +137,7 @@ where
     Value: From<V>,
 {
     fn from(m: HashMap<String, V>) -> Self {
-        Value::Dictionary {
-            dict: m.into_iter().map(|(k, v)| (k, v.into())).collect(),
-        }
+        Value::Dictionary(m.into_iter().map(|(k, v)| (k, v.into())).collect())
     }
 }
 
@@ -152,9 +146,7 @@ where
     Value: From<V>,
 {
     fn from(m: Vec<(String, V)>) -> Self {
-        Value::Dictionary {
-            dict: m.into_iter().map(|(k, v)| (k, v.into())).collect(),
-        }
+        Value::Dictionary(m.into_iter().map(|(k, v)| (k, v.into())).collect())
     }
 }
 
@@ -163,9 +155,7 @@ where
     Value: From<V>,
 {
     fn from(m: [(String, V); N]) -> Self {
-        Value::Dictionary {
-            dict: m.into_iter().map(|(k, v)| (k.clone(), v.into())).collect(),
-        }
+        Value::Dictionary(m.into_iter().map(|(k, v)| (k.clone(), v.into())).collect())
     }
 }
 
@@ -174,12 +164,11 @@ where
     Value: From<V>,
 {
     fn from(m: [(&str, V); N]) -> Self {
-        Value::Dictionary {
-            dict: m
-                .into_iter()
+        Value::Dictionary(
+            m.into_iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
                 .collect(),
-        }
+        )
     }
 }
 

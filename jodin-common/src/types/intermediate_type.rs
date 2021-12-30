@@ -42,12 +42,13 @@
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter, Write};
+use std::str::FromStr;
 
 use crate::ast::JodinNode;
 use itertools::Itertools;
 
 use crate::core::literal::ConstantCast;
-use crate::error::{JodinErrorType, JodinResult};
+use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
 use crate::types::arrays::Array;
 use crate::types::generic_context::{GenericParameter, GenericParameterInstance};
@@ -500,9 +501,16 @@ impl Display for TypeTail {
     }
 }
 
+impl FromStr for IntermediateType {
+    type Err = JodinError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use jodinc::parsing::parse_type;
 
     #[test]
     fn intermediate_type_as_string() {

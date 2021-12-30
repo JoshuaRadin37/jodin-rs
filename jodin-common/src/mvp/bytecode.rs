@@ -28,6 +28,7 @@ pub enum Asm {
     /// Go to this location if the value on the stack is NOT 0.
     CondGoto(AsmLocation),
 
+    /// Push a [Value](Value) to the stack
     Push(Value),
     /// Pops the top of the stack
     Pop,
@@ -143,12 +144,6 @@ pub trait Encode {
 }
 
 impl Encode for Assembly {
-    fn encode(self) -> Bytecode {
-        bincode::serialize(&self).unwrap()
-    }
-}
-
-impl Encode for Asm {
     fn encode(self) -> Bytecode {
         bincode::serialize(&self).unwrap()
     }

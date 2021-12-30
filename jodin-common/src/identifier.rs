@@ -1,16 +1,19 @@
 //! The standard identifier is used for every declaration within Jodin, from local declarations to
 //! class definitions to modules.
 
+use crate::error::JodinErrorType;
 use crate::utility::IntoBox;
 use itertools::Itertools;
 use std::array::IntoIter;
 use std::borrow::Borrow;
 use std::cmp::{min, Ordering};
 use std::collections::{Bound, VecDeque};
+use std::convert::Infallible;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::{FromIterator, FusedIterator};
 use std::ops::{Add, Div, Index, Range, RangeBounds, Shl, Shr};
+use std::str::FromStr;
 
 /// Contains this id and an optional parent
 #[derive(Eq, PartialEq, Hash, Clone)]
@@ -290,6 +293,14 @@ impl<S: AsRef<str>> From<S> for Identifier {
             parent: None,
             id: s.as_ref().to_string(),
         }
+    }
+}
+
+impl FromStr for Identifier {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Identifier::from_iter(s.split("::")))
     }
 }
 
