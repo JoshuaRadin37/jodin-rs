@@ -205,10 +205,9 @@ impl Ord for JTraitObjectWithDistance<'_> {
 #[cfg(test)]
 mod tests {
     use crate::error::{JodinError, JodinErrorType, JodinResult};
-    use jodin_common::core::types::primitives::Primitive;
-    use jodin_common::core::types::resolved_type::WeakResolvedType;
-    use jodin_common::core::types::type_environment::TypeEnvironment;
-    use jodin_common::core::types::Type;
+    use crate::types::primitives::Primitive;
+    use crate::types::resolved_type::WeakResolvedType;
+    use crate::types::type_environment::TypeEnvironment;
 
     #[test]
     fn upgrade_can_fail() {

@@ -50,6 +50,7 @@ use itertools::Itertools;
 use crate::core::literal::ConstantCast;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
+use crate::parsing::parse_type;
 use crate::types::arrays::Array;
 use crate::types::generic_context::{GenericParameter, GenericParameterInstance};
 use crate::types::pointer::Pointer;
@@ -505,12 +506,13 @@ impl FromStr for IntermediateType {
     type Err = JodinError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        parse_type(s)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parsing::parse_type;
 
     #[test]
     fn intermediate_type_as_string() {

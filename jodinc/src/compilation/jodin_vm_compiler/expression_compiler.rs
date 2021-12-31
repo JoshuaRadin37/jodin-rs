@@ -10,6 +10,7 @@ use jodin_common::core::operator::Operator;
 use jodin_common::core::tags::TagTools;
 use jodin_common::core::NATIVE_OBJECT;
 use jodin_common::error::JodinErrorType;
+use jodin_common::identifier::Identifier;
 use jodin_common::mvp::bytecode::{Asm, Assembly};
 use jodin_common::mvp::location::AsmLocation;
 use jodin_common::mvp::value::Value;
@@ -27,6 +28,7 @@ impl ExpressionCompiler {
 
     fn expr(&self, tree: &JodinNode) -> JodinResult<AssemblyBlock> {
         let mut output = AssemblyBlock::new(None);
+
         match tree.r#type() {
             JodinNodeType::Literal(_)
             | JodinNodeType::Identifier(_)
@@ -43,19 +45,21 @@ impl ExpressionCompiler {
                 generics_instance: _,
                 arguments,
             } => {
-                // todo: Need to decide if theres a way to call a function without always having to
-                // todo: rely on the call method
-                let mut arg_count = 0;
-                for arg in arguments.iter().rev() {
-                    output.insert_asm(self.expr(arg)?);
-                    arg_count += 1;
-                }
-
-                let mut called_asm = self.expr(called)?;
                 if let JodinNodeType::Identifier(id) = called.r#type() {
                     if id == NATIVE_OBJECT {
+                        let arguments = arguments.as_slice();
+                        let message = self.expr(&arguments[0])?;
+                        let args = &arguments[1..];
+                        let mut arg_count = 0;
+                        for arg in args.iter().rev() {
+                            output.insert_asm(jasm![self.expr(arg)?,]);
+                            arg_count += 1;
+                        }
                         output.insert_asm(jasm![
+                            Asm::Pack(arg_count),
+                            message,
                             Asm::Push(Value::Native),
+                            Asm::Pack(3),
                             Asm::Push(Value::Str("invoke".to_string())),
                             Asm::Push(Value::Native),
                             Asm::SendMessage
@@ -63,6 +67,17 @@ impl ExpressionCompiler {
                         return Ok(output);
                     }
                 }
+                // todo: Need to decide if theres a way to call a function without always having to
+                // todo: rely on the call method
+                let mut arg_count = 0;
+
+                for arg in arguments.iter().rev() {
+                    output.insert_asm(jasm![self.expr(arg)?,]);
+                    arg_count += 1;
+                }
+
+                let mut called_asm = self.expr(called)?;
+                output.insert_asm(Asm::Pack(arg_count));
 
                 let message = Asm::Push(Value::Str(CALL.to_string()));
                 output.insert_asm(message);
@@ -73,6 +88,11 @@ impl ExpressionCompiler {
                 panic!("Illegal node type given for expr: {:#?}", e)
             }
         }
+
+        if let Some(Asm::GetVar(_)) = output.normalize().last() {
+            output.insert_asm(Asm::Deref);
+        }
+
         if output.len() == 0 {
             panic!("expression did not form any bytecode")
         }

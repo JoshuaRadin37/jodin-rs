@@ -7,13 +7,13 @@ use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::{VMBuilder, VM};
 use jodinc::test_runner::ProjectBuilder;
-use log::LevelFilter;
+use log::{info, LevelFilter};
 use std::error::Error;
 use std::path::PathBuf;
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Info);
+    init_logging(LevelFilter::Warn);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
             
@@ -44,9 +44,9 @@ fn fibonacci() {
                 __NATIVE("print", value);
             }
             
-            fn main() -> int {
+            fn main() -> unsigned int {
                 print(factorial(6));
-                return 0;
+                return 0u;
             }
 
             "#,
@@ -54,17 +54,14 @@ fn fibonacci() {
 
     let dir = match builder.compile() {
         Ok(d) => d,
-        Err(e) => {
-            match e.downcast::<JodinError>() {
-                Ok(e) => {
-                    panic!("{:#}", e)
-                }
-                Err(e) => {
-                    panic!("{}", e)
-                }
+        Err(e) => match e.downcast::<JodinError>() {
+            Ok(e) => {
+                panic!("{:#}", e)
             }
-            panic!()
-        }
+            Err(e) => {
+                panic!("{}", e)
+            }
+        },
     };
 
     let mut vm = VMBuilder::new()
@@ -73,6 +70,8 @@ fn fibonacci() {
         .object_path(dir)
         .build()
         .expect("Should be able to build");
+
+    info!("VM: {:#?}", vm);
 
     assert_eq!(vm.run("main").unwrap(), 0);
 }

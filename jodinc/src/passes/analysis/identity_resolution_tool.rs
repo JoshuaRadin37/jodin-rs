@@ -916,7 +916,7 @@ pub fn identifier_is_visible_from(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::error::JodinResult;
+    use jodin_common::error::JodinResult;
 
     #[test]
     fn label_structure_members() -> JodinResult<()> {

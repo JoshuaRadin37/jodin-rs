@@ -1,9 +1,9 @@
-use jodin_asm::init_logging;
 use jodin_common::core::identifier_resolution::IdentifierResolver;
 use jodin_common::core::privacy::Visibility;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinResult;
 use jodin_common::identifier::Identifier;
+use jodin_common::init_logging;
 use jodin_common::parsing::parse_program;
 use jodin_common::types::intermediate_type::IntermediateType;
 use jodin_common::types::primitives::Primitive;

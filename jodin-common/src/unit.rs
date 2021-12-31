@@ -173,10 +173,22 @@ impl CompilationObject {
 
 impl Display for CompilationObject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let path: PathBuf = match std::env::current_dir() {
+            Ok(current) => {
+                let file_location = pathdiff::diff_paths(current, &self.file_location).unwrap();
+
+                if file_location.ancestors().count() < self.file_location.ancestors().count() {
+                    file_location
+                } else {
+                    self.file_location.clone()
+                }
+            }
+            Err(_) => self.file_location.clone(),
+        };
         f.debug_struct("CompilationObject")
-            .field("location", &self.file_location)
             .field("units", &self.units.len())
             .field("instructions", &self.jasm.len())
+            .field("location", &path)
             .finish()
     }
 }
@@ -193,9 +205,10 @@ impl<T: Target> Compilable<T> for CompilationObject {
         for unit in &self.units {
             write!(w, "{};", unit)?;
         }
-        writeln!(w, "}}")?;
+        write!(w, "}}")?;
         let encoded = self.jasm.encode();
         w.write_all(&*encoded)?;
+        w.flush()?;
         Ok(())
     }
 }
@@ -255,8 +268,8 @@ impl TryFrom<&[u8]> for CompilationObject {
         let header_bytes = value[8..translation_unit_start_index].to_vec();
         /// Header should be in utf-8
         let header = String::from_utf8(header_bytes)?;
-        let mut split = header.lines();
-        let file_location: PathBuf = PathBuf::from(split.next().unwrap());
+        let mut split = header.lines().skip(1);
+        let file_location: PathBuf = PathBuf::from(split.next().unwrap().replace('"', ""));
         let module: Identifier = Identifier::from(split.next().unwrap());
 
         let bytecode_raw = &value[translation_units_end + 1..];
@@ -280,6 +293,7 @@ impl TryFrom<&Path> for CompilationObject {
     type Error = JodinError;
 
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        info!("Attempting to load file at {:?}", value);
         if value.is_file() {
             let mut buffer = std::fs::read(value)?;
             Self::try_from(&*buffer)
@@ -308,8 +322,6 @@ mod tests {
     use super::*;
     use crate::types::primitives::Primitive;
     use crate::types::Type;
-    use jodinc::core::types::primitives::Primitive;
-    use jodinc::core::types::Type;
 
     #[test]
     fn get_translation_units() {

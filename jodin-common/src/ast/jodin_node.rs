@@ -625,7 +625,7 @@ impl Visitor<'_, HashMap<Identifier, Literal>, JodinResult<Literal>> for JodinNo
 #[cfg(test)]
 mod tests {
     use crate::ast::{JodinNode, JodinNodeType};
-    use crate::core::tags::DummyTag;
+    use crate::core::tags::{BlockIdentifierTag, DummyTag, ResolvedIdentityTag};
     use crate::identifier::Identifier;
 
     #[test]
@@ -642,7 +642,7 @@ mod tests {
     }
 
     mod node_refs {
-        use crate::ast::{node_tree, JodinNodeType};
+        use crate::ast::{node_tree, JodinNode, JodinNodeType};
         use crate::utility::{node_count, Acceptor, AcceptorMut, Tree};
 
         #[test]

@@ -56,6 +56,10 @@ pub enum Asm {
     Index(usize),
     /// Packs n amount of values from the stack into an array
     Pack(usize),
+    /// Dereference a pointer
+    Deref,
+    /// Gets a reference
+    GetRef,
 
     /// Return to the previous frame
     Return,

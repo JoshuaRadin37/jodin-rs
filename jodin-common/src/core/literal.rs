@@ -496,8 +496,8 @@ constant_cast!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jodinc::ast::parse_identifier;
-    use jodinc::parsing::parse_expression;
+    use crate::ast::parse_identifier;
+    use crate::parsing::parse_expression;
 
     #[test]
     fn parse_hex_literals() {

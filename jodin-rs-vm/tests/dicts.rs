@@ -1,12 +1,12 @@
-use jodin_asm::{default_logging, init_logging};
 use jodin_common::mvp::bytecode::{Asm, Assembly};
 use jodin_common::mvp::location::AsmLocation;
 use jodin_common::mvp::value::Value;
+use jodin_common::{default_logging, init_logging};
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::function_names::RECEIVE_MESSAGE;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
-use log::{info, LevelFilter};
+use log::{debug, info, LevelFilter};
 use std::io::stdout;
 
 #[test]
@@ -20,7 +20,8 @@ fn create_dict() {
             .alu(MinimumALU)
             .with_stdout(&mut buffer)
             .with_stderr(stdout())
-            .build();
+            .build()
+            .unwrap();
 
         let instructions = vec![
             Asm::label("__start"),
@@ -58,7 +59,8 @@ fn dict_with_native_override() {
             .alu(MinimumALU)
             .with_stdout(&mut buffer)
             .with_stderr(stdout())
-            .build();
+            .build()
+            .unwrap();
 
         let receive_msg: Assembly = vec![
             Asm::label("__output"),

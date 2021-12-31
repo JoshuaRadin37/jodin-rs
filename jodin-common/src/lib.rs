@@ -1,3 +1,22 @@
+#[macro_export]
+macro_rules! id {
+    ($first:ident $($sep:tt $next:ident)*) => {
+        $crate::identifier::Identifier::from_iter([stringify!($first), $(stringify!($next)),*])
+    };
+    ($first:literal $($sep:tt $next:literal)*) => {
+        {
+            use $crate::identifier::Identifier;
+            Identifier::from_iter(&[Identifier::from($first), $(Identifier::from($next)),*])
+        }
+    };
+    ($first:expr $(,$next:expr)*) => {
+        {
+            use $crate::identifier::Identifier;
+            Identifier::from_iter([Identifier::from($first), $(Identifier::from($next)),*])
+        }
+    };
+}
+
 pub mod asm_version;
 pub mod ast;
 pub mod compilation;

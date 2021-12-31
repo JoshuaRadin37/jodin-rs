@@ -2,8 +2,10 @@ use crate::core::literal::Literal;
 use crate::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
 use crate::mvp::location::AsmLocation;
 use num_traits::{PrimInt, Signed};
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -23,6 +25,59 @@ pub enum Value {
     /// is a reference to the actual virtual machine. When used as the value of an entry of an
     /// attribute that's being checked for, this means to pretend that there's no entry at all.
     Native,
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Empty => {
+                write!(f, "void")
+            }
+            Value::Byte(b) => {
+                write!(f, "{}u8", b)
+            }
+            Value::Float(fl) => {
+                write!(f, "{}f64", fl)
+            }
+            Value::Integer(i) => {
+                write!(f, "{:+}i64", i)
+            }
+            Value::UInteger(i) => {
+                write!(f, "{}u64", i)
+            }
+            Value::Str(s) => {
+                write!(f, "{:?}", s)
+            }
+            Value::Dictionary(d) => {
+                write!(
+                    f,
+                    "{:?}",
+                    d.iter()
+                        .map(|(k, v)| (k.to_string(), v.to_string()))
+                        .collect::<HashMap<_, _>>()
+                )
+            }
+            Value::Array(a) => {
+                write!(
+                    f,
+                    "{:?}",
+                    a.iter().map(|k| k.to_string()).collect::<Vec<_>>()
+                )
+            }
+            Value::Reference(r) => {
+                write!(f, "*{}", (&**r).borrow())
+            }
+            Value::Bytecode(b) => {
+                write!(f, "{:?}", b)
+            }
+            Value::Function(fu) => {
+                write!(f, "<{:?}>", fu)
+            }
+            Value::Native => {
+                write!(f, "NATIVE")
+            }
+        }
+    }
 }
 
 impl From<Literal> for Value {
@@ -69,6 +124,25 @@ impl Value {
             }
             v => Value::Reference(Box::new(RefCell::new(v))),
         }
+    }
+
+    pub fn is_null_ptr(&self) -> bool {
+        match self {
+            Value::Reference(b) => {
+                if let Value::Empty = &*(&**b).borrow() {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        }
+    }
+}
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Value::Byte(if b { 1 } else { 0 })
     }
 }
 

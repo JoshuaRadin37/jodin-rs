@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 /// A fault is a VM-level exception. The fault should return to the original point of execution once
 /// it completes.
+#[derive(Debug)]
 pub enum Fault {
     /// The following symbol is missing
     MissingSymbol(String),
@@ -22,6 +23,7 @@ impl Fault {
     }
 }
 
+#[derive(Debug)]
 pub struct FaultHandle {
     pub stored_pc: Vec<usize>,
     pub stored_stack: Vec<Value>,

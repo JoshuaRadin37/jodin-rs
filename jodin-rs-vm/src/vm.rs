@@ -10,8 +10,9 @@ use std::cell::RefCell;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
+use std::fmt::{Debug, Formatter};
 use std::io::{stderr, stdin, stdout, Read, Write};
-use std::ops::Deref;
+use std::ops::{Add, Deref};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -40,6 +41,23 @@ where
     kernel_mode: bool,
 }
 
+impl<'l, M, A> Debug for VM<'l, M, A>
+where
+    M: MemoryTrait,
+    A: ArithmeticsTrait,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VM")
+            .field("instructions", &self.instructions.len())
+            .field("program_counter", &self.program_counter())
+            .field("counter_stack", &self.counter_stack)
+            .field("memory", &self.memory)
+            .field("handler", &self.handler)
+            .field("kernel_mode", &self.kernel_mode)
+            .finish()
+    }
+}
+
 impl<'l, M, A> VM<'l, M, A>
 where
     M: MemoryTrait,
@@ -58,13 +76,19 @@ where
     }
 
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
+        info!(
+            "Running native method {:?} with args [{}]",
+            message,
+            args.iter()
+                .rev()
+                .map(|a| a.to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
         match message {
             "print" => {
-                if let Value::Str(s) = args.remove(0) {
-                    write!(self.stdout, "{}", s).expect("Couldn't print to output");
-                } else {
-                    panic!("Can not only pass strings to the print function")
-                }
+                let s = args.remove(0).to_string();
+                write!(self.stdout, "{}", s).expect("Couldn't print to output");
             }
             "write" => {
                 let fd = if let Value::UInteger(fd) = args.remove(0) {
@@ -87,12 +111,17 @@ where
             }
             "invoke" => {
                 // invokes the message (arg 2) on the target (arg 1) with args (arg 3..)
-                let mut target = args.remove(0);
+                let mut target = args.pop().unwrap();
                 let msg = args
-                    .remove(1)
+                    .pop()
+                    .unwrap()
                     .into_string()
                     .expect("String expected for message");
-                self.send_message(&mut target, &msg, args);
+                if let Value::Array(args) = args.pop().unwrap() {
+                    self.send_message(&mut target, &msg, args);
+                } else {
+                    panic!("Expected a value of type array")
+                }
             }
             "ref" => {
                 let target = args.remove(0);
@@ -290,10 +319,44 @@ where
                     .counter_stack
                     .last()
                     .cloned()
-                    .map(|v| v + 1)
+                    .map(|v| if v != 0 { v + 1 } else { 0 })
                     .unwrap_or(0);
                 trace!("Returning to instruction {}", next);
                 next_instruction = next;
+            }
+            Asm::Goto(location) => {
+                next_instruction = match location {
+                    &AsmLocation::ByteIndex(i) => i,
+                    &AsmLocation::InstructionDiff(diff) => {
+                        if diff > 0 {
+                            instruction_pointer + (diff as usize)
+                        } else {
+                            instruction_pointer - ((-diff) as usize)
+                        }
+                    }
+                    AsmLocation::Label(l) => self.label_to_instruction[l],
+                }
+            }
+            Asm::CondGoto(location) => {
+                let pop = self.memory.pop().unwrap();
+                let cond = match pop {
+                    Value::Byte(b) if b != 0 => true,
+                    r @ Value::Reference(_) => !r.is_null_ptr(),
+                    _ => false,
+                };
+                if cond {
+                    next_instruction = match location {
+                        &AsmLocation::ByteIndex(i) => i,
+                        &AsmLocation::InstructionDiff(diff) => {
+                            if diff > 0 {
+                                instruction_pointer + (diff as usize)
+                            } else {
+                                instruction_pointer - ((-diff) as usize)
+                            }
+                        }
+                        AsmLocation::Label(l) => self.label_to_instruction[l],
+                    }
+                }
             }
             Asm::Halt => {
                 self.cont = false;
@@ -342,6 +405,15 @@ where
                 self.memory.push(value);
             }
             &Asm::ClearVar(v) => {}
+            Asm::GetSymbol(string) => match self.label_to_instruction.get(string) {
+                None => {
+                    self.fault(Fault::MissingSymbol(string.clone()));
+                }
+                Some(_) => {
+                    let value = Value::Function(AsmLocation::Label(string.clone()));
+                    self.memory.push(value);
+                }
+            },
             Asm::SendMessage => {
                 let mut target = self
                     .memory
@@ -387,6 +459,65 @@ where
                     next_instruction = next;
                 }
             }
+            &Asm::Pack(len) => {
+                let mut vector = VecDeque::with_capacity(len);
+                for _ in 0..len {
+                    vector.push_front(
+                        self.memory
+                            .pop()
+                            .expect("Tried to pop more values than available"),
+                    );
+                }
+                let vector = Vec::from(vector);
+                self.memory.push(Value::Array(vector));
+            }
+            asm @ (Asm::Subtract | Asm::Add | Asm::Multiply) => {
+                let left = self.memory.pop().expect("couldn't pop");
+                let right = self.memory.pop().expect("couldn't pop");
+                let output = match asm {
+                    Asm::Subtract => self.alu.sub(left, right),
+                    Asm::Add => self.alu.add(left, right),
+                    Asm::Multiply => self.alu.mult(left, right),
+                    _ => unreachable!(),
+                };
+                self.memory.push(output);
+            }
+            Asm::Not => {
+                let v = self.memory.pop().unwrap();
+                let next = self.alu.not(v);
+                self.memory.push(next);
+            }
+            Asm::Deref => {
+                let pop = self.memory.pop().unwrap();
+                if let Value::Reference(reference) = pop {
+                    let derefed = reference.borrow().clone();
+                    self.memory.push(derefed);
+                } else {
+                    panic!("Can only deref pointers (found: {:?})", pop)
+                }
+            }
+            Asm::Boolify => {
+                let pop = self.memory.pop().unwrap();
+                let as_bool: bool = match pop {
+                    Value::Byte(b) => b != 0,
+                    Value::Integer(i) => i != 0,
+                    Value::UInteger(i) => i != 0,
+                    Value::Reference(r) => !r.borrow().is_null_ptr(),
+                    v => panic!("Value can not be boolified (value: {})", v),
+                };
+                self.memory.push(Value::Byte(as_bool as u8));
+            }
+            Asm::GT0 => {
+                let pop = self.memory.pop().unwrap();
+                let boolean = match pop {
+                    Value::Byte(b) => b > 0,
+                    Value::Float(f) => f > 0.0,
+                    Value::Integer(i) => i > 0,
+                    Value::UInteger(u) => u > 0,
+                    v => panic!("Invalid value to check if > 0 (value: {})", v),
+                };
+                self.memory.push(Value::from(boolean));
+            }
             a => panic!("Invalid instruction: {:?}", a),
         }
         Ok(next_instruction)
@@ -410,8 +541,13 @@ where
             if let Some(asm_label) = label {
                 let label_index = start_index + index;
                 match self.label_to_instruction.entry(asm_label.clone()) {
-                    Entry::Occupied(_) => {
-                        panic!("label {:?} already registered", asm_label);
+                    Entry::Occupied(mut occupant) => {
+                        if occupant.key().starts_with("@@") {
+                            occupant.insert(label_index);
+                            new_labels.insert(asm_label.clone(), label_index);
+                        } else {
+                            panic!("label {:?} already registered", asm_label);
+                        }
                     }
                     Entry::Vacant(v) => {
                         v.insert(label_index);
@@ -444,7 +580,9 @@ where
                 let ref instruction = self.instructions[pc].clone();
                 info!(target: "virtual_machine", "0x{:016X}: {:?}", pc, instruction);
                 let next = self.interpret_instruction(instruction, pc)?;
+                trace!(target: "virtual_machine", "memory: {:?}", self.memory);
                 self.set_program_counter(next);
+                info!(target: "virtual_machine", "vm: {:#?}", self);
             }
 
             match std::mem::replace(&mut self.handler, None) {

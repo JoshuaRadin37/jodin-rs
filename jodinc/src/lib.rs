@@ -69,25 +69,6 @@ use jodin_common::error::{JodinError, JodinResult};
 use jodin_common::types::type_environment::TypeEnvironment;
 use std::fs::File;
 
-#[macro_export]
-macro_rules! id {
-    ($first:ident $($sep:tt $next:ident)*) => {
-        $crate::core::identifier::Identifier::from_iter([stringify!($first), $(stringify!($next)),*])
-    };
-    ($first:literal $($sep:tt $next:literal)*) => {
-        {
-            use $crate::core::identifier::Identifier;
-            Identifier::from_iter(&[Identifier::from($first), $(Identifier::from($next)),*])
-        }
-    };
-    ($first:expr $(,$next:expr)*) => {
-        {
-            use $crate::core::identifier::Identifier;
-            Identifier::from_iter([Identifier::from($first), $(Identifier::from($next)),*])
-        }
-    };
-}
-
 pub mod cli;
 pub mod compilation;
 pub mod error_reporting;

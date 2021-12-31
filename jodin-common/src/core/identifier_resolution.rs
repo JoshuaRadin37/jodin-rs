@@ -857,6 +857,7 @@ mod tests {
     use crate::error::JodinErrorType;
     use crate::identifier::Identifiable;
     use crate::identifier::Identifier;
+    use crate::init_logging;
 
     #[test]
     fn insert_entries() {

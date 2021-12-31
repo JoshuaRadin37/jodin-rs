@@ -241,7 +241,7 @@ impl<'j> Module<'j> {
     pub fn static_object(&self, builder: &ObjectCompilerBuilder) -> JodinResult<CompilationObject> {
         info!("Creating static object for module {:?}", &builder.module_id);
         let path = self.static_object_path(|s| builder.relative_path(s, "jobj"));
-        let mut block = jasm![];
+        let mut block = jasm![Asm::PublicLabel("@@STATIC".to_string())];
         let mut translation_units = vec![];
         for tree in self.declarations() {
             match tree.r#type() {
@@ -280,6 +280,7 @@ impl<'j> Module<'j> {
                 }
             }
         }
+        block.insert_asm(jasm![Asm::push(0u64), Asm::Return,]);
         Ok(CompilationObject::new(
             path,
             self.identifier.clone(),
@@ -371,7 +372,6 @@ impl Display for CompiledObject {
 mod tests {
     use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
     use crate::{process_jodin_node, JodinResult};
-    use jodin_asm::init_logging;
     use jodin_common::compilation::Compiler;
     use jodin_common::compilation_settings::CompilationSettings;
     use jodin_common::init_logging;
