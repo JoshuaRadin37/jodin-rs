@@ -3,6 +3,7 @@ use crate::error::VMError;
 use crate::fault::{Fault, FaultHandle, FaultJumpTable};
 use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, RECEIVE_MESSAGE};
 use jodin_common::error::JodinErrorType;
+use jodin_common::identifier::Identifier;
 use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
 use jodin_common::mvp::location::AsmLocation;
 use jodin_common::mvp::value::Value;
@@ -50,7 +51,21 @@ where
         f.debug_struct("VM")
             .field("instructions", &self.instructions.len())
             .field("program_counter", &self.program_counter())
-            .field("counter_stack", &self.counter_stack)
+            .field(
+                "counter_stack",
+                &self
+                    .counter_stack
+                    .iter()
+                    .map(|c| {
+                        format!(
+                            "{} -> {}",
+                            *c,
+                            self.most_recent_public_label(*c)
+                                .unwrap_or(&"<none>".to_string())
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
             .field("memory", &self.memory)
             .field("handler", &self.handler)
             .field("kernel_mode", &self.kernel_mode)
@@ -75,6 +90,30 @@ where
         self.stderr = Some(Box::new(writer));
     }
 
+    pub fn most_recent_public_label(&self, instruction: usize) -> Option<&String> {
+        let range = (0..=instruction).into_iter().rev();
+
+        for i in range {
+            let asm = &self.instructions[i];
+            match asm {
+                Asm::PublicLabel(lbl) => {
+                    return Some(lbl);
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    pub fn pc_to_recent_id(&self, instruction: usize) -> Identifier {
+        let string = self
+            .most_recent_public_label(instruction)
+            .cloned()
+            .unwrap_or(format!("<none>"));
+        Identifier::new_alt_delimiter(string, "_")
+    }
+
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
         info!(
             "Running native method {:?} with args [{}]",
@@ -90,12 +129,13 @@ where
                 let s = args.remove(0).to_string();
                 match &mut self.stdout {
                     None => {
-                        println!("{}", s);
+                        print!("{}", s);
                     }
                     Some(stdout) => {
                         write!(stdout, "{}", s).expect("Couldn't print to output");
                     }
                 }
+                self.memory.push(Value::Empty);
             }
             "write" => {
                 let fd = if let Value::UInteger(fd) = args.remove(0) {
@@ -115,8 +155,9 @@ where
                 if let Value::Str(s) = args.remove(0) {
                     write!(output, "{}", s).expect("Couldn't write");
                 } else {
-                    panic!("Can not only pass strings to the print function")
+                    panic!("Can not only pass strings to the write function")
                 }
+                self.memory.push(Value::Empty);
             }
             "invoke" => {
                 // invokes the message (arg 2) on the target (arg 1) with args (arg 3..)
@@ -146,6 +187,7 @@ where
             }
             "@print_stack" => {
                 debug!("memory: {:#?}", self.memory);
+                self.memory.push(Value::Empty);
             }
             _ => panic!("{:?} is not a native method", message),
         }
@@ -322,6 +364,9 @@ where
         let mut next_instruction = instruction_pointer + 1;
         match bytecode {
             Asm::Label(_) | Asm::PublicLabel(_) | Asm::Nop => {}
+            Asm::Pop => {
+                self.memory.pop().unwrap();
+            }
             Asm::Return => {
                 self.counter_stack.pop();
                 let next = self
@@ -587,11 +632,16 @@ where
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
                 let ref instruction = self.instructions[pc].clone();
-                info!(target: "virtual_machine", "0x{:016X}: {:?}", pc, instruction);
+                info!(
+                    target: "virtual_machine",
+                    "[{function:^18}] 0x{pc:016X}: {asm:?}",
+                    function=Identifier::abbreviate_identifier(self.pc_to_recent_id(pc), 18),
+                    pc=pc,
+                    asm=instruction
+                );
                 let next = self.interpret_instruction(instruction, pc)?;
-                trace!(target: "virtual_machine", "memory: {:?}", self.memory);
                 self.set_program_counter(next);
-                info!(target: "virtual_machine", "vm: {:#?}", self);
+                trace!(target: "virtual_machine", "vm: {:#?}", self);
             }
 
             match std::mem::replace(&mut self.handler, None) {

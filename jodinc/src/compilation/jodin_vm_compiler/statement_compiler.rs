@@ -117,6 +117,7 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                 let mut expr_c = ExpressionCompiler::new(&self.tracker);
                 let expr = expr_c.create_compilable(tree)?;
                 block.insert_asm(expr);
+                block.insert_asm(Asm::Pop); // call's return value should be thrown away
             }
             JodinNodeType::ReturnValue { expression } => {
                 match expression {

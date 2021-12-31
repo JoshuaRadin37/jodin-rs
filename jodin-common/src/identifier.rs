@@ -3,7 +3,7 @@
 
 use crate::error::JodinErrorType;
 use crate::utility::IntoBox;
-use itertools::Itertools;
+use itertools::{max, Itertools};
 use std::array::IntoIter;
 use std::borrow::Borrow;
 use std::cmp::{min, Ordering};
@@ -27,6 +27,19 @@ impl Identifier {
     #[inline]
     pub fn new<I: Into<Identifier>>(into: I) -> Self {
         into.into()
+    }
+
+    /// Creates a new identifier by parsing a string that's split using an alternative delimiter
+    ///
+    /// # Example
+    /// ```
+    /// use jodin_common::identifier::Identifier;
+    /// let id = Identifier::new_alt_delimiter("hello_world", "_");
+    /// assert_eq!(id, id!(hello, world))
+    /// ```
+    pub fn new_alt_delimiter(string: impl AsRef<str>, delim: impl AsRef<str>) -> Self {
+        let split = string.as_ref().split(delim.as_ref());
+        Self::from_iter(split)
     }
 
     /// Creates an identifier from an array.
@@ -284,6 +297,59 @@ impl Identifier {
             .flat_map(|os| os.to_str())
             .map(|s| s.to_string())
             .next()
+    }
+
+    pub fn abbreviate_identifier(id: Identifier, max_size: usize) -> String {
+        if id.to_string().len() <= max_size {
+            return id.to_string();
+        }
+
+        let mut front: Vec<String> = Vec::new();
+        let mut back: VecDeque<String> = VecDeque::new();
+
+        let joined = |front: &Vec<String>, back: &VecDeque<String>| -> String {
+            let mut output = String::new();
+            for s in front {
+                output = format!("{}{}::", output, s);
+            }
+            output = format!("{}...", output);
+            for s in back {
+                output = format!("{}::{}", output, s);
+            }
+            output
+        };
+
+        enum Alternator {
+            Front,
+            Back,
+        }
+
+        let mut string_iter = id.iter();
+
+        let mut alt = Alternator::Back;
+        let mut output = String::new();
+
+        for id in string_iter {
+            match alt {
+                Alternator::Front => {
+                    front.push(id);
+                    alt = Alternator::Back;
+                }
+                Alternator::Back => {
+                    back.push_front(id);
+                    alt = Alternator::Front;
+                }
+            }
+
+            let next = joined(&front, &back);
+            if next.len() <= max_size {
+                output = next;
+            } else {
+                break;
+            }
+        }
+
+        output
     }
 }
 

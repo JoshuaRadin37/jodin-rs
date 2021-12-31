@@ -46,7 +46,7 @@ impl Display for Value {
                 write!(f, "{}u64", i)
             }
             Value::Str(s) => {
-                write!(f, "{:?}", s)
+                write!(f, "{}", s)
             }
             Value::Dictionary(d) => {
                 write!(

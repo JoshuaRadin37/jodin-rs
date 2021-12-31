@@ -13,10 +13,10 @@ use std::path::PathBuf;
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Warn);
+    init_logging(LevelFilter::Info);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
-            
+           
             fn fibonacci(n: int) -> int {
                 if (n < 2) {
                     return n;
@@ -44,8 +44,16 @@ fn fibonacci() {
                 __NATIVE("print", value);
             }
             
+            fn println(value: void) {
+                print(value);
+                print("\n");
+            }
+            
             fn main() -> unsigned int {
-                print(factorial(6));
+                println(factorial(6));
+                println("Hello, World!");
+                println(fibonacci(7));
+                
                 return 0u;
             }
 
