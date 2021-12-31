@@ -12,7 +12,6 @@ use jodin_common::mvp::bytecode::Asm;
 use jodin_common::mvp::value::Value;
 use jodin_common::parsing::Tok::As;
 use std::cell::RefCell;
-use std::os::macos::raw::stat;
 use std::rc::Rc;
 
 #[derive(Default)]
