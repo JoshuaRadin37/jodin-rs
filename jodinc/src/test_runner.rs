@@ -119,8 +119,6 @@ impl ProjectBuilder {
             .get("root")
             .ok_or("Unexpected output found for locate-workspace")?;
 
-        println!("{:?}", full_path);
-
         let parent_path = PathBuf::from(full_path.parent().unwrap());
         let meta_data_output = Command::new(&cargo_program)
             .arg("metadata")

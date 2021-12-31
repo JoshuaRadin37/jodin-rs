@@ -73,5 +73,7 @@ fn fibonacci() {
 
     info!("VM: {:#?}", vm);
 
-    assert_eq!(vm.run("main").unwrap(), 0);
+    let r = vm.run("main").unwrap();
+    println!();
+    assert_eq!(r, 0);
 }

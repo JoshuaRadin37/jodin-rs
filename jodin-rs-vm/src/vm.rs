@@ -29,9 +29,9 @@ where
     label_to_instruction: HashMap<String, usize>,
     counter_stack: Vec<usize>,
 
-    stdin: Box<dyn Read + 'l>,
-    stdout: Box<dyn Write + 'l>,
-    stderr: Box<dyn Write + 'l>,
+    stdin: Option<Box<dyn Read + 'l>>,
+    stdout: Option<Box<dyn Write + 'l>>,
+    stderr: Option<Box<dyn Write + 'l>>,
 
     next_anonymous_function: AtomicU64,
 
@@ -64,15 +64,15 @@ where
     A: ArithmeticsTrait,
 {
     pub fn set_stdin<R: Read + 'l>(&mut self, reader: R) {
-        self.stdin = Box::new(reader);
+        self.stdin = Some(Box::new(reader));
     }
 
     pub fn set_stdout<W: Write + 'l>(&mut self, writer: W) {
-        self.stdout = Box::new(writer);
+        self.stdout = Some(Box::new(writer));
     }
 
     pub fn set_stderr<W: Write + 'l>(&mut self, writer: W) {
-        self.stderr = Box::new(writer);
+        self.stderr = Some(Box::new(writer));
     }
 
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
@@ -88,7 +88,14 @@ where
         match message {
             "print" => {
                 let s = args.remove(0).to_string();
-                write!(self.stdout, "{}", s).expect("Couldn't print to output");
+                match &mut self.stdout {
+                    None => {
+                        println!("{}", s);
+                    }
+                    Some(stdout) => {
+                        write!(stdout, "{}", s).expect("Couldn't print to output");
+                    }
+                }
             }
             "write" => {
                 let fd = if let Value::UInteger(fd) = args.remove(0) {
@@ -96,9 +103,11 @@ where
                 } else {
                     panic!("File descriptors should only be unsigned ints")
                 };
+                let mut stdout: Box<dyn Write> = Box::new(stdout());
+                let mut stderr: Box<dyn Write> = Box::new(stderr());
                 let output = match fd {
-                    1 => &mut self.stdout,
-                    2 => &mut self.stderr,
+                    1 => self.stdout.as_mut().unwrap_or(&mut stdout),
+                    2 => self.stderr.as_mut().unwrap_or(&mut stderr),
                     _ => {
                         panic!("{} is not a valid file descriptor for writing", fd);
                     }
@@ -637,9 +646,9 @@ where
 pub struct VMBuilder<'l, A, M> {
     arithmetic: Option<A>,
     memory: Option<M>,
-    stdin: Box<dyn Read + 'l>,
-    stdout: Box<dyn Write + 'l>,
-    stderr: Box<dyn Write + 'l>,
+    stdin: Option<Box<dyn Read + 'l>>,
+    stdout: Option<Box<dyn Write + 'l>>,
+    stderr: Option<Box<dyn Write + 'l>>,
     object_path: Vec<PathBuf>,
 }
 
@@ -681,25 +690,25 @@ impl<'l, A, M> VMBuilder<'l, A, M> {
         Self {
             arithmetic: None,
             memory: None,
-            stdin: Box::new(stdin()),
-            stdout: Box::new(stdout()),
-            stderr: Box::new(stderr()),
+            stdin: None,
+            stdout: None,
+            stderr: None,
             object_path: vec![],
         }
     }
 
     pub fn with_stdin<R: Read + 'l>(mut self, reader: R) -> Self {
-        self.stdin = Box::new(reader);
+        self.stdin = Some(Box::new(reader));
         self
     }
 
     pub fn with_stdout<W: Write + 'l>(mut self, writer: W) -> Self {
-        self.stdout = Box::new(writer);
+        self.stdout = Some(Box::new(writer));
         self
     }
 
     pub fn with_stderr<W: Write + 'l>(mut self, writer: W) -> Self {
-        self.stderr = Box::new(writer);
+        self.stderr = Some(Box::new(writer));
         self
     }
 
