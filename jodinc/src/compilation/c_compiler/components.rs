@@ -5,16 +5,17 @@ use std::ops::Deref;
 
 use regex::Regex;
 
-use crate::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::compilation::c_compiler::SeparableCompilable;
-use crate::compilation::{Compilable, Context, PaddedWriter, C99};
-use crate::core::error::{JodinErrorType, JodinResult};
-use crate::core::identifier::Identifier;
-use crate::core::literal::Literal;
-use crate::core::operator::Operator;
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier};
-use crate::core::types::primitives::Primitive;
+use crate::compilation::C99;
 use itertools::Itertools;
+use jodin_common::ast::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use jodin_common::compilation::{Compilable, Context, PaddedWriter};
+use jodin_common::core::literal::Literal;
+use jodin_common::core::operator::Operator;
+use jodin_common::error::{JodinErrorType, JodinResult};
+use jodin_common::identifier::Identifier;
+use jodin_common::types::intermediate_type::{IntermediateType, TypeSpecifier};
+use jodin_common::types::primitives::Primitive;
 use std::fmt::Write;
 
 /// Represents a C translation Unit

@@ -1,9 +1,9 @@
 //! Replace all constant expressions
 
-use crate::ast::JodinNode;
-use crate::core::error::JodinResult;
-use crate::core::identifier::Identifier;
-use crate::core::literal::Literal;
+use jodin_common::ast::JodinNode;
+use jodin_common::core::literal::Literal;
+use jodin_common::error::JodinResult;
+use jodin_common::identifier::Identifier;
 use std::collections::HashMap;
 
 fn find_constant_expressions(node_tree: &JodinNode) -> JodinResult<HashMap<Identifier, Literal>> {

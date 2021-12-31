@@ -1,10 +1,10 @@
-use jodin_asm::mvp::bytecode::Asm;
-use jodin_asm::mvp::value::Value;
-use jodin_asm::{default_logging, init_logging};
+use jodin_common::mvp::bytecode::Asm;
+use jodin_common::mvp::value::Value;
+use jodin_common::{default_logging, init_logging};
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
-use log::LevelFilter;
+use log::{debug, LevelFilter};
 use simplelog::info;
 use std::io::Write;
 
@@ -14,7 +14,7 @@ const BYE_WORLD: &str = "Goodbye, world!";
 #[test]
 fn hello_world() {
     init_logging(LevelFilter::Trace);
-    info!("Running hello world program");
+    debug!("Running hello world program");
     let mut buffer: Vec<u8> = Vec::new();
     let mut err_buffer: Vec<u8> = Vec::new();
     {
@@ -23,7 +23,8 @@ fn hello_world() {
             .alu(MinimumALU)
             .with_stdout(&mut buffer)
             .with_stderr(&mut err_buffer)
-            .build();
+            .build()
+            .unwrap();
 
         let instructions = vec![
             Asm::label("__start"),

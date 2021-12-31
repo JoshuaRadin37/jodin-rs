@@ -9,7 +9,7 @@ strict = []
 
 [dependencies]
 jodin-asm-derive = { path= "../jodin-asm-derive" }
-jodin-asm = { path="../jodin-asm"}
+jodin-common = { path="../jodin-common"}
 
 num = "0.4"
 num-derive = "0.3"

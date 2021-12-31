@@ -1,12 +1,8 @@
-use crate::{
-    ast::{JodinNode, JodinNodeType},
-    compilation::{
-        c_compiler::{CType, CValidIdentifier},
-        MicroCompiler,
-    },
-    core::error::{JodinErrorType, JodinResult},
-    passes::analysis::ResolvedIdentityTag,
-};
+use crate::compilation::c_compiler::{CType, CValidIdentifier};
+use jodin_common::ast::{JodinNode, JodinNodeType};
+use jodin_common::compilation::MicroCompiler;
+use jodin_common::core::tags::ResolvedIdentityTag;
+use jodin_common::error::{JodinErrorType, JodinResult};
 
 use super::{CompoundStatement, FunctionInfo, C99};
 use crate::compilation::c_compiler::StatementCompiler;

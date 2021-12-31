@@ -1,16 +1,20 @@
-use crate::core::error::{JodinError, JodinErrorType, JodinResult};
-use crate::core::identifier::Identifier;
-use crate::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
+use jodin_common::identifier::Identifier;
 
-use crate::ast::JodinNodeType;
-use crate::ast::{CompoundType, JodinNode};
+use jodin_common::ast::JodinNodeType;
+use jodin_common::ast::{CompoundType, JodinNode};
 
-use crate::ast::tags::Tag;
-use crate::ast::tags::TagTools;
-use crate::core::import::{Import, ImportType};
-use crate::core::privacy::{Visibility, VisibilityTag};
-use crate::core::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
-use crate::utility::Tree;
+use anyhow::anyhow;
+use jodin_common::core::import::{Import, ImportType};
+use jodin_common::core::privacy::{Visibility, VisibilityTag};
+use jodin_common::core::tags::TagTools;
+use jodin_common::core::tags::{ResolvedIdentityTag, Tag};
+use jodin_common::core::NATIVE_OBJECT;
+use jodin_common::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
+use jodin_common::types::StorageModifier;
+use jodin_common::unit::TranslationUnit;
+use jodin_common::utility::Tree;
 use std::any::Any;
 use std::cmp::Ordering;
 use std::process::id;
@@ -26,11 +30,26 @@ pub struct IdentityResolutionTool {
 impl IdentityResolutionTool {
     /// Creates a new id resolution tool.
     pub fn new() -> Self {
-        Self {
+        let mut tool = Self {
             creator: IdentifierCreator::new(),
             setter: IdentifierSetter::new(),
             visibility: Registry::new(),
+        };
+        tool.visibility
+            .insert_with_identifier(Visibility::Public, Identifier::from(NATIVE_OBJECT));
+        tool
+    }
+
+    /// Creates a new id resolution tool.
+    pub fn with_translation_units(units: &[TranslationUnit]) -> Self {
+        let mut output = Self::new();
+        for unit in units {
+            let vis = unit.vis.clone();
+            let id = unit.name.clone();
+
+            output.visibility.insert_with_identifier(vis, id);
         }
+        output
     }
 
     /// Resolve identifiers
@@ -38,16 +57,16 @@ impl IdentityResolutionTool {
         &mut self,
         input: JodinNode,
     ) -> JodinResult<(JodinNode, IdentifierResolver)> {
-        info!("Creating absolute identifiers...");
+        debug!("Creating absolute identifiers...");
         let (mut tree, mut resolver) = self.creator.start(input, &mut self.visibility)?;
         //println!("Visibilities: {:#?}", self.visibility);
-        info!("Resolving identifiers...");
+        debug!("Resolving identifiers...");
         match self
             .setter
             .set_identities(&mut tree, &mut resolver, &self.visibility)
         {
             Err(e) => {
-                error!("Id resolver:\n{:#?}", resolver);
+                error!("Visibility:\n{:#?}", &self.visibility);
                 tree.set_property("id_resolver", resolver);
                 Err(e)
             }
@@ -56,67 +75,6 @@ impl IdentityResolutionTool {
                 Ok((tree, resolver))
             }
         }
-    }
-}
-
-/// This tag adds a resolved [Identifier](crate::core::identifier::Identifier) to a node. This resolved
-/// identifier is absolute.
-#[derive(Debug, Clone)]
-pub struct ResolvedIdentityTag(Identifier);
-
-impl ResolvedIdentityTag {
-    /// The absolute identifier of the tag.
-    pub fn absolute_id(&self) -> &Identifier {
-        &self.0
-    }
-
-    /// Creates a new tag from an identifier-like value.
-    pub fn new<I: Into<Identifier>>(id: I) -> Self {
-        ResolvedIdentityTag(id.into())
-    }
-}
-
-impl Tag for ResolvedIdentityTag {
-    fn tag_type(&self) -> String {
-        String::from("ResolvedId")
-    }
-
-    fn tag_info(&self) -> String {
-        format!("[Resolved '{}']", self.absolute_id())
-    }
-
-    fn max_of_this_tag(&self) -> u32 {
-        1
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
-
-/// A tag that assigns an identifier to an individual block.
-#[derive(Debug)]
-pub struct BlockIdentifierTag(usize);
-
-impl BlockIdentifierTag {
-    /// Creates a new block identifier
-    ///
-    /// # Arguments
-    ///
-    /// * `val`: The value to use as the base for the identifier
-    ///
-    /// returns: BlockIdentifierTag
-    pub fn new(val: usize) -> Self {
-        Self(val)
-    }
-
-    /// Gets the block number of the tag
-    pub fn block_num(&self) -> usize {
-        self.0
     }
 }
 
@@ -145,24 +103,6 @@ impl Tag for NoMangle {
 #[derive(Debug)]
 pub struct IdentifierCreator {
     block_num: Vec<usize>,
-}
-
-impl Tag for BlockIdentifierTag {
-    fn tag_type(&self) -> String {
-        "BlockNum".to_string()
-    }
-
-    fn max_of_this_tag(&self) -> u32 {
-        1
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
 }
 
 impl IdentifierCreator {
@@ -209,13 +149,13 @@ impl IdentifierCreator {
                 }
 
                 let abs = id_resolver.create_absolute_path(id);
-                info!("Created absolute identifier for use: {:?}", abs);
+                debug!("Created absolute identifier for use: {:?}", abs);
                 visibility_registry.insert_with_identifier(Visibility::Protected, abs.clone())?;
                 if let Ok(tag) = tree.get_tag::<VisibilityTag>() {
                     let vis = tag.visibility().clone();
                     visibility_registry.update_absolute_identity(&abs, vis)?;
                 }
-                let tag = ResolvedIdentityTag(abs);
+                let tag = ResolvedIdentityTag::new(abs);
                 tree.add_tag(tag)?;
             }
             JodinNodeType::VarDeclarations {
@@ -478,8 +418,33 @@ impl IdentifierSetter {
         visibility_resolver: &Registry<Visibility>,
     ) -> JodinResult<()> {
         let has_id = tree.get_tag::<ResolvedIdentityTag>().is_ok();
-
+        let mut tags_to_add: Vec<Box<dyn Tag>> = vec![];
         match tree.inner_mut() {
+            JodinNodeType::ExternDeclaration { declaration } => {
+                self.set_identities(declaration, id_resolver, visibility_resolver)?;
+                debug!("Settings id for extern dec from {:?}", declaration);
+                if let JodinNodeType::StoreVariable {
+                    storage_type: StorageModifier::Const,
+                    name,
+                    var_type: _,
+                    maybe_initial_value: _,
+                } = declaration.r#type()
+                {
+                    if let JodinNodeType::Identifier(_) = name.r#type() {
+                        tags_to_add.push(Box::new(ResolvedIdentityTag::new(name.resolved_id()?)))
+                    } else {
+                        Err(anyhow!(
+                            "Given is not an identifier (given= {:?})",
+                            name.r#type()
+                        ))?
+                    }
+                } else {
+                    Err(anyhow!(
+                        "Extern declaration must be const (given= {:?})",
+                        declaration.r#type()
+                    ))?
+                }
+            }
             JodinNodeType::InNamespace { namespace, inner } => {
                 let namespace = namespace
                     .get_tag::<ResolvedIdentityTag>()
@@ -509,18 +474,20 @@ impl IdentifierSetter {
                 }
             }
             JodinNodeType::Identifier(id) => {
-                if !has_id {
-                    info!(
+                if !has_id && id.to_string() != NATIVE_OBJECT {
+                    debug!(
                         "Attempting to find {} from {}",
                         id,
                         id_resolver.current_namespace()
                     );
                     let resolved =
                         self.try_get_absolute_identifier(id, id_resolver, visibility_resolver)?;
-                    info!("Found {}", resolved);
+                    debug!("Found {}", resolved);
                     let resolved_tag = ResolvedIdentityTag::new(resolved);
 
                     tree.add_tag(resolved_tag)?;
+                } else if id.to_string() == NATIVE_OBJECT {
+                    tree.add_tag(ResolvedIdentityTag::new(NATIVE_OBJECT))?;
                 }
             }
             JodinNodeType::FunctionDefinition {
@@ -532,6 +499,9 @@ impl IdentifierSetter {
                 self.resolve_type(return_type, id_resolver, visibility_resolver)?;
                 let tag = name.get_tag::<ResolvedIdentityTag>()?.clone();
                 let name = Identifier::from(tag.absolute_id().this());
+
+                tags_to_add.push(Box::new(tag.clone()));
+
                 id_resolver.push_namespace(name);
 
                 for argument in arguments {
@@ -581,16 +551,18 @@ impl IdentifierSetter {
 
                 id_resolver.pop_namespace();
             }
-            JodinNodeType::WhileStatement { cond: _, statement } => {
+            JodinNodeType::WhileStatement { cond, statement } => {
+                self.set_identities(cond, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
             }
             JodinNodeType::IfStatement {
-                cond: _,
+                cond,
                 statement,
                 else_statement,
             } => {
+                self.set_identities(cond, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
                 self.end_block(id_resolver);
@@ -602,9 +574,10 @@ impl IdentifierSetter {
                 }
             }
             JodinNodeType::SwitchStatement {
-                to_switch: _,
+                to_switch,
                 labeled_statements,
             } => {
+                self.set_identities(to_switch, id_resolver, visibility_resolver)?;
                 self.start_block(id_resolver);
                 for statement in labeled_statements {
                     self.set_identities(statement, id_resolver, visibility_resolver)?;
@@ -613,14 +586,20 @@ impl IdentifierSetter {
             }
             JodinNodeType::ForStatement {
                 init,
-                cond: _,
-                delta: _,
+                cond,
+                delta,
                 statement,
             } => {
                 self.start_block(id_resolver);
 
                 if let Some(init) = init {
                     self.set_identities(init, id_resolver, visibility_resolver)?;
+                }
+                if let Some(cond) = cond {
+                    self.set_identities(cond, id_resolver, visibility_resolver)?;
+                }
+                if let Some(delta) = delta {
+                    self.set_identities(delta, id_resolver, visibility_resolver)?;
                 }
                 self.set_identities(statement, id_resolver, visibility_resolver)?;
 
@@ -635,6 +614,9 @@ impl IdentifierSetter {
                 }
             }
         }
+        for tag in tags_to_add {
+            tree.add_tag(tag);
+        }
         Ok(())
     }
 
@@ -642,28 +624,37 @@ impl IdentifierSetter {
         &self,
         id: &Identifier,
         id_resolver: &IdentifierResolver,
-        visibility: &Registry<Visibility>,
+        visibility_registry: &Registry<Visibility>,
     ) -> JodinResult<Identifier> {
         let ref id_with_base = *id;
-        info!("Attempting to find absolute path {:?}", id);
+        debug!("Attempting to find absolute path {:?}", id);
         // first get alias if it exist
         let alias = self
             .aliases
             .get(id_with_base)
             .ok()
             .filter(|&alias_id| {
-                let visibility = visibility.get(alias_id).ok();
-                info!(
+                let visibility = visibility_registry.get(alias_id).ok();
+                debug!(
                     "Found alias {:?} with visibility {:?}",
                     alias_id, visibility
                 );
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        if visibility.is_visible(alias_id, &id_resolver.current_namespace()) {
+                        let checking = alias_id;
+                        let from = id_resolver.current_namespace();
+
+                        if visibility_registry.is_visible(checking, &from) {
+                            trace!(
+                                "Path {:?} ({:?}) is visible from {:?}",
+                                alias_id,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
                             true
                         } else {
-                            warn!(
+                            debug!(
                                 "Path {:?} ({:?}) is not visible from {:?}",
                                 alias_id,
                                 visibility,
@@ -679,15 +670,24 @@ impl IdentifierSetter {
             .resolve_path(id.clone(), false)
             .ok()
             .filter(|resolved| {
-                let visibility = visibility.get(resolved).ok();
-                info!("Found path {:?} with visibility {:?}", resolved, visibility);
+                let visibility = visibility_registry.get(resolved).ok();
+                debug!("Found path {:?} with visibility {:?}", resolved, visibility);
                 match visibility {
                     None => true,
                     Some(visibility) => {
-                        if visibility.is_visible(resolved, &id_resolver.current_namespace()) {
+                        let checking = resolved;
+                        let from = id_resolver.current_namespace();
+
+                        if visibility_registry.is_visible(checking, &from) {
+                            trace!(
+                                "Path {:?} ({:?}) is visible from {:?}",
+                                checking,
+                                visibility,
+                                id_resolver.current_namespace()
+                            );
                             true
                         } else {
-                            warn!(
+                            debug!(
                                 "Path {:?} ({:?}) is not visible from {:?}",
                                 resolved,
                                 visibility,
@@ -794,7 +794,7 @@ impl IdentifierSetter {
                 }
             }
         }
-        info!("Imported {:?}", aliases);
+        debug!("Imported {:?}", aliases);
         Ok(aliases)
     }
 
@@ -916,7 +916,7 @@ pub fn identifier_is_visible_from(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::error::JodinResult;
+    use jodin_common::error::JodinResult;
 
     #[test]
     fn label_structure_members() -> JodinResult<()> {

@@ -59,41 +59,21 @@ extern crate lalrpop_util;
 #[macro_use]
 extern crate log;
 
-use crate::ast::JodinNode;
-use crate::core::error::{JodinError, JodinResult};
-use crate::core::types::type_environment::TypeEnvironment;
+#[macro_use]
+extern crate static_assertions;
+
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
+use jodin_common::ast::JodinNode;
+use jodin_common::error::{JodinError, JodinResult};
+use jodin_common::types::type_environment::TypeEnvironment;
 use std::fs::File;
 
-#[macro_export]
-macro_rules! id {
-    ($first:ident $($sep:tt $next:ident)*) => {
-        $crate::core::identifier::Identifier::from_iter([stringify!($first), $(stringify!($next)),*])
-    };
-    ($first:literal $($sep:tt $next:literal)*) => {
-        {
-            use $crate::core::identifier::Identifier;
-            Identifier::from_iter(&[Identifier::from($first), $(Identifier::from($next)),*])
-        }
-    };
-    ($first:expr $(,$next:expr)*) => {
-        {
-            use $crate::core::identifier::Identifier;
-            Identifier::from_iter([Identifier::from($first), $(Identifier::from($next)),*])
-        }
-    };
-}
-
-pub mod ast;
 pub mod cli;
 pub mod compilation;
-pub mod compilation_settings;
-pub mod core;
 pub mod error_reporting;
-pub mod parsing;
 pub mod passes;
-pub mod utility;
+pub mod test_runner;
 
 /// processes the jodin node tree
 pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
