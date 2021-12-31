@@ -44,15 +44,16 @@ fn fibonacci() {
                 __NATIVE("print", value);
             }
             
-            fn println(value: void) {
+            in std
+            public fn println(value: void) {
                 print(value);
                 print("\n");
             }
             
             fn main() -> unsigned int {
-                println(factorial(6));
-                println("Hello, World!");
-                println(fibonacci(7));
+                std::println(factorial(6));
+                std::println("Hello, World!");
+                std::println(fibonacci(7));
                 
                 return 0u;
             }

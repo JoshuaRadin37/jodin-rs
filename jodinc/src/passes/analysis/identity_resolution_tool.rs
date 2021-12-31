@@ -66,7 +66,7 @@ impl IdentityResolutionTool {
             .set_identities(&mut tree, &mut resolver, &self.visibility)
         {
             Err(e) => {
-                error!("Id resolver:\n{:#?}", resolver);
+                error!("Visibility:\n{:#?}", &self.visibility);
                 tree.set_property("id_resolver", resolver);
                 Err(e)
             }
