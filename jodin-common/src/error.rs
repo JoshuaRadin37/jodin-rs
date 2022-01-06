@@ -7,7 +7,6 @@ use crate::identifier::{Identifier, Namespaced};
 
 use backtrace::Backtrace;
 
-
 use lalrpop_util::ParseError;
 use std::char::ParseCharError;
 use std::error::Error;
@@ -137,12 +136,16 @@ pub enum JodinErrorType {
     /// The type environment is no longer available
     #[error("The type environment is no longer available")]
     TypeEnvironmentUnavailable,
+    /// The given tree type is invalid
     #[error("Invalid tree type given to compiler (expected: {0})")]
     InvalidTreeTypeGivenToCompiler(String),
+    /// The given incremental unit is invalid in the current context
     #[error("Given invalid string for incremental compilation (string: {0:?})")]
     InvalidCompilationUnit(String),
+    /// An anyhow produced error
     #[error(transparent)]
     AnyHowError(#[from] anyhow::Error),
+    /// A UTF8 error
     #[error(transparent)]
     UTF8Error(#[from] FromUtf8Error),
 }
@@ -197,6 +200,7 @@ impl JodinError {
         (error_type, backtrace)
     }
 
+    #[doc(hidden)]
     pub fn illegal_type_for_node<I: Namespaced>(id: I, node: &JodinNode) -> Self {
         Self::new(JodinErrorType::IllegalNodeToBuildType {
             type_name: id.get_identifier().clone(),

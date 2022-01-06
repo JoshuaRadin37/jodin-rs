@@ -1,10 +1,13 @@
+//! The common package for the jodin-rs project. Contains _common_ structures and traits that
+//! should be present in all sub-packages
+
 #![cfg_attr(feature = "strict", deny(warnings))]
 #![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
+#![allow(dead_code)]
 #![warn(
     bad_style,
     const_err,
-    dead_code,
     improper_ctypes,
     non_shorthand_field_patterns,
     no_mangle_generic_items,
@@ -13,13 +16,14 @@
     patterns_in_fns_without_body,
     private_in_public,
     unconditional_recursion,
-    unused,
     unused_allocation,
     unused_comparisons,
     unused_parens,
     while_true
 )]
 
+/// A shorthand way of creating a identifiers. Can either use identifiers or literals seperated by any token,
+/// token, or an expression seperated by a comma
 #[macro_export]
 macro_rules! id {
     ($first:ident $($sep:tt $next:ident)*) => {
@@ -57,9 +61,6 @@ extern crate log;
 
 #[macro_use]
 extern crate static_assertions;
-
-#[macro_use]
-extern crate num_derive;
 
 #[macro_use]
 extern crate serde_derive;
@@ -105,10 +106,13 @@ pub fn init_logging(level: LevelFilter) {
     }
 }
 
+/// Sets the default logging options for given configurations
 pub fn default_logging() {
     if cfg!(debug_assertions) {
         init_logging(LevelFilter::Debug);
     } else if cfg!(release) {
+        init_logging(LevelFilter::Warn);
+    } else {
         init_logging(LevelFilter::Info);
     }
 }

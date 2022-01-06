@@ -5,7 +5,7 @@ use crate::ast::JodinNode;
 
 use std::any::Any;
 use std::collections::HashMap;
-use std::ops::{Index};
+use std::ops::Index;
 
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
@@ -112,22 +112,31 @@ impl LabeledStatementTag {
     }
 }
 
+/// The extra properties is a tag that allows for adding arbitrary properties to a node.
 pub struct ExtraProperties {
     properties: HashMap<String, Box<dyn Any>>,
 }
 
 impl ExtraProperties {
+    /// Create a new ExtraProperties instance
     pub fn new() -> Self {
         ExtraProperties {
             properties: HashMap::new(),
         }
     }
 
+    /// Put a new value into the properties tag
     pub fn put<S: AsRef<str>, T: Any>(&mut self, key: S, value: T) -> Option<Box<dyn Any>> {
         self.properties
             .insert(key.as_ref().to_string(), Box::new(value))
     }
 
+    /// Tries to get a reference to a value for property.
+    ///
+    /// # Error
+    ///
+    /// Returns `None` if either the key doesnt exist or the given type is wrong. Never fails
+    /// on type `T = dyn Any`.
     pub fn get<S: AsRef<str>, T: Any>(&self, key: S) -> Option<&T> {
         self.properties
             .get(&key.as_ref().to_string())
@@ -135,6 +144,7 @@ impl ExtraProperties {
             .flatten()
     }
 
+    /// Tries to take an owned value corresponding to a key from this object.
     pub fn take<S: AsRef<str>, T: Any>(&mut self, key: S) -> Option<T> {
         self.properties
             .remove(&key.as_ref().to_string())

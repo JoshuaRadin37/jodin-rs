@@ -11,14 +11,13 @@ use crate::types::intermediate_type::IntermediateType;
 use crate::types::Field;
 use anyhow::anyhow;
 
-
 use std::fmt::{Debug, Display, Formatter};
 use std::fs::File;
-use std::io::{BufRead, Write};
+use std::io::Write;
+use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::{mem};
 
 /// A translation unit is the smallest public facing unit
 #[derive(Debug, PartialEq, Clone)]
@@ -264,7 +263,7 @@ impl TryFrom<&[u8]> for CompilationObject {
         }
 
         let header_bytes = value[8..translation_unit_start_index].to_vec();
-        /// Header should be in utf-8
+        // Header should be in utf-8
         let header = String::from_utf8(header_bytes)?;
         let mut split = header.lines().skip(1);
         let file_location: PathBuf = PathBuf::from(split.next().unwrap().replace('"', ""));

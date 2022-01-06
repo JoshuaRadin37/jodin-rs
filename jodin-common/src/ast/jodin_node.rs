@@ -66,7 +66,7 @@ impl JodinNode {
             tags: vec![],
             index: Default::default(),
         };
-        node.add_tag(ExtraProperties::new());
+        node.add_tag(ExtraProperties::new()).unwrap();
 
         let parent_ptr = node.index.clone();
 
@@ -82,7 +82,7 @@ impl JodinNode {
         }
 
         let tag = NodeReferenceTag::new(&node);
-        node.add_tag(tag);
+        node.add_tag(tag).unwrap();
 
         node
     }
@@ -449,6 +449,7 @@ impl NodeReferenceTag {
         Self { info }
     }
 
+    #[allow(unused)]
     fn info(&self) -> &NodeReferenceInfo {
         &self.info
     }
@@ -477,6 +478,8 @@ struct NodeReferenceInfo {
     pub random_code: u64,
     pub checksum: u64,
 }
+
+/// A node reference is a "pointer" to a node
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeReference {
     directions: Vec<usize>,

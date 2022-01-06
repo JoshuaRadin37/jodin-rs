@@ -19,7 +19,6 @@ use crate::error::{JodinError, JodinErrorType, JodinResult};
 
 use crate::mvp::value::Value;
 
-use num_traits::Num;
 use regex::Regex;
 
 use std::convert::TryFrom;
@@ -439,7 +438,9 @@ impl Into<Value> for &Literal {
     }
 }
 
+/// A trait to enable constant casts between types (at compile time)
 pub trait ConstantCast<T>: Sized {
+    /// Try to cast this value to another value
     fn try_constant_cast(self) -> JodinResult<T>;
 }
 

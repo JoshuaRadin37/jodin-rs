@@ -16,7 +16,7 @@ use regex::Regex;
 use std::str::FromStr;
 
 // pub mod jodin_grammar;
-lalrpop_mod!(#[allow(missing_docs)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
+lalrpop_mod!(#[allow(warnings)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
 
 /// Shorthand for the result given by the Lexer
 pub type Spanned<Tok, Loc> = Result<(Loc, Tok, Loc), JodinError>;

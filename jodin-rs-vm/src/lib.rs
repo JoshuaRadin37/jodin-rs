@@ -1,6 +1,7 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unused_imports)]
+#![allow(dead_code)]
 #![warn(
     bad_style,
     const_err,
@@ -32,15 +33,6 @@ extern crate log;
 
 use crate::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
 use crate::function_names::{CALL, RECEIVE_MESSAGE};
-
-
-
-
-
-
-
-
-
 
 pub mod core_traits;
 pub use core_traits::*;

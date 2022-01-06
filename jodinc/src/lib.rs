@@ -27,6 +27,7 @@
 
 #![cfg_attr(feature = "strict", deny(warnings))]
 #![deny(rustdoc::broken_intra_doc_links)]
+#![allow(dead_code)]
 #![warn(
     bad_style,
     const_err,

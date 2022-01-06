@@ -1,3 +1,5 @@
+//! Common traits for implementing compilers for the jodin language
+
 use crate::ast::JodinNode;
 use crate::compilation_settings::CompilationSettings;
 use crate::error::JodinResult;

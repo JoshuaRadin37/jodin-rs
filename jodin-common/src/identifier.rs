@@ -1,9 +1,8 @@
 //! The standard identifier is used for every declaration within Jodin, from local declarations to
 //! class definitions to modules.
 
-
 use crate::utility::IntoBox;
-use itertools::{Itertools};
+use itertools::Itertools;
 use std::array::IntoIter;
 
 use std::cmp::{min, Ordering};
@@ -12,7 +11,7 @@ use std::convert::Infallible;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::{FromIterator, FusedIterator};
-use std::ops::{Add, Div, Index, RangeBounds, Shl, Shr};
+use std::ops::{Add, Div, RangeBounds, Shl, Shr};
 use std::str::FromStr;
 
 /// Contains this id and an optional parent
@@ -299,7 +298,7 @@ impl Identifier {
             .next()
     }
 
-    pub fn abbreviate_identifier(id: Identifier, max_size: usize) -> String {
+    addedpub fn abbreviate_identifier(id: Identifier, max_size: usize) -> String {
         if id.to_string().len() <= max_size {
             return id.to_string();
         }
@@ -740,7 +739,7 @@ impl ExactSizeIterator for IdentifierDiffIterator {}
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
     use std::cmp::Ordering;
     use std::iter::FromIterator;
 
