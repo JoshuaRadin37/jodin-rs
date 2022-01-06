@@ -3,7 +3,6 @@
 //!
 //! [JodinNode]: crate::ast::JodinNode
 
-use std::fmt::Write;
 use std::io;
 
 // pub use c_compiler::{C99Compiler, C99};

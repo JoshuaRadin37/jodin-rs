@@ -2,10 +2,8 @@
 
 use crate::compilation::JodinVM;
 use crate::JodinResult;
-use itertools::Itertools;
 use jodin_common::compilation::{Compilable, Context, PaddedWriter};
 use jodin_common::identifier::Identifier;
-use jodin_common::mvp::bytecode::GetAsm;
 use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode};
 use jodin_common::mvp::location::AsmLocation;
 use std::collections::HashSet;

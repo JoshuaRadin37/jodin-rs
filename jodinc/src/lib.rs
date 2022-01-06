@@ -26,7 +26,6 @@
 //! ```
 
 #![cfg_attr(feature = "strict", deny(warnings))]
-#![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![warn(
     bad_style,
@@ -51,12 +50,6 @@
 extern crate clap;
 
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate lalrpop_util;
-
-#[macro_use]
 extern crate log;
 
 #[macro_use]
@@ -67,7 +60,6 @@ use crate::passes::optimization::optimize;
 use jodin_common::ast::JodinNode;
 use jodin_common::error::{JodinError, JodinResult};
 use jodin_common::types::type_environment::TypeEnvironment;
-use std::fs::File;
 
 pub mod cli;
 pub mod compilation;

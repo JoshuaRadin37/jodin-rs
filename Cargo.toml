@@ -5,7 +5,6 @@
 [workspace]
 members = [
     "jodin-rs-vm",
-    "jodin-asm-derive",
     "jodinc",
     "jodin-tests",
     "jodin-common"

@@ -3,9 +3,9 @@
 use crate::ast::node_type::JodinNodeType;
 use crate::core::tags::{ExtraProperties, ResolvedIdentityTag, Tag, TagUtilities};
 use crate::error::{JodinErrorType, JodinResult};
-use crate::utility::{Acceptor, AcceptorMut, Tree, Visitor};
+use crate::utility::{Acceptor, Tree, Visitor};
 use std::any::Any;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::core::literal::{ConstantCast, Literal};
@@ -14,7 +14,7 @@ use crate::identifier::Identifier;
 use crate::types::intermediate_type::TypeSpecifier;
 use crate::types::primitives::Primitive;
 use num_traits::AsPrimitive;
-use std::fmt::{Debug, Formatter, Pointer};
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, Index};
 use std::rc::{Rc, Weak};
 

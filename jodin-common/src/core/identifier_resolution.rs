@@ -1,11 +1,9 @@
 //! The main method for tracking, then resolving identifiers.
 
-use num_traits::abs;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
-use std::process::id;
 
 // use ptree::{write_tree, Style, TreeItem};
 
