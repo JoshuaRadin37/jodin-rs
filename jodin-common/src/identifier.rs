@@ -298,7 +298,7 @@ impl Identifier {
             .next()
     }
 
-    addedpub fn abbreviate_identifier(id: Identifier, max_size: usize) -> String {
+    pub fn abbreviate_identifier(id: Identifier, max_size: usize) -> String {
         if id.to_string().len() <= max_size {
             return id.to_string();
         }
