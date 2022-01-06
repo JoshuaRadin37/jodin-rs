@@ -2,13 +2,13 @@
 
 use crate::error::VMError;
 use crate::fault::Fault;
-use crate::vm::VM;
-use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode, Decode, GetAsm};
+
+use jodin_common::mvp::bytecode::{Asm, Assembly, GetAsm};
 use jodin_common::mvp::error::BytecodeError;
 use jodin_common::mvp::value::Value;
-use jodin_common::unit::CompilationObject;
-use log::Level;
-use num_traits::PrimInt;
+
+
+
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::hash::Hash;

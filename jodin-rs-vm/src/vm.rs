@@ -1,20 +1,20 @@
-use crate::core_traits::VMLoadable;
+
 use crate::error::VMError;
 use crate::fault::{Fault, FaultHandle, FaultJumpTable};
 use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, RECEIVE_MESSAGE};
-use jodin_common::error::JodinErrorType;
+
 use jodin_common::identifier::Identifier;
 use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
 use jodin_common::mvp::location::AsmLocation;
 use jodin_common::mvp::value::Value;
-use std::cell::RefCell;
+
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
 use std::fmt::{Debug, Formatter};
-use std::io::{stderr, stdin, stdout, Read, Write};
+use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct VM<'l, M, A>
@@ -348,7 +348,7 @@ where
         self.memory.replace_stack(stored_stack);
     }
 
-    fn handle_native_fault(&mut self, handle: &FaultHandle) {}
+    fn handle_native_fault(&mut self, _handle: &FaultHandle) {}
 }
 
 impl<M, A> VirtualMachine for VM<'_, M, A>
@@ -458,7 +458,7 @@ where
                 let value: Value = val.into();
                 self.memory.push(value);
             }
-            &Asm::ClearVar(v) => {}
+            &Asm::ClearVar(_v) => {}
             Asm::GetSymbol(string) => match self.label_to_instruction.get(string) {
                 None => {
                     self.fault(Fault::MissingSymbol(string.clone()));
@@ -577,7 +577,7 @@ where
         Ok(next_instruction)
     }
 
-    fn enclosed(&mut self, asm: &Assembly) -> Value {
+    fn enclosed(&mut self, _asm: &Assembly) -> Value {
         todo!()
     }
 

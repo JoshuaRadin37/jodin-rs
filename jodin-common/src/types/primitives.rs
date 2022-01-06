@@ -9,7 +9,7 @@ use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{BuildType, JodinType, Type};
-use crate::utility::Visitor;
+
 use std::fmt::{Display, Formatter};
 use strum_macros::EnumIter;
 
@@ -117,8 +117,8 @@ impl Display for Primitive {
 impl<'t> BuildType<'t> for Primitive {
     fn build_type(
         node: &JodinNode,
-        env: &TypeEnvironment,
-        target_type: Option<&IntermediateType>,
+        _env: &TypeEnvironment,
+        _target_type: Option<&IntermediateType>,
     ) -> JodinResult<Self> {
         let s = "<primitive>";
         match node.inner() {

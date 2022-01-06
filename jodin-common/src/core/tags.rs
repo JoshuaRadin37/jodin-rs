@@ -2,10 +2,10 @@
 //! individual nodes with fewer restrictions.
 
 use crate::ast::JodinNode;
-use itertools::Itertools;
+
 use std::any::Any;
 use std::collections::HashMap;
-use std::ops::{Index, IndexMut};
+use std::ops::{Index};
 
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::Identifier;

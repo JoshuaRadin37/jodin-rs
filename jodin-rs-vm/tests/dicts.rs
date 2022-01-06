@@ -1,12 +1,12 @@
 use jodin_common::mvp::bytecode::{Asm, Assembly};
 use jodin_common::mvp::location::AsmLocation;
 use jodin_common::mvp::value::Value;
-use jodin_common::{default_logging, init_logging};
+use jodin_common::{init_logging};
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::function_names::RECEIVE_MESSAGE;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
-use log::{debug, info, LevelFilter};
+use log::{debug, LevelFilter};
 use std::io::stdout;
 
 #[test]

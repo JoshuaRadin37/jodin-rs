@@ -1,8 +1,8 @@
 //! contains error reporting functionality for better errors
 
-use crate::JodinResult;
-use std::collections::{Bound, HashMap};
-use std::ops::{Deref, RangeBounds, RangeInclusive, RangeTo};
+
+use std::collections::{Bound};
+use std::ops::{Deref, RangeBounds, RangeTo};
 
 type LineNum = usize;
 pub type Line = String;
@@ -20,7 +20,7 @@ impl FileStructure {
         let mut char_to_inc = vec![false; contents.len()];
         for (char_index, _) in contents
             .char_indices()
-            .filter(|(index, char)| *char == '\n')
+            .filter(|(_index, char)| *char == '\n')
         {
             char_to_inc[char_index] = true;
         }
@@ -83,7 +83,7 @@ impl Deref for LineRange {
 #[cfg(test)]
 mod tests {
     use crate::error_reporting::FileStructure;
-    use std::ops::{RangeInclusive, RangeTo};
+    
 
     #[test]
     fn get_lines() {

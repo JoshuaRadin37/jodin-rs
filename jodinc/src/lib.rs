@@ -68,7 +68,7 @@ pub mod passes;
 pub mod test_runner;
 
 /// processes the jodin node tree
-pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
+pub fn process_jodin_node(node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
     let (analyzed, env) = analyze(node)?;
     let optimized = optimize(analyzed)?;
     Ok((optimized, env))

@@ -6,7 +6,7 @@
 use crate::identifier::{Identifier, Namespaced};
 
 use backtrace::Backtrace;
-use std::any::TypeId;
+
 
 use lalrpop_util::ParseError;
 use std::char::ParseCharError;

@@ -1,17 +1,17 @@
 //! The most basic, complex type that is just a record
 
-use crate::core::privacy::Visibility;
-use crate::error::JodinResult;
+
+
 use crate::identifier::Identifier;
-use std::sync::{Arc, Weak};
+
 
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{
-    BuildResolvedType, ResolveType, ResolvedTypeBuilder, WeakResolvedType,
+    BuildResolvedType, ResolvedTypeBuilder,
 };
-use crate::types::type_environment::TypeEnvironment;
-use crate::types::{get_type_id, CompoundType, Field, JodinType, JodinTypeReference, Type};
-use crate::utility::Visitor;
+
+use crate::types::{get_type_id, CompoundType, Field, JodinType, Type};
+
 
 /// Contains a name and its fields
 #[derive(Debug, Clone)]

@@ -3,16 +3,16 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
-use std::ops::Index;
+
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Weak;
+
 
 use crate::ast::JodinNode;
 use intermediate_type::IntermediateType;
 use resolved_type::WeakResolvedType;
 
-use crate::core::identifier_resolution::{Registrable, Registry};
+
 use crate::core::privacy::Visibility;
 use crate::core::tags::Tag;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
@@ -25,7 +25,7 @@ use crate::types::resolved_type::{ResolveType, ResolvedType};
 use crate::types::structure::Structure;
 use crate::types::traits::{JTrait, JTraitObject};
 use crate::types::type_environment::TypeEnvironment;
-use crate::utility::Visitor;
+
 
 pub mod arrays;
 pub mod base_type;

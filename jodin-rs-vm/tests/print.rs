@@ -1,12 +1,12 @@
 use jodin_common::mvp::bytecode::Asm;
 use jodin_common::mvp::value::Value;
-use jodin_common::{default_logging, init_logging};
+use jodin_common::{init_logging};
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
 use log::{debug, LevelFilter};
-use simplelog::info;
-use std::io::Write;
+
+
 
 const HELLO_WORLD: &str = "Hello, world!";
 const BYE_WORLD: &str = "Goodbye, world!";

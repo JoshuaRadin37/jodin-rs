@@ -1,14 +1,14 @@
 //! The array types that exist within Jodin
 
 use crate::ast::JodinNode;
-use crate::error::JodinResult;
+
 use crate::identifier::Identifier;
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{get_type_id, AsIntermediate, JodinType, Type};
-use crate::utility::Visitor;
-use std::sync::{Arc, Weak};
+
+
 
 /// An array type
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl Into<JodinType> for Array {
 }
 
 impl ResolveType for Array {
-    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
+    fn resolve(&self, _environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }

@@ -643,7 +643,7 @@ mod tests {
 
     mod node_refs {
         use crate::ast::{node_tree, JodinNode, JodinNodeType};
-        use crate::utility::{node_count, Acceptor, AcceptorMut, Tree};
+        use crate::utility::{node_count, Acceptor};
 
         #[test]
         fn base_node_ref() {

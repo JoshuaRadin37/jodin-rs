@@ -4,10 +4,10 @@ use crate::compilation::JodinVM;
 use crate::JodinResult;
 use jodin_common::compilation::{Compilable, Context, PaddedWriter};
 use jodin_common::identifier::Identifier;
-use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode};
+use jodin_common::mvp::bytecode::{Asm, Assembly};
 use jodin_common::mvp::location::AsmLocation;
 use std::collections::HashSet;
-use std::fmt::{format, Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
 
 assert_impl_all!(AssemblyBlock: Compilable<JodinVM>);
@@ -70,7 +70,7 @@ impl AssemblyBlock {
     pub fn with_id<I: Into<Identifier>>(id: I) -> Self {
         let id: Identifier = id.into();
         let name = id.to_string().replace("::", "_").to_lowercase();
-        let mut output = Self::new(&name);
+        let output = Self::new(&name);
         output
     }
 
@@ -411,7 +411,7 @@ impl Compilable<JodinVM> for AssemblyBlock {
 
 impl Compilable<JodinVM> for Asm {
     fn compile<W: Write>(self, _context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        use jodin_common::mvp::bytecode::Encode;
+        
         // let encoded = self.encode();
         let encoded = Some(self);
         for byte in encoded {

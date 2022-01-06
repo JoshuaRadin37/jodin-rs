@@ -2,7 +2,7 @@
 
 use crate::compilation::jodin_vm_compiler::asm_block::{rel_label, AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
-use crate::compilation::jodin_vm_compiler::{JodinVMCompiler, VariableUseTracker};
+use crate::compilation::jodin_vm_compiler::{VariableUseTracker};
 use crate::compilation::JodinVM;
 use crate::{jasm, JodinError, JodinNode, JodinResult};
 use jodin_common::ast::JodinNodeType;
@@ -10,7 +10,7 @@ use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 use jodin_common::mvp::bytecode::Asm;
 use jodin_common::mvp::value::Value;
-use jodin_common::parsing::Tok::As;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 

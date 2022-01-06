@@ -2,9 +2,9 @@
 //!
 //! aka classes
 
-use crate::core::identifier_resolution::Registry;
-use crate::core::privacy::Visibility;
-use crate::error::{JodinError, JodinErrorType, JodinResult};
+
+
+
 use crate::identifier::{Identifier, Namespaced};
 use crate::types::generic_context::{GenericParameter, Morph};
 use crate::types::intermediate_type::IntermediateType;
@@ -12,12 +12,12 @@ use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::traits::JTraitObject;
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{
-    CompoundType, Field, GetResolvedMember, JodinType, JodinTypeReference, Member, Type,
+    CompoundType, Field, JodinType, Member, Type,
 };
-use crate::utility::Visitor;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use std::ops::Deref;
+
+
+
+
 
 /// The actual, declaration of the JObject
 #[derive(Debug, Clone)]
@@ -42,8 +42,8 @@ impl Into<JodinType> for JObject {
 }
 
 impl ResolveType for JObject {
-    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
-        let mut fields = self.fields.iter().collect::<Vec<_>>();
+    fn resolve(&self, _environment: &TypeEnvironment) -> WeakResolvedType {
+        let _fields = self.fields.iter().collect::<Vec<_>>();
         todo!()
     }
 }
@@ -67,7 +67,7 @@ impl CompoundType<'_> for JObject {
 impl Morph<'_> for JObject {
     type Morphed = Self;
 
-    fn apply_generics<I>(&self, generics: I) -> Self::Morphed
+    fn apply_generics<I>(&self, _generics: I) -> Self::Morphed
     where
         I: IntoIterator<Item = (Identifier, Identifier)>,
     {

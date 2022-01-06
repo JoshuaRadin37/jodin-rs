@@ -6,11 +6,11 @@ use crate::types::intermediate_type::IntermediateType;
 use crate::types::traits::JTraitObject;
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{AsIntermediate, Field, GetResolvedMember, JodinType, Type};
-use crate::utility::Visitor;
+
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use std::fmt::{Display, Formatter};
-use std::ops::Deref;
+
+
+
 use std::sync::{Arc, Weak};
 
 /// A trait that should be implemented to take some jodin type and create a fully resolved type out of it
@@ -122,7 +122,7 @@ impl<'t> ResolvedTypeBuilder<'t> {
             panic!("Base Type should be set by now.")
         }
         let mut fields: Vec<Field<WeakResolvedType>> = vec![];
-        let big_o_factory = ResolvedTypeFactory::new(self.env);
+        let _big_o_factory = ResolvedTypeFactory::new(self.env);
         fields.extend(self.base_type.as_ref().unwrap().fields().into_iter().map(
             |Field {
                  vis,
@@ -135,7 +135,7 @@ impl<'t> ResolvedTypeBuilder<'t> {
             .into_iter()
             .flat_map(|big_obj| big_obj.fields);
         fields.extend(parent);
-        let mut traits: Vec<&JTraitObject> = Vec::new();
+        let _traits: Vec<&JTraitObject> = Vec::new();
         // let mut trait_iter = self.jtraits.into_iter();
         // while let Some(next) = trait_iter.next() {
         //     traits.push(next.object);
@@ -204,7 +204,7 @@ impl Ord for JTraitObjectWithDistance<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::{JodinError, JodinErrorType, JodinResult};
+    use crate::error::{JodinErrorType};
     use crate::types::primitives::Primitive;
     use crate::types::resolved_type::WeakResolvedType;
     use crate::types::type_environment::TypeEnvironment;

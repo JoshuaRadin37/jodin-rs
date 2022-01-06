@@ -7,7 +7,7 @@ use std::ops::{Index, IndexMut};
 
 // use ptree::{write_tree, Style, TreeItem};
 
-use crate::error::JodinErrorType::IdentifierDoesNotExist;
+
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::{Identifier, IdentifierIterator, Namespaced};
 use crate::utility::Tree;
@@ -642,7 +642,7 @@ impl Debug for NodeInfo {
         }
         map.entry(
             &"relevant",
-            &self.relevant.iter().map(|(a, b)| a).collect::<Vec<_>>(),
+            &self.relevant.iter().map(|(a, _b)| a).collect::<Vec<_>>(),
         );
         map.finish()
     }

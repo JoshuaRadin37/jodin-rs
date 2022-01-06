@@ -379,17 +379,13 @@ pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
 }
 
 #[allow(unused_results)]
+#[cfg(test)]
 mod tests {
-    use super::jodin_grammar;
-    use crate::ast::{JodinNode, JodinNodeType};
+    use super::*;
     use crate::core::literal::Literal;
-    use crate::core::operator::Operator;
     use crate::identifier::Identifier;
-    use crate::parsing::{JodinLexer, Tok};
     use crate::types::primitives::Primitive;
     use crate::types::Type;
-    use std::iter::FromIterator;
-    use std::str::FromStr;
 
     #[test]
     fn lex_identifiers() {
