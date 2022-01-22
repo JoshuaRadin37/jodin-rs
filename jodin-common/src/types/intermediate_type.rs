@@ -39,7 +39,6 @@
 //!
 //! [JodinTypeReference]: crate::core::types::JodinTypeReference
 
-
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::str::FromStr;
@@ -52,12 +51,10 @@ use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
 use crate::parsing::parse_type;
 use crate::types::arrays::Array;
-use crate::types::generic_context::{GenericParameterInstance};
+use crate::types::generic_context::GenericParameterInstance;
 use crate::types::pointer::Pointer;
 use crate::types::primitives::Primitive;
-use crate::types::resolved_type::{
-    ResolveType, WeakResolvedType,
-};
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{AsIntermediate, Type};
 use crate::utility::Visitor;

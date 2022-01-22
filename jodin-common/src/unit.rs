@@ -2,11 +2,11 @@
 //! declarations
 
 use crate::asm_version::Version;
+use crate::assembly::instructions::{Assembly, Bytecode, Decode, Encode, GetAsm};
 use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::core::privacy::Visibility;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
-use crate::mvp::bytecode::{Assembly, Bytecode, Decode, Encode, GetAsm};
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::Field;
 use anyhow::anyhow;

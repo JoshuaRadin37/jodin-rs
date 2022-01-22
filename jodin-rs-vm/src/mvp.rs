@@ -1,6 +1,6 @@
 use crate::{ArithmeticsTrait, MemoryTrait};
-use jodin_common::mvp::error::BytecodeError;
-use jodin_common::mvp::value::Value;
+use jodin_common::assembly::error::BytecodeError;
+use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;

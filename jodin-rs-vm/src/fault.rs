@@ -1,8 +1,6 @@
-
 use crate::{ArithmeticsTrait, MemoryTrait};
 
-use jodin_common::mvp::value::Value;
-
+use jodin_common::assembly::value::Value;
 
 /// A fault is a VM-level exception. The fault should return to the original point of execution once
 /// it completes.
@@ -15,7 +13,10 @@ pub enum Fault {
 }
 
 impl Fault {
-    pub fn handle_fault<'vm, 'l, M: MemoryTrait, A: ArithmeticsTrait>(&self, _handle: &FaultHandle) {
+    pub fn handle_fault<'vm, 'l, M: MemoryTrait, A: ArithmeticsTrait>(
+        &self,
+        _handle: &FaultHandle,
+    ) {
         match self {
             Fault::MissingSymbol(_s) => {}
             Fault::DoubleFault => panic!("Double Fault Encountered"),

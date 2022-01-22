@@ -7,11 +7,9 @@ use std::fmt::{Debug, Display, Formatter};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-
 use crate::ast::JodinNode;
 use intermediate_type::IntermediateType;
 use resolved_type::WeakResolvedType;
-
 
 use crate::core::privacy::Visibility;
 use crate::core::tags::Tag;
@@ -25,7 +23,6 @@ use crate::types::resolved_type::{ResolveType, ResolvedType};
 use crate::types::structure::Structure;
 use crate::types::traits::{JTrait, JTraitObject};
 use crate::types::type_environment::TypeEnvironment;
-
 
 pub mod arrays;
 pub mod base_type;

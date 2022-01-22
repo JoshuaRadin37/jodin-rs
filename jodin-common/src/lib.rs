@@ -44,13 +44,13 @@ macro_rules! id {
 }
 
 pub mod asm_version;
+pub mod assembly;
 pub mod ast;
 pub mod compilation;
 pub mod compilation_settings;
 pub mod core;
 pub mod error;
 pub mod identifier;
-pub mod mvp;
 pub mod parsing;
 pub mod types;
 pub mod unit;

@@ -2,12 +2,9 @@
 //!
 //! Does not store any information about how byte codes are actually implemented
 
-use crate::mvp::error::BytecodeError;
-use crate::mvp::location::AsmLocation;
-use crate::mvp::value::Value;
-
-
-
+use crate::assembly::error::BytecodeError;
+use crate::assembly::location::AsmLocation;
+use crate::assembly::value::Value;
 
 /// The size of pointers
 pub const PTR_SIZE: usize = std::mem::size_of::<usize>();
@@ -111,6 +108,10 @@ pub enum Asm {
 impl Asm {
     pub fn label<S: AsRef<str>>(lbl: S) -> Self {
         Self::Label(lbl.as_ref().to_string())
+    }
+
+    pub fn pub_label<S: AsRef<str>>(lbl: S) -> Self {
+        Self::PublicLabel(lbl.as_ref().to_string())
     }
 
     pub fn push<V>(value: V) -> Self

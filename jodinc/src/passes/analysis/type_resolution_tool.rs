@@ -1,8 +1,3 @@
-
-
-
-
-
 use jodin_common::ast::JodinNodeType;
 use jodin_common::ast::{CompoundType, JodinNode};
 use jodin_common::core::privacy::{Visibility, VisibilityTag};

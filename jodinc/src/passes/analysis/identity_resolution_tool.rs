@@ -18,7 +18,6 @@ use jodin_common::utility::Tree;
 use std::any::Any;
 use std::cmp::Ordering;
 
-
 /// A toolchain that assigns identities to every node that needs to be resolved. For example, the
 /// types must all be resolved.
 pub struct IdentityResolutionTool {

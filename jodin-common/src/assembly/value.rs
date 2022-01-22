@@ -1,6 +1,6 @@
+use crate::assembly::instructions::{Asm, Assembly, Bytecode, Encode};
+use crate::assembly::location::AsmLocation;
 use crate::core::literal::Literal;
-use crate::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
-use crate::mvp::location::AsmLocation;
 
 use std::cell::RefCell;
 use std::collections::HashMap;

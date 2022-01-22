@@ -4,7 +4,6 @@ use jodin_common::parsing::parse_program;
 use jodinc::process_jodin_node;
 use log::LevelFilter;
 
-
 static JODIN_STRING: &str = r#"
 public trait Shape {
     fn side_length(n: unsigned int) -> int;

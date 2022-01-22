@@ -1,5 +1,5 @@
-use crate::mvp::error::BytecodeError;
-use crate::mvp::value::Value;
+use crate::assembly::error::BytecodeError;
+use crate::assembly::value::Value;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum AsmLocation {

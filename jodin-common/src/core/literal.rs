@@ -17,7 +17,7 @@
 
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 
-use crate::mvp::value::Value;
+use crate::assembly::value::Value;
 
 use regex::Regex;
 

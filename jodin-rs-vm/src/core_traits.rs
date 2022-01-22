@@ -3,11 +3,9 @@
 use crate::error::VMError;
 use crate::fault::Fault;
 
-use jodin_common::mvp::bytecode::{Asm, Assembly, GetAsm};
-use jodin_common::mvp::error::BytecodeError;
-use jodin_common::mvp::value::Value;
-
-
+use jodin_common::assembly::error::BytecodeError;
+use jodin_common::assembly::instructions::{Asm, Assembly, GetAsm};
+use jodin_common::assembly::value::Value;
 
 use std::cell::RefCell;
 use std::fmt::Debug;

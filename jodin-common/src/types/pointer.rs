@@ -1,14 +1,11 @@
 //! Stores type information for the pointer type
 //!
 
-
 use crate::identifier::Identifier;
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{JodinType, Type};
-
-
 
 use super::get_type_id;
 lazy_static::lazy_static! {

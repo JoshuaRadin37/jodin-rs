@@ -1,5 +1,5 @@
+use jodin_common::assembly::value::Value;
 use jodin_common::error::JodinError;
-use jodin_common::mvp::value::Value;
 use std::error::Error as StdError;
 use std::io;
 use thiserror::Error;

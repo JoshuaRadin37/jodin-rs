@@ -1,12 +1,11 @@
-
 use crate::error::VMError;
 use crate::fault::{Fault, FaultHandle, FaultJumpTable};
 use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, RECEIVE_MESSAGE};
 
+use jodin_common::assembly::instructions::{Asm, Assembly, Decode, GetAsm};
+use jodin_common::assembly::location::AsmLocation;
+use jodin_common::assembly::value::Value;
 use jodin_common::identifier::Identifier;
-use jodin_common::mvp::bytecode::{Asm, Assembly, Decode, GetAsm};
-use jodin_common::mvp::location::AsmLocation;
-use jodin_common::mvp::value::Value;
 
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
@@ -14,7 +13,7 @@ use std::ffi::OsStr;
 use std::fmt::{Debug, Formatter};
 use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct VM<'l, M, A>

@@ -9,8 +9,6 @@ use crate::types::{AsIntermediate, Field, GetResolvedMember, JodinType, Type};
 
 use std::cmp::Ordering;
 
-
-
 use std::sync::{Arc, Weak};
 
 /// A trait that should be implemented to take some jodin type and create a fully resolved type out of it
@@ -204,7 +202,7 @@ impl Ord for JTraitObjectWithDistance<'_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::{JodinErrorType};
+    use crate::error::JodinErrorType;
     use crate::types::primitives::Primitive;
     use crate::types::resolved_type::WeakResolvedType;
     use crate::types::type_environment::TypeEnvironment;

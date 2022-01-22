@@ -2,28 +2,24 @@
 //!
 //! Used to determine type checking.
 
-
-use std::cell::{RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::hash::Hash;
 
-
-
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use crate::ast::{JodinNode, NodeReference};
 use strum::IntoEnumIterator;
 
 use crate::error::{JodinErrorType, JodinResult};
-use crate::identifier::{Identifier};
+use crate::identifier::Identifier;
 use crate::types::base_type::base_type;
 use crate::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::types::primitives::Primitive;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 
 use crate::types::{AsIntermediate, BuildType, JodinType, Type};
-
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug)]

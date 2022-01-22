@@ -1,9 +1,10 @@
-use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
 use crate::{jasm, JodinError, JodinNode, JodinResult};
 use anyhow::anyhow;
 use jodin_common::asm_version::Version;
+use jodin_common::assembly::asm_block::{AssemblyBlock, InsertAsm};
+use jodin_common::assembly::instructions::{Asm, Bytecode, Encode};
 use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::{
     Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target,
@@ -12,24 +13,21 @@ use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::core::privacy::VisibilityTag;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
-use jodin_common::identifier::{Identifier};
-use jodin_common::mvp::bytecode::{Asm, Bytecode, Encode};
+use jodin_common::identifier::Identifier;
 use jodin_common::types::StorageModifier;
 use jodin_common::unit::{CompilationObject, TranslationUnit};
 
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
 use std::fmt::{Display, Formatter, Write as fmtWrite};
-use std::fs::{OpenOptions};
+use std::fs::OpenOptions;
 use std::hash::Hash;
 use std::io;
-use std::io::{Write};
+use std::io::Write;
 use std::marker::PhantomData;
 
 use std::path::{Path, PathBuf};
 
-
-pub mod asm_block;
 mod expression_compiler;
 mod function_compiler;
 mod statement_compiler;
@@ -371,7 +369,7 @@ impl Display for CompiledObject {
 #[cfg(test)]
 mod tests {
     use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
-    use crate::{process_jodin_node};
+    use crate::process_jodin_node;
     use jodin_common::compilation::Compiler;
     use jodin_common::compilation_settings::CompilationSettings;
     use jodin_common::init_logging;

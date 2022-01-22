@@ -8,8 +8,6 @@ use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{get_type_id, AsIntermediate, JodinType, Type};
 
-
-
 /// An array type
 #[derive(Debug)]
 pub enum ArrayType {

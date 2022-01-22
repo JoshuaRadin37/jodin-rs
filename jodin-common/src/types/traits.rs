@@ -1,6 +1,5 @@
 //! Traits are interfaces
 
-
 use crate::identifier::Identifier;
 use crate::types::generic_context::GenericParameter;
 use crate::types::intermediate_type::IntermediateType;
@@ -10,7 +9,6 @@ use crate::types::{get_type_id, Field, JodinType, Type};
 
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
-
 
 /// A jodin trait structure
 #[derive(Debug, Clone)]

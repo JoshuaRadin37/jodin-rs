@@ -2,22 +2,13 @@
 //!
 //! aka classes
 
-
-
-
 use crate::identifier::{Identifier, Namespaced};
 use crate::types::generic_context::{GenericParameter, Morph};
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::traits::JTraitObject;
 use crate::types::type_environment::TypeEnvironment;
-use crate::types::{
-    CompoundType, Field, JodinType, Member, Type,
-};
-
-
-
-
+use crate::types::{CompoundType, Field, JodinType, Member, Type};
 
 /// The actual, declaration of the JObject
 #[derive(Debug, Clone)]

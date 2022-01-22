@@ -5,11 +5,9 @@ use jodin_common::init_logging;
 
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
-use jodin_rs_vm::vm::{VMBuilder};
+use jodin_rs_vm::vm::VMBuilder;
 use jodinc::test_runner::ProjectBuilder;
 use log::{info, LevelFilter};
-
-
 
 #[test]
 fn fibonacci() {

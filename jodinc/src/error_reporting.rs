@@ -1,7 +1,6 @@
 //! contains error reporting functionality for better errors
 
-
-use std::collections::{Bound};
+use std::collections::Bound;
 use std::ops::{Deref, RangeBounds, RangeTo};
 
 type LineNum = usize;
@@ -83,7 +82,6 @@ impl Deref for LineRange {
 #[cfg(test)]
 mod tests {
     use crate::error_reporting::FileStructure;
-    
 
     #[test]
     fn get_lines() {

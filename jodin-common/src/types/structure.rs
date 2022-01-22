@@ -1,17 +1,11 @@
 //! The most basic, complex type that is just a record
 
-
-
 use crate::identifier::Identifier;
 
-
 use crate::types::intermediate_type::IntermediateType;
-use crate::types::resolved_type::{
-    BuildResolvedType, ResolvedTypeBuilder,
-};
+use crate::types::resolved_type::{BuildResolvedType, ResolvedTypeBuilder};
 
 use crate::types::{get_type_id, CompoundType, Field, JodinType, Type};
-
 
 /// Contains a name and its fields
 #[derive(Debug, Clone)]

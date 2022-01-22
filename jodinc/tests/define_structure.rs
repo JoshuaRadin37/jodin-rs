@@ -7,9 +7,7 @@ use jodin_common::init_logging;
 use jodin_common::parsing::parse_program;
 use jodin_common::types::intermediate_type::IntermediateType;
 use jodin_common::types::primitives::Primitive;
-use jodin_common::types::resolved_type::{
-    ResolvedType, ResolvedTypeFactory,
-};
+use jodin_common::types::resolved_type::{ResolvedType, ResolvedTypeFactory};
 use jodin_common::types::{AsIntermediate, Field, GetResolvedMember};
 
 use jodinc::process_jodin_node;
