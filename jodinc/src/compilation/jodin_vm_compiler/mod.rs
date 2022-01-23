@@ -1,6 +1,6 @@
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
-use crate::{jasm, JodinError, JodinNode, JodinResult};
+use crate::{JodinError, JodinNode, JodinResult};
 use anyhow::anyhow;
 use jodin_common::asm_version::Version;
 use jodin_common::assembly::asm_block::{AssemblyBlock, InsertAsm};
@@ -26,6 +26,7 @@ use std::io;
 use std::io::Write;
 use std::marker::PhantomData;
 
+use jodin_common::jasm;
 use std::path::{Path, PathBuf};
 
 mod expression_compiler;
