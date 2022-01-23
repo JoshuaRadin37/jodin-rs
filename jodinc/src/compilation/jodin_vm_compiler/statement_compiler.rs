@@ -11,7 +11,7 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 
-use jasm_macros::cond;
+use jasm_macros::{cond, if_};
 use jodin_common::block;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -55,15 +55,15 @@ impl StatementCompiler {
 
         let asm = match else_block {
             None => {
-                cond! {
-                    if (expr_c.create_compilable(cond)?) {
+                if_! {
+                    (expr_c.create_compilable(cond)?) {
                         self.create_compilable(block)?
                     }
                 }
             }
             Some(r#else) => {
-                cond! {
-                    if (expr_c.create_compilable(cond)?) {
+                if_! {
+                    (expr_c.create_compilable(cond)?) {
                         self.create_compilable(block)?
                     } else {
                         self.create_compilable(r#else)?

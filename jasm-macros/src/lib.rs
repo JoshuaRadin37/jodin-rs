@@ -106,13 +106,15 @@ macro_rules! cond {
             $crate::block![
                 if_false:
                 $($if_false,)?
+                $crate::Asm::Nop
             ],
             $crate::goto!(end_if),
             $crate::label!(if_true),
             $crate::block![
                 if_true:
                 $($if_true,)?
-            ]
+                $crate::Asm::Nop
+            ],
             $crate::goto!(end_if),
             $crate::label!(end_if)
         ]
@@ -129,7 +131,8 @@ macro_rules! cond {
             $crate::label!(start_while_block),
             $crate::block![
                 if_true:
-            $($if_true,)?
+                $($if_true,)?
+                $crate::Asm::Nop
             ],
             $crate::goto!(start_while),
             $crate::label!(end_while)
@@ -153,14 +156,12 @@ macro_rules! cond {
 #[macro_export]
 macro_rules! if_ {
     (($cond:expr) $blk:block) => {
-        $crate::cond!(
-            if ($cond) $blk
-        )
+        $crate::cond!(if ($cond) {
+            $blk
+        })
     };
     (($cond:expr) $blk:block else $else_blk:block) => {
-        $crate::cond!(
-            if ($cond) $blk else $else_blk
-        )
+        $crate::cond!(if ($cond) { $blk } else { $else_blk })
     };
 }
 
@@ -289,7 +290,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let blk = block! {factorial:
+        let blk = jasm! {factorial:
             label!(pub factorial);
             var!(0 = pop!());
             var!(1 = value!(1u64));
