@@ -79,9 +79,9 @@ pub enum Asm {
 
     /// & two values on the stack
     And,
-    /// | two values on the stack
+    /// ! a values on the stack
     Not,
-    /// ! a value on the stack
+    /// || two values on the stack
     Or,
 
     /// Pop the top of the stack and makes the popped value either be

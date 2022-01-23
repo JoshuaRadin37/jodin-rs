@@ -7,6 +7,7 @@ members = [
     "jodin-rs-vm",
     "jodinc",
     "jodin-tests",
-    "jodin-common"
+    "jodin-common",
+    "jasm-macros"
 ]
 

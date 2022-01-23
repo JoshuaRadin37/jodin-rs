@@ -26,7 +26,7 @@ use std::io;
 use std::io::Write;
 use std::marker::PhantomData;
 
-use jodin_common::jasm;
+use jodin_common::block;
 use std::path::{Path, PathBuf};
 
 mod expression_compiler;
@@ -240,7 +240,7 @@ impl<'j> Module<'j> {
     pub fn static_object(&self, builder: &ObjectCompilerBuilder) -> JodinResult<CompilationObject> {
         info!("Creating static object for module {:?}", &builder.module_id);
         let path = self.static_object_path(|s| builder.relative_path(s, "jobj"));
-        let mut block = jasm![Asm::PublicLabel("@@STATIC".to_string())];
+        let mut block = block![Asm::PublicLabel("@@STATIC".to_string())];
         let mut translation_units = vec![];
         for tree in self.declarations() {
             match tree.r#type() {
@@ -255,7 +255,7 @@ impl<'j> Module<'j> {
                         .as_ref()
                         .ok_or(anyhow!("Non-extern values must be initialized to a value"))?;
                     let mut expr_c = ExpressionCompiler::default();
-                    block.insert_asm(jasm![
+                    block.insert_asm(block![
                         expr_c.create_compilable(value)?,
                         Asm::SetSymbol(name.os_compat_str().unwrap())
                     ]);
@@ -279,7 +279,7 @@ impl<'j> Module<'j> {
                 }
             }
         }
-        block.insert_asm(jasm![Asm::push(0u64), Asm::Return,]);
+        block.insert_asm(block![Asm::push(0u64), Asm::Return,]);
         Ok(CompilationObject::new(
             path,
             self.identifier.clone(),
