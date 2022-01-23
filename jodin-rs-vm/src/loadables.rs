@@ -3,8 +3,7 @@
 use crate::error::VMError;
 use crate::{VMTryLoadable, VirtualMachine};
 use jodin_common::unit::CompilationObject;
-use std::borrow::Borrow;
-use std::fs::File;
+
 use std::path::{Path, PathBuf};
 
 /// A regular file

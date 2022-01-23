@@ -26,8 +26,8 @@
 //! ```
 
 #![cfg_attr(feature = "strict", deny(warnings))]
-#![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
+#![allow(dead_code)]
 #![warn(
     bad_style,
     const_err,
@@ -51,12 +51,6 @@
 extern crate clap;
 
 #[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate lalrpop_util;
-
-#[macro_use]
 extern crate log;
 
 #[macro_use]
@@ -67,7 +61,6 @@ use crate::passes::optimization::optimize;
 use jodin_common::ast::JodinNode;
 use jodin_common::error::{JodinError, JodinResult};
 use jodin_common::types::type_environment::TypeEnvironment;
-use std::fs::File;
 
 pub mod cli;
 pub mod compilation;
@@ -76,7 +69,7 @@ pub mod passes;
 pub mod test_runner;
 
 /// processes the jodin node tree
-pub fn process_jodin_node(mut node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
+pub fn process_jodin_node(node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
     let (analyzed, env) = analyze(node)?;
     let optimized = optimize(analyzed)?;
     Ok((optimized, env))

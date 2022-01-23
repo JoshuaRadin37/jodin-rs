@@ -1,15 +1,12 @@
 //! The main method for tracking, then resolving identifiers.
 
-use num_traits::abs;
 use std::collections::{HashMap, HashSet};
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Formatter};
 use std::iter::FromIterator;
 use std::ops::{Index, IndexMut};
-use std::process::id;
 
 // use ptree::{write_tree, Style, TreeItem};
 
-use crate::error::JodinErrorType::IdentifierDoesNotExist;
 use crate::error::{JodinErrorType, JodinResult};
 use crate::identifier::{Identifier, IdentifierIterator, Namespaced};
 use crate::utility::Tree;
@@ -237,6 +234,7 @@ mod _hidden {
             self.tree.get_from_absolute_identifier(&path).is_ok()
         }
 
+        /// The semi push should both push the given id, and set the current id as a used namespace.
         pub fn semi_push(&mut self, id: Identifier) {
             let original_current = self.current_namespace.clone();
             if let Some(current) = &original_current {
@@ -251,11 +249,14 @@ mod _hidden {
             self.push_namespace(id);
         }
 
+        /// Pops the current namespace, then releases the now current namespace from the used namespace
+        /// collection.
         pub fn semi_pop(&mut self) {
             self.pop_namespace();
             let original_current = self.current_namespace.clone();
             if let Some(current) = &original_current {
-                self.stop_use_namespace(current);
+                self.stop_use_namespace(current)
+                    .expect("namespace not used");
             }
         }
 
@@ -644,7 +645,7 @@ impl Debug for NodeInfo {
         }
         map.entry(
             &"relevant",
-            &self.relevant.iter().map(|(a, b)| a).collect::<Vec<_>>(),
+            &self.relevant.iter().map(|(a, _b)| a).collect::<Vec<_>>(),
         );
         map.finish()
     }

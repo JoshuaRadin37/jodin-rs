@@ -17,7 +17,6 @@ use jodin_common::unit::TranslationUnit;
 use jodin_common::utility::Tree;
 use std::any::Any;
 use std::cmp::Ordering;
-use std::process::id;
 
 /// A toolchain that assigns identities to every node that needs to be resolved. For example, the
 /// types must all be resolved.
@@ -354,7 +353,7 @@ impl IdentifierCreator {
         &mut self,
         id: Identifier,
         resolver: &mut IdentifierResolver,
-        mut closure: F,
+        closure: F,
     ) -> R
     where
         F: Fn(&mut IdentifierResolver) -> R,

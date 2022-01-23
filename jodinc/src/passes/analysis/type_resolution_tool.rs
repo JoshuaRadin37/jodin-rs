@@ -1,14 +1,9 @@
-use std::collections::HashMap;
-use std::env::var;
-
-use itertools::Itertools;
-
 use jodin_common::ast::JodinNodeType;
 use jodin_common::ast::{CompoundType, JodinNode};
 use jodin_common::core::privacy::{Visibility, VisibilityTag};
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::{JodinErrorType, JodinResult};
-use jodin_common::identifier::Identifier;
+
 use jodin_common::types::intermediate_type::IntermediateType;
 use jodin_common::types::structure::Structure;
 use jodin_common::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};

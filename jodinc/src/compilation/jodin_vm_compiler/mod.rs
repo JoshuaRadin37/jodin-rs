@@ -1,9 +1,10 @@
-use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::expression_compiler::ExpressionCompiler;
 use crate::compilation::jodin_vm_compiler::function_compiler::FunctionCompiler;
-use crate::{jasm, JodinError, JodinNode, JodinResult};
+use crate::{JodinError, JodinNode, JodinResult};
 use anyhow::anyhow;
 use jodin_common::asm_version::Version;
+use jodin_common::assembly::asm_block::{AssemblyBlock, InsertAsm};
+use jodin_common::assembly::instructions::{Asm, Bytecode, Encode};
 use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::{
     Compilable, Compiler, Context, MicroCompiler, PaddedWriter, Target,
@@ -12,24 +13,22 @@ use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::core::privacy::VisibilityTag;
 use jodin_common::core::tags::TagTools;
 use jodin_common::error::JodinErrorType;
-use jodin_common::identifier::{Identifiable, Identifier};
-use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
+use jodin_common::identifier::Identifier;
 use jodin_common::types::StorageModifier;
 use jodin_common::unit::{CompilationObject, TranslationUnit};
-use jodin_common::utility::Tree;
+
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
-use std::fmt::{write, Display, Formatter, Write as fmtWrite};
-use std::fs::{File, OpenOptions};
+use std::fmt::{Display, Formatter, Write as fmtWrite};
+use std::fs::OpenOptions;
 use std::hash::Hash;
 use std::io;
-use std::io::{stdout, Write};
+use std::io::Write;
 use std::marker::PhantomData;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicI32;
 
-pub mod asm_block;
+use jodin_common::jasm;
+use std::path::{Path, PathBuf};
+
 mod expression_compiler;
 mod function_compiler;
 mod statement_compiler;
@@ -79,7 +78,7 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
             info!("Compiling module {:?}", module.identifier);
             match &mut self.writer_override {
                 None => {
-                    let mut builder = module.builder(&settings.target_directory);
+                    let builder = module.builder(&settings.target_directory);
                     for member in module.objects() {
                         let resolved_id = member.resolved_id()?;
                         info!("Compiling {:?}", resolved_id);
@@ -92,7 +91,7 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
                     Compilable::<JodinVM>::compile(static_obj, &context, writer)?;
                 }
                 Some(s) => {
-                    let mut writer = PaddedWriter::new(s);
+                    let _writer = PaddedWriter::new(s);
                     // module.compile(&context, &mut writer)?;
                     todo!()
                 }
@@ -155,7 +154,7 @@ impl<'m> TranslationObjectCompiler<'m> {
 }
 
 impl Compiler<JodinVM> for TranslationObjectCompiler<'_> {
-    fn compile(&mut self, tree: &JodinNode, settings: &CompilationSettings) -> JodinResult<()> {
+    fn compile(&mut self, tree: &JodinNode, _settings: &CompilationSettings) -> JodinResult<()> {
         let as_obj = self.create_compilable(tree)?;
         let mut buffer = Vec::<u8>::new();
 
@@ -371,7 +370,7 @@ impl Display for CompiledObject {
 #[cfg(test)]
 mod tests {
     use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
-    use crate::{process_jodin_node, JodinResult};
+    use crate::process_jodin_node;
     use jodin_common::compilation::Compiler;
     use jodin_common::compilation_settings::CompilationSettings;
     use jodin_common::init_logging;

@@ -9,4 +9,8 @@ pub mod operator;
 pub mod privacy;
 pub mod tags;
 
+/// This should be used as the name of the callable native object that can be used within jodin programs.
+///
+/// The native object is special because unlike other functions, the only type-checked parameter
+/// is the first, which must be a [`Value::String`](crate::assembly::value::Value) value.
 pub static NATIVE_OBJECT: &str = "__NATIVE";

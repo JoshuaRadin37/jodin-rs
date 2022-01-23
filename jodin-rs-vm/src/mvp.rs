@@ -1,6 +1,6 @@
 use crate::{ArithmeticsTrait, MemoryTrait};
-use jodin_common::mvp::error::BytecodeError;
-use jodin_common::mvp::value::Value;
+use jodin_common::assembly::error::BytecodeError;
+use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -15,9 +15,9 @@ pub struct MinimumMemory {
 impl MemoryTrait for MinimumMemory {
     fn global_scope(&self) {}
 
-    fn save_current_scope<H: Hash>(&mut self, identifier: H) {}
+    fn save_current_scope<H: Hash>(&mut self, _identifier: H) {}
 
-    fn load_scope<H: Hash>(&mut self, identifier: H) {}
+    fn load_scope<H: Hash>(&mut self, _identifier: H) {}
 
     fn push_scope(&mut self) {}
 
@@ -90,19 +90,19 @@ impl ArithmeticsTrait for MinimumALU {
         }
     }
 
-    fn div(&self, a: Value, b: Value) -> Value {
+    fn div(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
-    fn rem(&self, a: Value, b: Value) -> Value {
+    fn rem(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
-    fn and(&self, a: Value, b: Value) -> Value {
+    fn and(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
-    fn or(&self, a: Value, b: Value) -> Value {
+    fn or(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
@@ -115,15 +115,15 @@ impl ArithmeticsTrait for MinimumALU {
         }
     }
 
-    fn xor(&self, a: Value, b: Value) -> Value {
+    fn xor(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
-    fn shift_left(&self, a: Value, b: Value) -> Value {
+    fn shift_left(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 
-    fn shift_right(&self, a: Value, b: Value) -> Value {
+    fn shift_right(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
 }

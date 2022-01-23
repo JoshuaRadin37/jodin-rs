@@ -1,19 +1,20 @@
 //! The expression compiler
 
-use crate::compilation::jodin_vm_compiler::asm_block::{AssemblyBlock, InsertAsm};
 use crate::compilation::jodin_vm_compiler::VariableUseTracker;
 use crate::compilation::JodinVM;
-use crate::{jasm, JodinNode, JodinResult};
+use crate::{JodinNode, JodinResult};
+use jodin_common::assembly::asm_block::{AssemblyBlock, InsertAsm};
 use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::core::operator::Operator;
 use jodin_common::core::tags::TagTools;
 use jodin_common::core::NATIVE_OBJECT;
 use jodin_common::error::JodinErrorType;
-use jodin_common::identifier::Identifier;
-use jodin_common::mvp::bytecode::{Asm, Assembly};
-use jodin_common::mvp::location::AsmLocation;
-use jodin_common::mvp::value::Value;
+
+use jodin_common::assembly::instructions::Asm;
+
+use jodin_common::assembly::value::Value;
+use jodin_common::jasm;
 use jodin_rs_vm::function_names::CALL;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -76,7 +77,7 @@ impl ExpressionCompiler {
                     arg_count += 1;
                 }
 
-                let mut called_asm = self.expr(called)?;
+                let called_asm = self.expr(called)?;
                 output.insert_asm(Asm::Pack(arg_count));
 
                 let message = Asm::Push(Value::Str(CALL.to_string()));

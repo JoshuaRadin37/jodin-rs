@@ -3,7 +3,6 @@ use jodin_common::init_logging;
 use jodin_common::parsing::parse_program;
 use jodinc::process_jodin_node;
 use log::LevelFilter;
-use std::error::Error;
 
 static JODIN_STRING: &str = r#"
 public trait Shape {
@@ -57,7 +56,7 @@ public class Square<T> : Rectangle {
 fn _define_class() -> Result<(), JodinError> {
     init_logging(LevelFilter::Trace);
     let declaration = parse_program(JODIN_STRING)?;
-    let (processed, env) = process_jodin_node(declaration)?;
+    let (_processed, _env) = process_jodin_node(declaration)?;
 
     Ok(())
 }

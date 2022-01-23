@@ -15,16 +15,12 @@
 //! 8. `unsigned int`
 //! 9. `unsigned long`
 
-use crate::core::operator::{NumType, TryConstEvaluation};
 use crate::error::{JodinError, JodinErrorType, JodinResult};
-use crate::identifier::Identifier;
-use crate::mvp::value::Value;
-use crate::types::intermediate_type::TypeSpecifier;
-use crate::types::primitives::Primitive;
-use crate::utility::Visitor;
-use num_traits::{Num, PrimInt};
+
+use crate::assembly::value::Value;
+
 use regex::Regex;
-use std::collections::HashMap;
+
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -442,7 +438,9 @@ impl Into<Value> for &Literal {
     }
 }
 
+/// A trait to enable constant casts between types (at compile time)
 pub trait ConstantCast<T>: Sized {
+    /// Try to cast this value to another value
     fn try_constant_cast(self) -> JodinResult<T>;
 }
 
@@ -496,8 +494,10 @@ constant_cast!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::parse_identifier;
+    use std::collections::HashMap;
+
     use crate::parsing::parse_expression;
+    use crate::utility::Visitor;
 
     #[test]
     fn parse_hex_literals() {

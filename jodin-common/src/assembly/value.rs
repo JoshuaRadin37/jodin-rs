@@ -1,12 +1,10 @@
+use crate::assembly::instructions::{Asm, Assembly, Bytecode, Encode};
+use crate::assembly::location::AsmLocation;
 use crate::core::literal::Literal;
-use crate::mvp::bytecode::{Asm, Assembly, Bytecode, Encode};
-use crate::mvp::location::AsmLocation;
-use num_traits::{PrimInt, Signed};
-use std::borrow::Borrow;
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
-use std::hash::Hash;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Value {

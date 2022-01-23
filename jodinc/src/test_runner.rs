@@ -8,7 +8,7 @@ use jodin_rs_vm::vm::VMBuilder;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fs::File as FsFile;
+
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -171,7 +171,7 @@ impl ProjectBuilder {
                 let as_string = String::from_utf8(buffer)?;
                 compiler.compile_to_object(as_string)?;
             }
-            Some(ProjectBuilderInput::Directory(p)) => {
+            Some(ProjectBuilderInput::Directory(_p)) => {
                 todo!()
             }
         }

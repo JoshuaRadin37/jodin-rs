@@ -22,21 +22,17 @@
 //!
 //! [#74]: https://github.com/joshradin/jodin-rs/issues/74
 
-use crate::compilation::jodin_vm_compiler::{
-    split_by_module, JodinVMCompiler, Module, ObjectCompilerBuilder,
-};
-use crate::compilation::JodinVM;
+use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
+
 use crate::passes::analysis::analyze_with_preload;
-use crate::{optimize, JodinError, JodinNode, JodinResult};
-use jodin_common::compilation::{
-    execute_compiler, Compilable, Compiler, Context, PaddedWriter, Target,
-};
+use crate::{optimize, JodinError};
+use jodin_common::compilation::{Compilable, Compiler};
 use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::parsing::parse_program;
 use jodin_common::unit::{CompilationObject, Incremental, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
-use std::fs::{File, FileType};
+
 use std::path::{Path, PathBuf};
 
 pub struct IncrementalCompiler {

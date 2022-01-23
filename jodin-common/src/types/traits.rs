@@ -1,16 +1,14 @@
 //! Traits are interfaces
 
-use crate::error::JodinResult;
 use crate::identifier::Identifier;
 use crate::types::generic_context::GenericParameter;
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::resolved_type::{ResolveType, WeakResolvedType};
 use crate::types::type_environment::TypeEnvironment;
 use crate::types::{get_type_id, Field, JodinType, Type};
-use crate::utility::Visitor;
+
 use itertools::Itertools;
-use std::fmt::{DebugStruct, Display, Formatter};
-use std::sync::Arc;
+use std::fmt::{Display, Formatter};
 
 /// A jodin trait structure
 #[derive(Debug, Clone)]
@@ -73,7 +71,7 @@ impl Into<JodinType> for JTrait {
 }
 
 impl ResolveType for JTrait {
-    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
+    fn resolve(&self, _environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }
@@ -103,7 +101,7 @@ impl Into<JodinType> for JTraitObject {
 }
 
 impl ResolveType for JTraitObject {
-    fn resolve(&self, environment: &TypeEnvironment) -> WeakResolvedType {
+    fn resolve(&self, _environment: &TypeEnvironment) -> WeakResolvedType {
         todo!()
     }
 }

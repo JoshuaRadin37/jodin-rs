@@ -16,7 +16,7 @@ use regex::Regex;
 use std::str::FromStr;
 
 // pub mod jodin_grammar;
-lalrpop_mod!(#[allow(missing_docs)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
+lalrpop_mod!(#[allow(warnings)] pub jodin_grammar, "/parsing/jodin_grammar.rs");
 
 /// Shorthand for the result given by the Lexer
 pub type Spanned<Tok, Loc> = Result<(Loc, Tok, Loc), JodinError>;
@@ -379,17 +379,13 @@ pub fn parse_program<S: AsRef<str>>(expr: S) -> ParseResult {
 }
 
 #[allow(unused_results)]
+#[cfg(test)]
 mod tests {
-    use super::jodin_grammar;
-    use crate::ast::{JodinNode, JodinNodeType};
+    use super::*;
     use crate::core::literal::Literal;
-    use crate::core::operator::Operator;
     use crate::identifier::Identifier;
-    use crate::parsing::{JodinLexer, Tok};
     use crate::types::primitives::Primitive;
     use crate::types::Type;
-    use std::iter::FromIterator;
-    use std::str::FromStr;
 
     #[test]
     fn lex_identifiers() {

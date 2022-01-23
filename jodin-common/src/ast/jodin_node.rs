@@ -3,9 +3,9 @@
 use crate::ast::node_type::JodinNodeType;
 use crate::core::tags::{ExtraProperties, ResolvedIdentityTag, Tag, TagUtilities};
 use crate::error::{JodinErrorType, JodinResult};
-use crate::utility::{Acceptor, AcceptorMut, Tree, Visitor};
+use crate::utility::{Acceptor, Tree, Visitor};
 use std::any::Any;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::core::literal::{ConstantCast, Literal};
@@ -14,7 +14,7 @@ use crate::identifier::Identifier;
 use crate::types::intermediate_type::TypeSpecifier;
 use crate::types::primitives::Primitive;
 use num_traits::AsPrimitive;
-use std::fmt::{Debug, Formatter, Pointer};
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, Index};
 use std::rc::{Rc, Weak};
 
@@ -66,7 +66,7 @@ impl JodinNode {
             tags: vec![],
             index: Default::default(),
         };
-        node.add_tag(ExtraProperties::new());
+        node.add_tag(ExtraProperties::new()).unwrap();
 
         let parent_ptr = node.index.clone();
 
@@ -82,7 +82,7 @@ impl JodinNode {
         }
 
         let tag = NodeReferenceTag::new(&node);
-        node.add_tag(tag);
+        node.add_tag(tag).unwrap();
 
         node
     }
@@ -449,6 +449,7 @@ impl NodeReferenceTag {
         Self { info }
     }
 
+    #[allow(unused)]
     fn info(&self) -> &NodeReferenceInfo {
         &self.info
     }
@@ -477,6 +478,8 @@ struct NodeReferenceInfo {
     pub random_code: u64,
     pub checksum: u64,
 }
+
+/// A node reference is a "pointer" to a node
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct NodeReference {
     directions: Vec<usize>,
@@ -643,7 +646,7 @@ mod tests {
 
     mod node_refs {
         use crate::ast::{node_tree, JodinNode, JodinNodeType};
-        use crate::utility::{node_count, Acceptor, AcceptorMut, Tree};
+        use crate::utility::{node_count, Acceptor};
 
         #[test]
         fn base_node_ref() {

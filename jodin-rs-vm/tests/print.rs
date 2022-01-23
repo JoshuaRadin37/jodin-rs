@@ -1,19 +1,17 @@
-use jodin_common::mvp::bytecode::Asm;
-use jodin_common::mvp::value::Value;
-use jodin_common::{default_logging, init_logging};
+use jodin_common::assembly::instructions::Asm;
+use jodin_common::assembly::value::Value;
+use jodin_common::init_logging;
 use jodin_rs_vm::core_traits::VirtualMachine;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
 use log::{debug, LevelFilter};
-use simplelog::info;
-use std::io::Write;
 
 const HELLO_WORLD: &str = "Hello, world!";
 const BYE_WORLD: &str = "Goodbye, world!";
 
 #[test]
 fn hello_world() {
-    init_logging(LevelFilter::Trace);
+    init_logging(LevelFilter::Info);
     debug!("Running hello world program");
     let mut buffer: Vec<u8> = Vec::new();
     let mut err_buffer: Vec<u8> = Vec::new();

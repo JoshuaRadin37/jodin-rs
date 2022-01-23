@@ -1,10 +1,10 @@
 use jodin_common::compilation_settings::CompilationSettings;
-use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
+use jodin_common::error::{JodinErrorType, JodinResult};
 use jodin_common::init_logging;
 use jodinc::cli::JodinRsApp;
-use jodinc::passes::analysis::analyze;
+
 use jodinc::passes::frontend::FilesToJodinNodeTool;
-use jodinc::passes::optimization::optimize;
+
 use jodinc::process_jodin_node;
 use log::LevelFilter;
 use std::fs::File;

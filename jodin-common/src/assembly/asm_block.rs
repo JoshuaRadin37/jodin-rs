@@ -1,20 +1,13 @@
 //! Contains supporting code for inserting and creating assembly code for the compiler
 
-use crate::compilation::JodinVM;
-use crate::JodinResult;
-use itertools::Itertools;
-use jodin_common::compilation::{Compilable, Context, PaddedWriter};
-use jodin_common::identifier::Identifier;
-use jodin_common::mvp::bytecode::GetAsm;
-use jodin_common::mvp::bytecode::{Asm, Assembly, Bytecode};
-use jodin_common::mvp::location::AsmLocation;
+use crate::assembly::instructions::{Asm, Assembly};
+use crate::assembly::location::AsmLocation;
+use crate::compilation::{Compilable, Context, PaddedWriter, Target};
+use crate::error::JodinResult;
+use crate::identifier::Identifier;
 use std::collections::HashSet;
-use std::fmt::{format, Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
-
-assert_impl_all!(AssemblyBlock: Compilable<JodinVM>);
-assert_impl_all!(Assembly: Compilable<JodinVM>);
-assert_impl_all!(Asm: Compilable<JodinVM>);
 
 /// Present at the beginning of a label Marks that the label is relative to the most recent namespace
 pub const RELATIVE_LABEL_MARKER: char = '@';
@@ -26,32 +19,6 @@ pub const REMOVE_LABEL_MARKER: char = '#';
 pub struct AssemblyBlock {
     pub name: Option<String>,
     assembly: Vec<AssemblyBlockComponent>,
-}
-
-#[macro_export]
-macro_rules! jasm {
-     ($name:ident : $($asm:expr),* $(,)?) => {
-        {
-            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
-
-            let mut output = AssemblyBlock::new(Some(&stringify!($name).to_string()));
-            $(
-                output.insert_asm($asm);
-            )*
-            output
-        }
-    };
-    ($($asm:expr),* $(,)?) => {
-        {
-            use $crate::compilation::jodin_vm_compiler::asm_block::{InsertAsm, AssemblyBlock};
-            let mut output = AssemblyBlock::new(None);
-            $(
-                output.insert_asm($asm);
-            )*
-            output
-        }
-    };
-
 }
 
 impl AssemblyBlock {
@@ -72,7 +39,7 @@ impl AssemblyBlock {
     pub fn with_id<I: Into<Identifier>>(id: I) -> Self {
         let id: Identifier = id.into();
         let name = id.to_string().replace("::", "_").to_lowercase();
-        let mut output = Self::new(&name);
+        let output = Self::new(&name);
         output
     }
 
@@ -404,16 +371,15 @@ impl InsertAsm<()> for AssemblyBlock {
     }
 }
 
-impl Compilable<JodinVM> for AssemblyBlock {
+impl<T: Target> Compilable<T> for AssemblyBlock {
     fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         let normalized: Assembly = self.normalize();
-        normalized.compile(context, w)
+        Compilable::<T>::compile(normalized, context, w)
     }
 }
 
-impl Compilable<JodinVM> for Asm {
+impl<T: Target> Compilable<T> for Asm {
     fn compile<W: Write>(self, _context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
-        use jodin_common::mvp::bytecode::Encode;
         // let encoded = self.encode();
         let encoded = Some(self);
         for byte in encoded {

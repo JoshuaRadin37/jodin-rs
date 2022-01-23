@@ -2,28 +2,24 @@
 //!
 //! Used to determine type checking.
 
-use std::any::Any;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::hash::Hash;
-use std::mem::MaybeUninit;
-use std::ops::{Deref, Index};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LockResult, RwLock, TryLockError, TryLockResult, Weak};
+
+use std::sync::Arc;
 
 use crate::ast::{JodinNode, NodeReference};
 use strum::IntoEnumIterator;
 
-use crate::error::{JodinError, JodinErrorType, JodinResult};
-use crate::identifier::{Identifier, IdentifierChain, IdentifierChainIterator};
+use crate::error::{JodinErrorType, JodinResult};
+use crate::identifier::Identifier;
 use crate::types::base_type::base_type;
 use crate::types::intermediate_type::{IntermediateType, TypeSpecifier, TypeTail};
 use crate::types::primitives::Primitive;
-use crate::types::resolved_type::{ResolveType, ResolvedTypeBuilder, WeakResolvedType};
-use crate::types::traits::JTrait;
+use crate::types::resolved_type::{ResolveType, WeakResolvedType};
+
 use crate::types::{AsIntermediate, BuildType, JodinType, Type};
-use crate::utility::Visitor;
 
 /// Stores a lot of information about types and related identifier
 #[derive(Debug)]
@@ -148,7 +144,7 @@ impl TypeEnvironment {
         self.base_type_id = id;
     }
 
-    pub fn is_child_type(&self, child: &Identifier, parent: &Identifier) -> bool {
+    pub fn is_child_type(&self, _child: &Identifier, _parent: &Identifier) -> bool {
         todo!()
     }
 
@@ -247,10 +243,10 @@ impl TypeEnvironmentManager {
         self._set_variable_type(var_id, ty.intermediate_type())
     }
 
-    fn _set_variable_type(&mut self, var_id: &Identifier, ty: IntermediateType) {}
+    fn _set_variable_type(&mut self, _var_id: &Identifier, _ty: IntermediateType) {}
 
     /// Loads the big object version of some variable
-    pub fn load_variable_type(&self, var_id: &Identifier) -> JodinResult<WeakResolvedType> {
+    pub fn load_variable_type(&self, _var_id: &Identifier) -> JodinResult<WeakResolvedType> {
         todo!()
     }
 

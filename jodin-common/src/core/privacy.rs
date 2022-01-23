@@ -9,7 +9,7 @@ use crate::error::JodinError;
 use crate::error::JodinErrorType;
 use crate::identifier::Identifier;
 use std::any::Any;
-use std::fmt::{write, Debug, Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 /// The visibility of a declaration

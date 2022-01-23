@@ -2,25 +2,22 @@
 //! declarations
 
 use crate::asm_version::Version;
+use crate::assembly::instructions::{Assembly, Bytecode, Decode, Encode, GetAsm};
 use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::core::privacy::Visibility;
 use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::identifier::Identifier;
-use crate::mvp::bytecode::{Assembly, Bytecode, Decode, Encode, GetAsm};
 use crate::types::intermediate_type::IntermediateType;
 use crate::types::Field;
 use anyhow::anyhow;
-use bytemuck::{
-    bytes_of, cast, cast_slice, from_bytes, pod_align_to, try_cast, try_cast_slice, try_from_bytes,
-};
-use std::borrow::Borrow;
-use std::fmt::{format, Debug, Display, Formatter};
+
+use std::fmt::{Debug, Display, Formatter};
 use std::fs::File;
-use std::io::{BufRead, Read, Write};
+use std::io::Write;
+use std::mem;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::{io, mem};
 
 /// A translation unit is the smallest public facing unit
 #[derive(Debug, PartialEq, Clone)]
@@ -52,7 +49,7 @@ impl FromStr for TranslationUnit {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let as_split: Vec<&str> = s.split(FIELD_SEPARATOR).collect();
         let as_split_slice = as_split.as_slice();
-        if let &[name, jtype, visibility] = as_split_slice {
+        if let &[_name, _jtype, _visibility] = as_split_slice {
             // Ok(TranslationUnit::new(
             //     Visibility::from_str(visibility)?,
             //     parse_type(jtype)?,
@@ -194,7 +191,7 @@ impl Display for CompilationObject {
 }
 
 impl<T: Target> Compilable<T> for CompilationObject {
-    fn compile<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
+    fn compile<W: Write>(self, _context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         let magic_num_as_bytes = self.magic_number.to_be_bytes();
         trace!("Wrote magic num {:?} to file", magic_num_as_bytes);
         w.write_all(&magic_num_as_bytes)?;
@@ -266,7 +263,7 @@ impl TryFrom<&[u8]> for CompilationObject {
         }
 
         let header_bytes = value[8..translation_unit_start_index].to_vec();
-        /// Header should be in utf-8
+        // Header should be in utf-8
         let header = String::from_utf8(header_bytes)?;
         let mut split = header.lines().skip(1);
         let file_location: PathBuf = PathBuf::from(split.next().unwrap().replace('"', ""));
@@ -295,7 +292,7 @@ impl TryFrom<&Path> for CompilationObject {
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
         info!("Attempting to load file at {:?}", value);
         if value.is_file() {
-            let mut buffer = std::fs::read(value)?;
+            let buffer = std::fs::read(value)?;
             Self::try_from(&*buffer)
         } else {
             Err(anyhow!(
