@@ -8,7 +8,7 @@ pub mod location;
 pub mod value;
 
 pub mod prelude {
-    pub use crate::jasm;
+    pub use crate::block;
 
     pub use super::instructions::*;
 }

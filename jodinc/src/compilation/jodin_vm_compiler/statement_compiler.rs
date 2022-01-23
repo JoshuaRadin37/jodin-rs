@@ -11,7 +11,8 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 
-use jodin_common::jasm;
+use jasm_macros::{cond, if_};
+use jodin_common::block;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -52,54 +53,25 @@ impl StatementCompiler {
             }
         };
 
-        let asm = jasm![if_block:
-            expr_c.create_compilable(cond)?,
-            Asm::cond_goto(rel_label("__true__")),
-            Asm::goto(rel_label("__false__")),
-            Asm::label(rel_label("__true__")),
-            self.create_compilable(block)?,
-            Asm::cond_goto(rel_label("__end_if__")),
-            Asm::label(rel_label("__false__")),
-            else_block
-                .map(|e| self.create_compilable(e))
-                .unwrap_or(Ok(AssemblyBlock::from(Asm::Nop)))?,
-            Asm::goto(rel_label("__end_if__")),
-            Asm::label(rel_label("__end_if__")),
-        ];
+        let asm = match else_block {
+            None => {
+                if_! {
+                    (expr_c.create_compilable(cond)?) {
+                        self.create_compilable(block)?
+                    }
+                }
+            }
+            Some(r#else) => {
+                if_! {
+                    (expr_c.create_compilable(cond)?) {
+                        self.create_compilable(block)?
+                    } else {
+                        self.create_compilable(r#else)?
+                    }
+                }
+            }
+        };
         Ok(asm)
-
-        // output.insert_before_label(Asm::goto(rel_label("if_end")), rel_label("true_end"));
-        // if else_block.is_some() {
-        //     output.insert_before_label(Asm::label(rel_label("false_end")), rel_label("if_end"));
-        //     output
-        //         .insert_before_label(Asm::label(rel_label("false_start")), rel_label("false_end"));
-        //
-        //     output.insert_before_label(Asm::goto(rel_label("if_end")), rel_label("false_end"));
-        // } else {
-        // }
-        //
-        // let mut compiled_expression = expr_c.create_compilable(cond)?;
-        // compiled_expression.insert_asm(Asm::Not);
-        //
-        // if else_block.is_some() {
-        //     output.insert_asm(Asm::cond_goto(rel_label("false_start")));
-        // } else {
-        //     output.insert_asm(Asm::cond_goto(rel_label("if_end")));
-        // }
-        //
-        // if let Some(else_block) = else_block {
-        //     let else_block_asm = self.create_compilable(else_block)?;
-        //
-        //     output.insert_after_label(else_block_asm, rel_label("false_start"));
-        // }
-        //
-        // let block_asm = self.create_compilable(block)?;
-        //
-        // output.insert_after_label(block_asm, rel_label("true_start"));
-        //
-        // output.insert_before_label(compiled_expression, rel_label("true_start"));
-        //
-        // Ok(output)
     }
 }
 
