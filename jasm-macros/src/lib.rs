@@ -103,10 +103,16 @@ macro_rules! cond {
             // if not zero (aka falls through if condition is false)
             $crate::cond_goto!(if_true),
             $crate::label!(if_false),
-            $($if_false,)?
+            $crate::block![
+                if_false:
+                $($if_false,)?
+            ],
             $crate::goto!(end_if),
             $crate::label!(if_true),
-            $($if_true,)?
+            $crate::block![
+                if_true:
+                $($if_true,)?
+            ]
             $crate::goto!(end_if),
             $crate::label!(end_if)
         ]
@@ -121,7 +127,10 @@ macro_rules! cond {
             $crate::cond_goto!(start_while_block),
             $crate::goto!(end_while),
             $crate::label!(start_while_block),
+            $crate::block![
+                if_true:
             $($if_true,)?
+            ],
             $crate::goto!(start_while),
             $crate::label!(end_while)
         ]
@@ -142,6 +151,38 @@ macro_rules! cond {
 }
 
 #[macro_export]
+macro_rules! if_ {
+    (($cond:expr) $blk:block) => {
+        $crate::cond!(
+            if ($cond) $blk
+        )
+    };
+    (($cond:expr) $blk:block else $else_blk:block) => {
+        $crate::cond!(
+            if ($cond) $blk else $else_blk
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! while_ {
+    (($cond:expr) $blk:block) => {
+        $crate::cond!(
+            while ($cond) $blk
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! for_ {
+    (($init:expr;$cond:expr;$delta:expr) $blk:block) => {
+        $crate::cond!(
+            for ($init; $cond; $delta) $blk
+        )
+    };
+}
+
+#[macro_export]
 macro_rules! expr {
     (+, $l:expr, $r:expr) => {
         $crate::block![
@@ -157,6 +198,89 @@ macro_rules! expr {
             $crate::Asm::Multiply
         ]
     };
+    (-, $l:expr, $r:expr) => {
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::Subtract
+        ]
+    };
+    (/, $l:expr, $r:expr) => {
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::Divide
+        ]
+    };
+    (%, $l:expr, $r:expr) => {
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::Remainder
+        ]
+    };
+
+    // boolean
+    (!, $e:expr) => {
+        $crate::block![
+            $e,
+            $crate::Asm::Not,
+        ]
+    };
+    (>0, $e:expr) => {
+        $crate::block![
+            $e,
+            $crate::Asm::GT0,
+        ]
+    };
+    (&, $l:expr, $r:expr) => {
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::And
+        ]
+    };
+    (|, $l:expr, $r:expr) => {
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::Or
+        ]
+    };
+    (==, $l:expr, $r:expr) => {
+        $crate::expr!(&,
+            $crate::expr!(>0,$crate::expr!(-, $l, $r)),
+            $crate::expr!(>0,$crate::expr!(-, $r, $l))
+        )
+    };
+    (!=, $l:expr, $r:expr) => {
+        $crate::expr!(!,
+            $crate::expr!(==, $l, $r)
+        )
+    };
+    (>, $l:expr, $r:expr) => {
+        $crate::expr!(>0, $crate::expr!(-, $l, $r))
+    };
+    (<, $l:expr, $r:expr) => {
+        $crate::expr!(>, $r, $l)
+    };
+    (<=, $l:expr, $r:expr) => {
+        $crate::expr!(!,
+            $crate::expr!(>, $l, $r)
+        )
+    };
+    (>=, $l:expr, $r:expr) => {
+        $crate::expr!(!,
+            $crate::expr!(<, $l, $r)
+        )
+    };
+}
+
+#[macro_export]
+macro_rules! boolify {
+    ($e:expr) => {
+        $crate::block![$e, $crate::Asm::Boolify]
+    };
 }
 
 #[cfg(test)]
@@ -170,14 +294,15 @@ mod tests {
             var!(0 = pop!());
             var!(1 = value!(1u64));
             cond!(
-                for (var!(2 = var!(0)); value![true]; var!(2 = expr!(+, var!(2), value!(1u64)))) {
+                for (var!(2 = var!(0)); expr!(>, var!(2), value!(0u64)); var!(2 = expr!(+, var!(2), value!(1u64)))) {
                     block![
                         expr!(*, var!(2), var!(1));
                         var!(1 = pop!());
                     ]
                 }
             );
-            return_!(var!(1))
+
+            return_!(var!(1));
         };
         println!("{blk:#?}")
     }
