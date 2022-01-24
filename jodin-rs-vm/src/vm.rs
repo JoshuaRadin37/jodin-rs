@@ -372,7 +372,11 @@ where
             }
             Asm::Return => {
                 self.counter_stack.pop();
+                let last = self.memory.pop();
                 self.memory.back_scope();
+                if let Some(last) = last {
+                    self.memory.push(last);
+                }
                 let next = self
                     .counter_stack
                     .last()
@@ -623,6 +627,7 @@ where
         let label = "@@STATIC".to_string();
         self.label_to_instruction.insert(label.clone(), start_index);
         self.load(asm);
+        self.memory.global_scope();
         if self.run(&*label).expect("VM Error encountered") != 0 {
             panic!("VM Failed")
         }
@@ -633,6 +638,7 @@ where
         let start_counter = self.label_to_instruction[start_label];
         self.counter_stack.push(start_counter);
         self.memory.global_scope();
+        self.memory.push_scope();
         loop {
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
@@ -657,12 +663,14 @@ where
                 }
             }
         }
-        self.memory.back_scope();
-        match self.memory.pop() {
+
+        let output = match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
-        }
+        };
+        self.memory.back_scope();
+        output
     }
 
     fn fault(&mut self, fault: Fault) {

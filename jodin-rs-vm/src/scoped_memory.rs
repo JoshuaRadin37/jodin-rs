@@ -265,6 +265,7 @@ impl MemoryTrait for VMMemory {
     }
 
     fn back_scope(&mut self) {
+        let _ = 0i32;
         while self.last_stack_len() > 0 {
             self.pop_scope();
         }
