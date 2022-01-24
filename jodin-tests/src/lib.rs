@@ -6,6 +6,7 @@ use std::sync::{Mutex, RwLock};
 
 use jodin_rs_vm::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
+use jodin_rs_vm::scoped_memory::VMMemory;
 use jodin_rs_vm::vm::{VMBuilder, VM};
 use jodinc::test_runner::ProjectBuilder;
 use lazy_static::lazy_static;
@@ -63,7 +64,7 @@ fn fibonacci() {
 
     let mut buffer = Vec::<u8>::new();
     let mut vm = VMBuilder::new()
-        .memory(MinimumMemory::default())
+        .memory(VMMemory::default())
         .alu(MinimumALU)
         .object_path(dir)
         .with_stdout(&mut buffer)

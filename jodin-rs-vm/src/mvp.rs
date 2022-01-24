@@ -13,7 +13,7 @@ pub struct MinimumMemory {
 }
 
 impl MemoryTrait for MinimumMemory {
-    fn global_scope(&self) {}
+    fn global_scope(&mut self) {}
 
     fn save_current_scope<H: Hash>(&mut self, _identifier: H) {}
 

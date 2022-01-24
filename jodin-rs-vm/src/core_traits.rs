@@ -44,7 +44,7 @@ pub trait VirtualMachine {
 /// Memory defines a way of storing and getting variables.
 pub trait MemoryTrait: Debug {
     /// Sets the memory to the global scope. Works similarly to a load
-    fn global_scope(&self);
+    fn global_scope(&mut self);
     /// Saves the current scope using some value to identify it for later.
     fn save_current_scope<H: Hash>(&mut self, identifier: H);
     /// Loads a scope into memory
