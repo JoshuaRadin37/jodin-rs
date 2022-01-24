@@ -21,6 +21,7 @@ mod helper_structs {
     pub(super) struct MemNode {
         id: usize,
         num_to_value: HashMap<usize, RefCell<Value>>,
+        stack: Vec<Value>,
     }
 
     impl MemNode {
@@ -28,7 +29,22 @@ mod helper_structs {
             MemNode {
                 id,
                 num_to_value: HashMap::new(),
+                stack: vec![],
             }
+        }
+
+        pub fn id(&self) -> usize {
+            self.id
+        }
+        pub fn num_to_value(&self) -> &HashMap<usize, RefCell<Value>> {
+            &self.num_to_value
+        }
+        pub fn num_to_value_mut(&mut self) -> &mut HashMap<usize, RefCell<Value>> {
+            &mut self.num_to_value
+        }
+
+        pub fn stack(&mut self) -> &mut Vec<Value> {
+            &mut self.stack
         }
     }
 
@@ -92,7 +108,7 @@ pub struct VMMemory {
     hash_to_id: HashMap<u64, usize>,
     id_to_prev_id: HashMap<usize, usize>,
     mem_node_stack: Vec<Vec<usize>>,
-    id_pool: VarIdPool,
+    id_pool: RefCell<VarIdPool>,
 }
 
 impl VMMemory {
@@ -100,6 +116,75 @@ impl VMMemory {
         let last = self.mem_node_stack.last().unwrap();
         let &last_last = last.last().unwrap();
         last_last
+    }
+
+    fn last_stack(&mut self) -> &mut Vec<usize> {
+        match self.mem_node_stack.last_mut() {
+            None => {
+                panic!()
+            }
+            Some(s) => s,
+        }
+    }
+
+    fn last_stack_len(&mut self) -> usize {
+        match self.mem_node_stack.last() {
+            None => 0,
+            Some(s) => s.len(),
+        }
+    }
+
+    fn is_referenced(&self, id: usize) -> bool {
+        for stack in &self.mem_node_stack {
+            for &found_id in stack {
+                if found_id == id {
+                    return true;
+                }
+            }
+        }
+
+        for &value in self.id_to_prev_id.values() {
+            if value == id {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn remove_node(&mut self, node_id: usize) {
+        let node = self
+            .mem_nodes
+            .remove(&node_id)
+            .expect(format!("No node with id {node_id}").as_str());
+
+        let node_id = node.id();
+        self.id_to_prev_id.remove(&node_id);
+
+        let vars = node.num_to_value().keys();
+
+        self.id_pool.borrow_mut().ret_ids(vars);
+
+        let mut hashed = vec![];
+        for (&hash, &id) in self.hash_to_id.iter() {
+            if id == node_id {
+                hashed.push(hash);
+            }
+        }
+
+        for hash in hashed {
+            self.hash_to_id.remove(&hash);
+        }
+    }
+
+    fn current_node_mut(&mut self) -> &mut MemNode {
+        let id = self.current_node_id();
+        self.mem_nodes.get_mut(&id).unwrap()
+    }
+
+    fn current_node(&self) -> &MemNode {
+        let id = self.current_node_id();
+        self.mem_nodes.get(&id).unwrap()
     }
 }
 
@@ -161,42 +246,58 @@ impl MemoryTrait for VMMemory {
     }
 
     fn pop_scope(&mut self) {
-        self.mem_node_stack.last_mut().unwrap().pop();
+        let popped_id = self.last_stack().pop().expect("No mem nodes in stack");
+        if !self.is_referenced(popped_id) {
+            self.remove_node(popped_id);
+        }
     }
 
     fn back_scope(&mut self) {
-        let mut last_stack =
+        while self.last_stack_len() > 0 {
+            self.pop_scope();
+        }
+        self.mem_node_stack.pop();
     }
 
     fn set_var(&mut self, var: usize, value: Value) {
-        todo!()
+        self.current_node_mut()
+            .num_to_value_mut()
+            .insert(var, RefCell::new(value));
     }
 
     fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError> {
-        todo!()
+        self.current_node()
+            .num_to_value()
+            .get(&var)
+            .cloned()
+            .ok_or(BytecodeError::VariableNotSet(var))
     }
 
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError> {
-        todo!()
+        self.current_node_mut()
+            .num_to_value_mut()
+            .remove(&var)
+            .ok_or(BytecodeError::VariableNotSet(var))
+            .map(|_| ())
     }
 
     fn next_var_number(&self) -> usize {
-        todo!()
+        self.id_pool.borrow_mut().next_id().unwrap()
     }
 
     fn push(&mut self, value: Value) {
-        todo!()
+        self.current_node_mut().stack().push(value);
     }
 
     fn pop(&mut self) -> Option<Value> {
-        todo!()
+        self.current_node_mut().stack().pop()
     }
 
     fn take_stack(&mut self) -> Vec<Value> {
-        todo!()
+        std::mem::replace(self.current_node_mut().stack(), vec![])
     }
 
     fn replace_stack(&mut self, stack: Vec<Value>) {
-        todo!()
+        std::mem::replace(self.current_node_mut().stack(), stack);
     }
 }
