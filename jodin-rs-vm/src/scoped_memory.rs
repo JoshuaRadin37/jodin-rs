@@ -71,7 +71,7 @@ mod helper_structs {
 
     impl VarIdPool {
         pub fn next_id(&mut self) -> Option<usize> {
-            match self.reclaimed.pop_front() {
+            let output = match self.reclaimed.pop_front() {
                 None => {
                     if let Some(next_id) = self.next_id {
                         self.next_id = next_id.checked_add(1);
@@ -81,7 +81,9 @@ mod helper_structs {
                     }
                 }
                 Some(output) => Some(output),
-            }
+            };
+            info!("Next id: {output:?}");
+            output
         }
 
         pub fn ret_id(&mut self, id: usize) {
@@ -89,6 +91,7 @@ mod helper_structs {
             let mut stored = Vec::from(std::mem::replace(&mut self.reclaimed, VecDeque::new()));
             stored.sort();
             self.reclaimed.extend(stored);
+            info!("Reclaimed var ids: {:?}", self.reclaimed);
         }
 
         pub fn ret_ids<I: IntoIterator<Item = usize>>(&mut self, iter: I) {
@@ -96,6 +99,7 @@ mod helper_structs {
             let mut stored = Vec::from(std::mem::replace(&mut self.reclaimed, VecDeque::new()));
             stored.sort();
             self.reclaimed.extend(stored);
+            info!("Reclaimed var ids: {:?}", self.reclaimed);
         }
     }
 }
@@ -113,6 +117,7 @@ pub struct VMMemory {
 
 impl VMMemory {
     fn current_node_id(&self) -> usize {
+        println!("{self:#?}");
         let last = self.mem_node_stack.last().unwrap();
         let &last_last = last.last().unwrap();
         last_last
@@ -161,7 +166,7 @@ impl VMMemory {
         let node_id = node.id();
         self.id_to_prev_id.remove(&node_id);
 
-        let vars = node.num_to_value().keys();
+        let vars: Vec<usize> = node.num_to_value().keys().copied().collect();
 
         self.id_pool.borrow_mut().ret_ids(vars);
 
@@ -222,16 +227,23 @@ impl MemoryTrait for VMMemory {
         let mut hasher = DefaultHasher::default();
         identifier.hash(&mut hasher);
         let hashed = hasher.finish();
-        let mut id = self.hash_to_id.get(&hashed);
+        let mut id = self.hash_to_id.get(&hashed).cloned();
+
+        if id.is_none() {
+            self.global_scope();
+            self.push_scope();
+            self.save_current_scope(identifier);
+            self.pop_scope();
+        }
 
         let mut stack = VecDeque::new();
 
         while let Some(m_id) = id {
             stack.push_front(m_id);
-            id = self.id_to_prev_id.get(m_id);
+            id = self.id_to_prev_id.get(&m_id).cloned();
         }
 
-        let stack = Vec::from_iter(stack.into_iter().copied());
+        let stack = Vec::from_iter(stack.into_iter());
         self.mem_node_stack.push(stack);
     }
 

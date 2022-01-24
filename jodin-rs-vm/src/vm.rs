@@ -372,6 +372,7 @@ where
             }
             Asm::Return => {
                 self.counter_stack.pop();
+                self.memory.back_scope();
                 let next = self
                     .counter_stack
                     .last()
@@ -631,6 +632,7 @@ where
         self.cont = true;
         let start_counter = self.label_to_instruction[start_label];
         self.counter_stack.push(start_counter);
+        self.memory.global_scope();
         loop {
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
@@ -655,6 +657,7 @@ where
                 }
             }
         }
+        self.memory.back_scope();
         match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
