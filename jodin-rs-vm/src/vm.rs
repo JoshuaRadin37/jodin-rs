@@ -77,6 +77,10 @@ where
     M: MemoryTrait,
     A: ArithmeticsTrait,
 {
+    pub fn instructions(&self) -> &Vec<Asm> {
+        &self.instructions
+    }
+
     pub fn set_stdin<R: Read + 'l>(&mut self, reader: R) {
         self.stdin = Some(Box::new(reader));
     }

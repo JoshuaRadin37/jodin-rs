@@ -381,6 +381,7 @@ dependencies = [
  "jodin-common",
  "jodin-rs-vm",
  "jodinc",
+ "lazy_static",
  "log",
 ]
 

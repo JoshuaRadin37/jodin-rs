@@ -17,10 +17,10 @@ macro_rules! jasm {
 
 #[macro_export]
 macro_rules! var {
-    ($var_id:literal = $value:expr) => {
-        jasm![$value, $crate::Asm::SetVar($var_id)]
+    ($var_id:expr => $value:expr) => {
+        $crate::jasm![$value, $crate::Asm::SetVar($var_id)]
     };
-    ($var_id:literal) => {
+    ($var_id:expr) => {
         $crate::Asm::GetVar($var_id)
     };
 }
@@ -168,9 +168,9 @@ macro_rules! if_ {
 #[macro_export]
 macro_rules! while_ {
     (($cond:expr) $blk:block) => {
-        $crate::cond!(
-            while ($cond) $blk
-        )
+        $crate::cond!(while ($cond) {
+            $blk
+        })
     };
 }
 
@@ -292,13 +292,13 @@ mod tests {
     fn it_works() {
         let blk = jasm! {factorial:
             label!(pub factorial);
-            var!(0 = pop!());
-            var!(1 = value!(1u64));
+            var!(0 => pop!());
+            var!(1 => value!(1u64));
             cond!(
-                for (var!(2 = var!(0)); expr!(>, var!(2), value!(0u64)); var!(2 = expr!(+, var!(2), value!(1u64)))) {
+                for (var!(2 = var!(0)); expr!(>, var!(2), value!(0u64)); var!(2 => expr!(+, var!(2), value!(1u64)))) {
                     block![
                         expr!(*, var!(2), var!(1));
-                        var!(1 = pop!());
+                        var!(1 => pop!());
                     ]
                 }
             );

@@ -114,10 +114,11 @@ impl ProjectBuilder {
             .into());
         }
         let json_string = String::from_utf8(cargo_output.stdout)?;
-        let dict: HashMap<String, &Path> = serde_json::from_str(&json_string)?;
-        let &full_path = dict
+        let dict: HashMap<String, String> = serde_json::from_str(&json_string)?;
+        let full_path: PathBuf = dict
             .get("root")
-            .ok_or("Unexpected output found for locate-workspace")?;
+            .ok_or("Unexpected output found for locate-workspace")?
+            .into();
 
         let parent_path = PathBuf::from(full_path.parent().unwrap());
         let meta_data_output = Command::new(&cargo_program)
