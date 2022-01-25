@@ -665,6 +665,7 @@ where
         let label = "@@STATIC".to_string();
         self.label_to_instruction.insert(label.clone(), start_index);
         self.load(asm);
+        self.memory.global_scope();
         if self.run(&*label).expect("VM Error encountered") != 0 {
             panic!("VM Failed")
         }
@@ -701,7 +702,9 @@ where
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
-        }
+        };
+        self.memory.back_scope();
+        output
     }
 
     fn fault(&mut self, fault: Fault) {
