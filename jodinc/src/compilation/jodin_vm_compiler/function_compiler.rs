@@ -11,6 +11,7 @@ use jodin_common::core::tags::TagTools;
 
 use jodin_common::assembly::instructions::Asm;
 
+use jasm_macros::{push, scope};
 use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -38,6 +39,8 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<AssemblyBlock> {
         let mut output = AssemblyBlock::with_id(tree.resolved_id().unwrap());
         output.insert_asm(Asm::PublicLabel(tree.resolved_id().unwrap().to_string()));
+        output.insert_asm(push!(tree.resolved_id().unwrap().to_string()));
+        output.insert_asm(scope!(load));
         output.insert_asm(temp_label("__func_params__"));
         let (return_type, args, block) = {
             if let JodinNodeType::FunctionDefinition {
@@ -72,9 +75,12 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for FunctionCompiler {
         output.insert_asm(Asm::label(rel_label("__func_end__")));
 
         if return_type.is_void() {
+            output.insert_asm(scope!(back));
             output.insert_asm(Asm::Push(Value::Empty));
             output.insert_asm(Asm::Return);
         }
+
+        debug!("Compiled function: {output:#?}");
 
         Ok(output)
     }

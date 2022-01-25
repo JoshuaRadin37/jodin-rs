@@ -2,9 +2,12 @@ use crate::assembly::instructions::{Asm, Assembly, Bytecode, Encode};
 use crate::assembly::location::AsmLocation;
 use crate::core::literal::Literal;
 
+use crate::error::{JodinError, JodinResult};
+use anyhow::anyhow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Value {
@@ -135,6 +138,31 @@ impl Value {
             }
             _ => false,
         }
+    }
+
+    pub fn try_hash<H: Hasher>(&self, hasher: &mut H) -> JodinResult<()> {
+        match self {
+            Value::Empty => {
+                ().hash(hasher);
+            }
+            Value::Byte(b) => {
+                b.hash(hasher);
+            }
+            Value::Integer(i) => {
+                i.hash(hasher);
+            }
+            Value::UInteger(u) => {
+                u.hash(hasher);
+            }
+            Value::Str(s) => {
+                s.hash(hasher);
+            }
+            Value::Reference(r) => {
+                r.as_ptr().hash(hasher);
+            }
+            _ => return Err(anyhow!("{self} can not be hashed").into()),
+        }
+        Ok(())
     }
 }
 

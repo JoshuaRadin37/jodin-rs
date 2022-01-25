@@ -7,10 +7,11 @@ use jodin_common::assembly::location::AsmLocation;
 use jodin_common::assembly::value::Value;
 use jodin_common::identifier::Identifier;
 
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
 use std::fmt::{Debug, Formatter};
+use std::hash::Hasher;
 use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
@@ -119,13 +120,13 @@ where
 
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
         info!(
-            "Running native method {:?} with args [{}]",
+            "Running native method {:?} with args ({})",
             message,
             args.iter()
                 .rev()
-                .map(|a| a.to_string())
+                .map(|a| format!("{a:?}"))
                 .collect::<Vec<_>>()
-                .join(",")
+                .join(", ")
         );
         match message {
             "print" => {
@@ -188,6 +189,34 @@ where
                 self.memory.push(target);
                 self.memory.push(cloned);
             }
+            "@load_scope" => {
+                let stack = self.memory.take_stack();
+                let scope = args.remove(0);
+                let mut hasher = DefaultHasher::default();
+                scope.try_hash(&mut hasher).unwrap();
+                let hashed = hasher.finish();
+                self.memory.load_scope(hashed);
+                self.memory.replace_stack(stack);
+            }
+            "@save_scope" => {
+                let scope = args.remove(0);
+                let mut hasher = DefaultHasher::default();
+                scope.try_hash(&mut hasher).unwrap();
+                let hashed = hasher.finish();
+                self.memory.save_current_scope(hashed);
+            }
+            "@push_scope" => {
+                self.memory.push_scope();
+            }
+            "@pop_scope" => {
+                self.memory.pop_scope();
+            }
+            "@global_scope" => {
+                self.memory.global_scope();
+            }
+            "@back_scope" => {
+                self.memory.back_scope();
+            }
             "@print_stack" => {
                 debug!("memory: {:#?}", self.memory);
                 self.memory.push(Value::Empty);
@@ -202,7 +231,16 @@ where
         message: &str,
         mut args: Vec<Value>,
     ) -> Option<usize> {
-        debug!("Sending {:?} to {:?} with args {:?}", message, target, args);
+        info!(
+            "Sending {:?} to {:?} with args ({})",
+            message,
+            target,
+            args.iter()
+                .rev()
+                .map(|a| format!("{a:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         match target {
             Value::Empty => {}
             Value::Byte(_) => {}
@@ -265,10 +303,8 @@ where
                 decoded.insert(0, label);
                 self.load(decoded);
 
-                self.memory.push_scope();
                 let mut value = Value::Function(AsmLocation::Label(name.clone()));
                 self.memory.save_current_scope(&name);
-                self.memory.pop_scope();
 
                 return self.send_message(&mut value, CALL, args);
             }
@@ -290,9 +326,14 @@ where
     }
 
     fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) -> Option<usize> {
-        debug!(
-            "Attempting to call {:?} with args: {:?}",
-            asm_location, args
+        info!(
+            "Attempting to call {:?} with args ({})",
+            asm_location,
+            args.iter()
+                .rev()
+                .map(|a| format!("{a:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
         );
         let name = match &asm_location {
             AsmLocation::ByteIndex(i) => {
@@ -308,7 +349,6 @@ where
             }
             AsmLocation::Label(l) => l.to_string(),
         };
-        self.memory.load_scope(name);
         args.reverse();
         for arg in args {
             self.memory.push(arg);
@@ -372,7 +412,6 @@ where
             }
             Asm::Return => {
                 self.counter_stack.pop();
-                self.memory.back_scope();
                 let next = self
                     .counter_stack
                     .last()
@@ -458,7 +497,10 @@ where
                 self.memory.set_var(v as usize, value);
             }
             &Asm::GetVar(v) => {
-                let val = self.memory.get_var(v as usize).expect("no var");
+                let val = self
+                    .memory
+                    .get_var(v as usize)
+                    .expect(format!("no var set: {:#?}", self.memory).as_str());
                 let value: Value = val.into();
                 self.memory.push(value);
             }
@@ -632,7 +674,6 @@ where
         self.cont = true;
         let start_counter = self.label_to_instruction[start_label];
         self.counter_stack.push(start_counter);
-        self.memory.global_scope();
         loop {
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
@@ -641,7 +682,6 @@ where
                     target: "virtual_machine",
                     "[{function:^18}] 0x{pc:016X}: {asm:?}",
                     function=Identifier::abbreviate_identifier(self.pc_to_recent_id(pc), 18),
-                    pc=pc,
                     asm=instruction
                 );
                 let next = self.interpret_instruction(instruction, pc)?;
@@ -657,7 +697,6 @@ where
                 }
             }
         }
-        self.memory.back_scope();
         match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),

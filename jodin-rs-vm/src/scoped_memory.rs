@@ -11,6 +11,7 @@ use std::hash::{BuildHasher, Hash, Hasher, SipHasher};
 const GLOBAL_SCOPE_IDENTIFIER: &str = "@@GLOBAL_SCOPE";
 
 mod helper_structs {
+    use itertools::Itertools;
     use jodin_common::assembly::value::Value;
     use std::cell::RefCell;
     use std::collections::{HashMap, VecDeque};
@@ -90,7 +91,7 @@ mod helper_structs {
             self.reclaimed.push_back(id);
             let mut stored = Vec::from(std::mem::replace(&mut self.reclaimed, VecDeque::new()));
             stored.sort();
-            self.reclaimed.extend(stored);
+            self.reclaimed.extend(stored.into_iter().unique());
             info!("Reclaimed var ids: {:?}", self.reclaimed);
         }
 
@@ -98,7 +99,7 @@ mod helper_structs {
             self.reclaimed.extend(iter);
             let mut stored = Vec::from(std::mem::replace(&mut self.reclaimed, VecDeque::new()));
             stored.sort();
-            self.reclaimed.extend(stored);
+            self.reclaimed.extend(stored.into_iter().unique());
             info!("Reclaimed var ids: {:?}", self.reclaimed);
         }
     }
@@ -117,7 +118,6 @@ pub struct VMMemory {
 
 impl VMMemory {
     fn current_node_id(&self) -> usize {
-        println!("{self:#?}");
         let last = self.mem_node_stack.last().unwrap();
         let &last_last = last.last().unwrap();
         last_last
@@ -158,6 +158,8 @@ impl VMMemory {
     }
 
     fn remove_node(&mut self, node_id: usize) {
+        info!("Removing node (id = {node_id})");
+
         let node = self
             .mem_nodes
             .remove(&node_id)
@@ -178,6 +180,7 @@ impl VMMemory {
         }
 
         for hash in hashed {
+            info!("Removing hash association (hash = {hash}, id = {node_id})");
             self.hash_to_id.remove(&hash);
         }
     }
@@ -190,6 +193,10 @@ impl VMMemory {
     fn current_node(&self) -> &MemNode {
         let id = self.current_node_id();
         self.mem_nodes.get(&id).unwrap()
+    }
+
+    fn pop_scope_no_reclaim(&mut self) {
+        self.last_stack().pop().expect("No mem nodes in stack");
     }
 }
 
@@ -212,6 +219,7 @@ impl Default for VMMemory {
 
 impl MemoryTrait for VMMemory {
     fn global_scope(&mut self) {
+        info!("Loading global scope");
         self.load_scope(GLOBAL_SCOPE_IDENTIFIER);
     }
 
@@ -221,6 +229,7 @@ impl MemoryTrait for VMMemory {
         identifier.hash(&mut hasher);
         let hashed = hasher.finish();
         self.hash_to_id.insert(hashed, id);
+        info!("Saved current scope to {hashed} (id = {id})");
     }
 
     fn load_scope<H: Hash>(&mut self, identifier: H) {
@@ -233,18 +242,23 @@ impl MemoryTrait for VMMemory {
             self.global_scope();
             self.push_scope();
             self.save_current_scope(identifier);
-            self.pop_scope();
+            self.pop_scope_no_reclaim();
+            id = self.hash_to_id.get(&hashed).cloned();
+            assert!(id.is_some(), "No scope saved to hash value {}", hashed);
+        } else {
+            info!("Loading scope {hashed} (id = {id})", id = id.unwrap());
         }
 
-        let mut stack = VecDeque::new();
+        let mut node_stack = VecDeque::new();
 
         while let Some(m_id) = id {
-            stack.push_front(m_id);
+            node_stack.push_front(m_id);
             id = self.id_to_prev_id.get(&m_id).cloned();
         }
 
-        let stack = Vec::from_iter(stack.into_iter());
+        let stack = Vec::from_iter(node_stack.into_iter());
         self.mem_node_stack.push(stack);
+        info!("Scope stack: {:?}", self.last_stack());
     }
 
     fn push_scope(&mut self) {
@@ -255,6 +269,8 @@ impl MemoryTrait for VMMemory {
         self.mem_nodes.insert(next_id, memory_node);
         let stack = self.mem_node_stack.last_mut().unwrap();
         stack.push(next_id);
+        info!("Pushed scope (id = {next_id})");
+        info!("Scope stack: {:?}", self.last_stack());
     }
 
     fn pop_scope(&mut self) {
@@ -262,6 +278,8 @@ impl MemoryTrait for VMMemory {
         if !self.is_referenced(popped_id) {
             self.remove_node(popped_id);
         }
+        info!("Popped scope (id = {popped_id})");
+        info!("Scope stack: {:?}", self.last_stack());
     }
 
     fn back_scope(&mut self) {
@@ -269,6 +287,8 @@ impl MemoryTrait for VMMemory {
             self.pop_scope();
         }
         self.mem_node_stack.pop();
+        info!("Went back a scope (id = {})", self.current_node_id());
+        info!("Scope stack: {:?}", self.last_stack());
     }
 
     fn set_var(&mut self, var: usize, value: Value) {

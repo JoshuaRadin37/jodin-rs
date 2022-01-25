@@ -284,6 +284,28 @@ macro_rules! boolify {
     };
 }
 
+#[macro_export]
+macro_rules! scope {
+    (push) => {
+        $crate::Asm::native_method("@push_scope", None)
+    };
+    (pop) => {
+        $crate::Asm::native_method("@pop_scope", None)
+    };
+    (save) => {
+        $crate::Asm::native_method("@save_scope", 1)
+    };
+    (load) => {
+        $crate::Asm::native_method("@load_scope", 1)
+    };
+    (global) => {
+        $crate::Asm::native_method("@global_scope", None)
+    };
+    (back) => {
+        $crate::Asm::native_method("@back_scope", None)
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

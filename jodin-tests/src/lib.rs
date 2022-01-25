@@ -10,7 +10,7 @@ use jodin_rs_vm::scoped_memory::VMMemory;
 use jodin_rs_vm::vm::{VMBuilder, VM};
 use jodinc::test_runner::ProjectBuilder;
 use lazy_static::lazy_static;
-use log::{info, LevelFilter};
+use log::{debug, info, LevelFilter};
 
 #[test]
 fn fibonacci() {
@@ -71,9 +71,7 @@ fn fibonacci() {
         .build()
         .expect("Should be able to build");
 
-    info!("VM: {:#?}", vm);
-    info!("INSTRUCTIONS: {:#?}", vm.instructions());
-
+    debug!("VM: {:#?}", vm);
     let r = vm.run("main").unwrap();
     drop(vm);
     println!();
