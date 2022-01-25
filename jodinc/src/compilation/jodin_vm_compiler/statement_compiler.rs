@@ -11,7 +11,7 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 
-use jasm_macros::{cond, if_, scope, value, var, while_};
+use jasm_macros::{cond, if_, pop, return_, scope, value, var, while_};
 use jodin_common::block;
 use jodin_common::core::tags::TagTools;
 use jodin_common::types::StorageModifier;
@@ -115,7 +115,6 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                 block.insert_asm(Asm::Pop); // call's return value should be thrown away
             }
             JodinNodeType::ReturnValue { expression } => {
-                block.insert_asm(scope!(back));
                 match expression {
                     None => block.insert_asm(Asm::Push(Value::Empty)),
                     Some(o) => {
@@ -124,6 +123,7 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                         block.insert_asm(expr);
                     }
                 };
+                block.insert_asm(scope!(back));
                 block.insert_asm(Asm::Return);
             }
             JodinNodeType::IfStatement { .. } => block.insert_asm(self.if_statement(tree)?),

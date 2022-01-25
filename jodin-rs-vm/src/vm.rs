@@ -206,16 +206,24 @@ where
                 self.memory.save_current_scope(hashed);
             }
             "@push_scope" => {
+                let stack = self.memory.take_stack();
                 self.memory.push_scope();
+                self.memory.replace_stack(stack);
             }
             "@pop_scope" => {
+                let stack = self.memory.take_stack();
                 self.memory.pop_scope();
+                self.memory.replace_stack(stack);
             }
             "@global_scope" => {
+                let stack = self.memory.take_stack();
                 self.memory.global_scope();
+                self.memory.replace_stack(stack);
             }
             "@back_scope" => {
+                let stack = self.memory.take_stack();
                 self.memory.back_scope();
+                self.memory.replace_stack(stack);
             }
             "@print_stack" => {
                 debug!("memory: {:#?}", self.memory);
@@ -698,7 +706,7 @@ where
                 }
             }
         }
-        match self.memory.pop() {
+        let output = match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
