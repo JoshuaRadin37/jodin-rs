@@ -9,5 +9,6 @@ jodin-common = { path = "../jodin-common" }
 jodinc = { path = "../jodinc" }
 jodin-rs-vm= { path = "../jodin-rs-vm" }
 log = "0.4.14"
+lazy_static = "1.4.0"
 
 

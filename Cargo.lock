@@ -349,6 +349,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "simplelog",
+ "smallvec",
  "static_assertions",
  "strum",
  "strum_macros",
@@ -381,6 +382,7 @@ dependencies = [
  "jodin-common",
  "jodin-rs-vm",
  "jodinc",
+ "lazy_static",
  "log",
 ]
 

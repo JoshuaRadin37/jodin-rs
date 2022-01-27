@@ -4,17 +4,19 @@ use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, 
 
 use jodin_common::assembly::instructions::{Asm, Assembly, Decode, GetAsm};
 use jodin_common::assembly::location::AsmLocation;
-use jodin_common::assembly::value::Value;
+use jodin_common::assembly::value::{JRef, Value};
 use jodin_common::identifier::Identifier;
 
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
 use std::fmt::{Debug, Formatter};
+use std::hash::Hasher;
 use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 
 pub struct VM<'l, M, A>
 where
@@ -77,6 +79,16 @@ where
     M: MemoryTrait,
     A: ArithmeticsTrait,
 {
+    pub fn run_with_time(&mut self, start_label: &str) -> (Result<u32, VMError>, Duration) {
+        let start = Instant::now();
+        let result = self.run(start_label);
+        (result, start.elapsed())
+    }
+
+    pub fn instructions(&self) -> &Vec<Asm> {
+        &self.instructions
+    }
+
     pub fn set_stdin<R: Read + 'l>(&mut self, reader: R) {
         self.stdin = Some(Box::new(reader));
     }
@@ -115,17 +127,17 @@ where
 
     fn native_method(&mut self, message: &str, mut args: Vec<Value>) {
         info!(
-            "Running native method {:?} with args [{}]",
+            "Running native method {:?} with args ({})",
             message,
             args.iter()
                 .rev()
-                .map(|a| a.to_string())
+                .map(|a| format!("{a:?}"))
                 .collect::<Vec<_>>()
-                .join(",")
+                .join(", ")
         );
         match message {
             "print" => {
-                let s = args.remove(0).to_string();
+                let s = format!("{:#}", args.remove(0));
                 match &mut self.stdout {
                     None => {
                         print!("{}", s);
@@ -184,8 +196,34 @@ where
                 self.memory.push(target);
                 self.memory.push(cloned);
             }
+            "@load_scope" => {
+                let scope = args.remove(0);
+                let mut hasher = DefaultHasher::default();
+                scope.try_hash(&mut hasher).unwrap();
+                let hashed = hasher.finish();
+                self.memory.load_scope(hashed);
+            }
+            "@save_scope" => {
+                let scope = args.remove(0);
+                let mut hasher = DefaultHasher::default();
+                scope.try_hash(&mut hasher).unwrap();
+                let hashed = hasher.finish();
+                self.memory.save_current_scope(hashed);
+            }
+            "@push_scope" => {
+                self.memory.push_scope();
+            }
+            "@pop_scope" => {
+                self.memory.pop_scope();
+            }
+            "@global_scope" => {
+                self.memory.global_scope();
+            }
+            "@back_scope" => {
+                self.memory.back_scope();
+            }
             "@print_stack" => {
-                debug!("memory: {:#?}", self.memory);
+                println!("memory: {:#?}", self.memory);
                 self.memory.push(Value::Empty);
             }
             _ => panic!("{:?} is not a native method", message),
@@ -198,7 +236,16 @@ where
         message: &str,
         mut args: Vec<Value>,
     ) -> Option<usize> {
-        debug!("Sending {:?} to {:?} with args {:?}", message, target, args);
+        info!(
+            "Sending {:?} to {:?} with args ({})",
+            message,
+            target,
+            args.iter()
+                .rev()
+                .map(|a| format!("{a:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         match target {
             Value::Empty => {}
             Value::Byte(_) => {}
@@ -261,10 +308,8 @@ where
                 decoded.insert(0, label);
                 self.load(decoded);
 
-                self.memory.push_scope();
                 let mut value = Value::Function(AsmLocation::Label(name.clone()));
                 self.memory.save_current_scope(&name);
-                self.memory.pop_scope();
 
                 return self.send_message(&mut value, CALL, args);
             }
@@ -286,9 +331,14 @@ where
     }
 
     fn call(&mut self, asm_location: &AsmLocation, mut args: Vec<Value>) -> Option<usize> {
-        debug!(
-            "Attempting to call {:?} with args: {:?}",
-            asm_location, args
+        info!(
+            "Attempting to call {:?} with args ({})",
+            asm_location,
+            args.iter()
+                .rev()
+                .map(|a| format!("{a:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
         );
         let name = match &asm_location {
             AsmLocation::ByteIndex(i) => {
@@ -304,7 +354,6 @@ where
             }
             AsmLocation::Label(l) => l.to_string(),
         };
-        self.memory.load_scope(name);
         args.reverse();
         for arg in args {
             self.memory.push(arg);
@@ -453,8 +502,12 @@ where
                 self.memory.set_var(v as usize, value);
             }
             &Asm::GetVar(v) => {
-                let val = self.memory.get_var(v as usize).expect("no var");
-                let value: Value = val.into();
+                let val = self
+                    .memory
+                    .get_var(v as usize)
+                    .expect(format!("no var set: {:#?}", self.memory).as_str());
+                let as_jref = JRef::from(val);
+                let value: Value = Value::Reference(as_jref);
                 self.memory.push(value);
             }
             &Asm::ClearVar(_v) => {}
@@ -571,6 +624,25 @@ where
                 };
                 self.memory.push(Value::from(boolean));
             }
+            Asm::SetRef => {
+                let ptr = self.memory.pop().unwrap();
+                let value = self.memory.pop().unwrap();
+                match ptr {
+                    Value::Reference(r) => {
+                        let mut borrowed = r.borrow_mut();
+                        *borrowed = value;
+                    }
+                    other => panic!("Invalid value for set ref (expected ref, found = {other})"),
+                }
+                info!(
+                    "VARS: {:#?}",
+                    self.memory
+                        .var_dict()
+                        .into_iter()
+                        .map(|(num, value)| (num, format!("{value}")))
+                        .collect::<HashMap<usize, String>>()
+                );
+            }
             a => panic!("Invalid instruction: {:?}", a),
         }
         Ok(next_instruction)
@@ -618,9 +690,11 @@ where
         let label = "@@STATIC".to_string();
         self.label_to_instruction.insert(label.clone(), start_index);
         self.load(asm);
+        self.memory.global_scope();
         if self.run(&*label).expect("VM Error encountered") != 0 {
             panic!("VM Failed")
         }
+        self.memory.back_scope();
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
@@ -633,10 +707,10 @@ where
                 let ref instruction = self.instructions[pc].clone();
                 info!(
                     target: "virtual_machine",
-                    "[{function:^18}] 0x{pc:016X}: {asm:?}",
+                    "[{function:^18}] 0x{pc:016X}: {asm: <24}  {top}",
                     function=Identifier::abbreviate_identifier(self.pc_to_recent_id(pc), 18),
-                    pc=pc,
-                    asm=instruction
+                    asm=format!("{:?}", instruction),
+                    top=self.memory.stack().last().map(|s| format!("(top = {})", s)).unwrap_or(String::new())
                 );
                 let next = self.interpret_instruction(instruction, pc)?;
                 self.set_program_counter(next);
@@ -651,11 +725,12 @@ where
                 }
             }
         }
-        match self.memory.pop() {
+        let output = match self.memory.pop() {
             None => Err(VMError::NoExitCode),
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
-        }
+        };
+        output
     }
 
     fn fault(&mut self, fault: Fault) {

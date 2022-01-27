@@ -13,6 +13,7 @@ use jodin_common::error::JodinErrorType;
 
 use jodin_common::assembly::instructions::Asm;
 
+use jasm_macros::expr;
 use jodin_common::assembly::value::Value;
 use jodin_common::block;
 use jodin_rs_vm::function_names::CALL;
@@ -174,30 +175,26 @@ impl ExpressionCompiler {
                     }
                     Operator::Equal => {
                         // (a - b) == 0 ? !bool(a - b)
-                        output.insert_asm(right);
-                        output.insert_asm(left);
-                        output.insert_asm(block![Asm::Subtract, Asm::Boolify, Asm::Not])
+                        output.insert_asm(expr![==, left, right])
                     }
-                    Operator::Nequal => output.insert_asm(block![Asm::Subtract, Asm::Boolify]),
+                    Operator::Nequal => output.insert_asm(expr![!=, left, right]),
                     Operator::Lt => {
                         /*
                         l < r
                         0 < r - l
 
                          */
-                        output.insert_asm(block![left, right, Asm::Subtract, Asm::GT0])
+                        output.insert_asm(expr![<, left, right])
                     }
                     Operator::Lte => {
                         /*
                         l <= r
                         !(l > r)
                          */
-                        output.insert_asm(block![right, left, Asm::Subtract, Asm::GT0, Asm::Not])
+                        output.insert_asm(expr![<=, left, right])
                     }
-                    Operator::Gt => output.insert_asm(block![right, left, Asm::Subtract, Asm::GT0]),
-                    Operator::Gte => {
-                        output.insert_asm(block![left, right, Asm::Subtract, Asm::GT0, Asm::Not])
-                    }
+                    Operator::Gt => output.insert_asm(expr![>, left, right]),
+                    Operator::Gte => output.insert_asm(expr![>=, left, right]),
                     Operator::LShift => {
                         todo!("<< not implemented")
                     }

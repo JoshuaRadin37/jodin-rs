@@ -15,7 +15,7 @@ pub const RELATIVE_LABEL_MARKER: char = '@';
 pub const REMOVE_LABEL_MARKER: char = '#';
 
 /// An assembly block marks the scope of local labels
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct AssemblyBlock {
     pub name: Option<String>,
     assembly: Vec<AssemblyBlockComponent>,
@@ -210,6 +210,7 @@ pub trait InsertAsm<T>: InsertAsmHelper {
 }
 
 /// The components of assembly, allowing for a tree-like structure of assembly code
+#[derive(Clone)]
 pub enum AssemblyBlockComponent {
     SingleInstruction(Asm),
     Block(AssemblyBlock),

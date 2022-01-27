@@ -42,4 +42,5 @@ pub mod function_names;
 pub mod kernel;
 pub mod loadables;
 pub mod mvp;
+pub mod scoped_memory;
 pub mod vm;

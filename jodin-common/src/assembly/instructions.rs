@@ -57,6 +57,9 @@ pub enum Asm {
     Deref,
     /// Gets a reference
     GetRef,
+    /// Pop the first value, which is a reference, and then pops a second value
+    /// and sets the ref to that value
+    SetRef,
 
     /// Return to the previous frame
     Return,

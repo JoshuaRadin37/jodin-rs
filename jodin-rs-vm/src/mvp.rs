@@ -3,21 +3,23 @@ use jodin_common::assembly::error::BytecodeError;
 use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::hash::Hash;
+use std::rc::Rc;
 
 /// Only has stack implementations and non-scoped variables
 #[derive(Default, Debug)]
 pub struct MinimumMemory {
     stack: Vec<Value>,
-    vars: HashMap<usize, RefCell<Value>>,
+    vars: HashMap<usize, Rc<RefCell<Value>>>,
 }
 
 impl MemoryTrait for MinimumMemory {
-    fn global_scope(&self) {}
+    fn global_scope(&mut self) {}
 
-    fn save_current_scope<H: Hash>(&mut self, _identifier: H) {}
+    fn save_current_scope<H: Hash + Debug>(&mut self, _identifier: H) {}
 
-    fn load_scope<H: Hash>(&mut self, _identifier: H) {}
+    fn load_scope<H: Hash + Debug>(&mut self, _identifier: H) {}
 
     fn push_scope(&mut self) {}
 
@@ -26,10 +28,10 @@ impl MemoryTrait for MinimumMemory {
     fn back_scope(&mut self) {}
 
     fn set_var(&mut self, var: usize, value: Value) {
-        self.vars.insert(var, RefCell::new(value));
+        self.vars.insert(var, Rc::new(RefCell::new(value)));
     }
 
-    fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError> {
+    fn get_var(&self, var: usize) -> Result<Rc<RefCell<Value>>, BytecodeError> {
         self.vars
             .get(&var)
             .cloned()
@@ -47,6 +49,13 @@ impl MemoryTrait for MinimumMemory {
         1
     }
 
+    fn var_dict(&self) -> HashMap<usize, Value> {
+        self.vars
+            .iter()
+            .map(|(&num, val)| (num, val.borrow().clone()))
+            .collect()
+    }
+
     fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
@@ -60,6 +69,10 @@ impl MemoryTrait for MinimumMemory {
     }
     fn replace_stack(&mut self, stack: Vec<Value>) {
         std::mem::replace(&mut self.stack, stack);
+    }
+
+    fn stack(&self) -> &[Value] {
+        &*self.stack
     }
 }
 

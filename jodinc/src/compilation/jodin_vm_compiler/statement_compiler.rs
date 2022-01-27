@@ -11,8 +11,11 @@ use jodin_common::ast::JodinNodeType;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinErrorType;
 
-use jasm_macros::{cond, if_};
+use jasm_macros::{cond, if_, pop, return_, scope, value, var, while_};
 use jodin_common::block;
+use jodin_common::core::operator::Operator;
+use jodin_common::core::tags::TagTools;
+use jodin_common::types::StorageModifier;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -79,6 +82,27 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<AssemblyBlock> {
         let mut block = AssemblyBlock::new(None);
         match tree.r#type() {
+            JodinNodeType::StoreVariable {
+                storage_type: StorageModifier::Local,
+                name,
+                var_type: _,
+                maybe_initial_value,
+            } => {
+                let mut tracker = self.tracker.borrow_mut();
+                let id = name.resolved_id()?;
+                let var = tracker.next_var(id) as u64;
+                drop(tracker);
+                let value = match maybe_initial_value {
+                    None => {
+                        block!(value!(()))
+                    }
+                    Some(val) => {
+                        let mut expr_c = ExpressionCompiler::new(&self.tracker);
+                        expr_c.create_compilable(val)?
+                    }
+                };
+                block.insert_asm(var!(var => value));
+            }
             JodinNodeType::Block { expressions } => {
                 for expr in expressions {
                     let asm = self.create_compilable(expr)?;
@@ -100,9 +124,37 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                         block.insert_asm(expr);
                     }
                 };
+                block.insert_asm(scope!(back));
                 block.insert_asm(Asm::Return);
             }
             JodinNodeType::IfStatement { .. } => block.insert_asm(self.if_statement(tree)?),
+            JodinNodeType::WhileStatement { cond, statement } => {
+                let mut expr_c = ExpressionCompiler::new(&self.tracker);
+                let cond = expr_c.create_compilable(cond)?;
+                let statement = self.create_compilable(statement)?;
+                block.insert_asm(while_! {
+                    (cond) { statement }
+                })
+            }
+            JodinNodeType::AssignmentExpression {
+                maybe_assignment_operator,
+                lhs,
+                rhs,
+            } => match maybe_assignment_operator {
+                None => {
+                    let mut expr_c = ExpressionCompiler::new(&self.tracker);
+                    let mut assign_to = expr_c.create_compilable(lhs)?.normalize();
+                    if let Some(Asm::Deref) = assign_to.last() {
+                        assign_to.pop();
+                    }
+                    let value = expr_c.create_compilable(rhs)?;
+
+                    block.insert_asm(block![value, assign_to, Asm::SetRef,])
+                }
+                Some(op) => {
+                    panic!("assignment {op} not supported yet")
+                }
+            },
             _ => {
                 // return Err(JodinError::new(
                 //     JodinErrorType::InvalidTreeTypeGivenToCompiler("...".to_string()),
