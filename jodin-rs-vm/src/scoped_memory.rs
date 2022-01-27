@@ -6,7 +6,9 @@ use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, VecDeque};
+use std::fmt::Debug;
 use std::hash::{BuildHasher, Hash, Hasher, SipHasher};
+use std::rc::Rc;
 
 const GLOBAL_SCOPE_IDENTIFIER: &str = "@@GLOBAL_SCOPE";
 
@@ -17,12 +19,12 @@ mod helper_structs {
     use std::collections::{HashMap, VecDeque};
     use std::hash::Hash;
     use std::ops::Add;
+    use std::rc::Rc;
 
     #[derive(Debug)]
     pub(super) struct MemNode {
         id: usize,
-        num_to_value: HashMap<usize, RefCell<Value>>,
-        stack: Vec<Value>,
+        num_to_value: HashMap<usize, Rc<RefCell<Value>>>,
     }
 
     impl MemNode {
@@ -30,22 +32,17 @@ mod helper_structs {
             MemNode {
                 id,
                 num_to_value: HashMap::new(),
-                stack: vec![],
             }
         }
 
         pub fn id(&self) -> usize {
             self.id
         }
-        pub fn num_to_value(&self) -> &HashMap<usize, RefCell<Value>> {
+        pub fn num_to_value(&self) -> &HashMap<usize, Rc<RefCell<Value>>> {
             &self.num_to_value
         }
-        pub fn num_to_value_mut(&mut self) -> &mut HashMap<usize, RefCell<Value>> {
+        pub fn num_to_value_mut(&mut self) -> &mut HashMap<usize, Rc<RefCell<Value>>> {
             &mut self.num_to_value
-        }
-
-        pub fn stack(&mut self) -> &mut Vec<Value> {
-            &mut self.stack
         }
     }
 
@@ -114,6 +111,7 @@ pub struct VMMemory {
     id_to_prev_id: HashMap<usize, usize>,
     mem_node_stack: Vec<Vec<usize>>,
     id_pool: RefCell<VarIdPool>,
+    stack: Vec<Value>,
 }
 
 impl VMMemory {
@@ -210,6 +208,7 @@ impl Default for VMMemory {
             id_to_prev_id: Default::default(),
             mem_node_stack: vec![vec![0]],
             id_pool: Default::default(),
+            stack: vec![],
         };
         output.mem_nodes.insert(0, node);
         output.save_current_scope(GLOBAL_SCOPE_IDENTIFIER);
@@ -219,23 +218,24 @@ impl Default for VMMemory {
 
 impl MemoryTrait for VMMemory {
     fn global_scope(&mut self) {
-        info!("Loading global scope");
+        trace!("Loading global scope");
         self.load_scope(GLOBAL_SCOPE_IDENTIFIER);
     }
 
-    fn save_current_scope<H: Hash>(&mut self, identifier: H) {
+    fn save_current_scope<H: Hash + Debug>(&mut self, identifier: H) {
         let id = self.current_node_id();
         let mut hasher = DefaultHasher::default();
         identifier.hash(&mut hasher);
         let hashed = hasher.finish();
         self.hash_to_id.insert(hashed, id);
-        info!("Saved current scope to {hashed} (id = {id})");
+        trace!("Saved current scope to {hashed} (id = {id})");
     }
 
-    fn load_scope<H: Hash>(&mut self, identifier: H) {
+    fn load_scope<H: Hash + Debug>(&mut self, identifier: H) {
         let mut hasher = DefaultHasher::default();
         identifier.hash(&mut hasher);
         let hashed = hasher.finish();
+        trace!("{identifier:?} hashed to {hashed}");
         let mut id = self.hash_to_id.get(&hashed).cloned();
 
         if id.is_none() {
@@ -243,10 +243,11 @@ impl MemoryTrait for VMMemory {
             self.push_scope();
             self.save_current_scope(identifier);
             self.pop_scope_no_reclaim();
+            self.back_scope();
             id = self.hash_to_id.get(&hashed).cloned();
             assert!(id.is_some(), "No scope saved to hash value {}", hashed);
         } else {
-            info!("Loading scope {hashed} (id = {id})", id = id.unwrap());
+            trace!("Loading scope {hashed} (id = {id})", id = id.unwrap());
         }
 
         let mut node_stack = VecDeque::new();
@@ -258,7 +259,7 @@ impl MemoryTrait for VMMemory {
 
         let stack = Vec::from_iter(node_stack.into_iter());
         self.mem_node_stack.push(stack);
-        info!("Scope stack: {:?}", self.last_stack());
+        trace!("Scope stack: {:?}", self.mem_node_stack);
     }
 
     fn push_scope(&mut self) {
@@ -269,8 +270,8 @@ impl MemoryTrait for VMMemory {
         self.mem_nodes.insert(next_id, memory_node);
         let stack = self.mem_node_stack.last_mut().unwrap();
         stack.push(next_id);
-        info!("Pushed scope (id = {next_id})");
-        info!("Scope stack: {:?}", self.last_stack());
+        trace!("Pushed scope (id = {next_id})");
+        trace!("Scope stack: {:?}", self.mem_node_stack);
     }
 
     fn pop_scope(&mut self) {
@@ -278,8 +279,8 @@ impl MemoryTrait for VMMemory {
         if !self.is_referenced(popped_id) {
             self.remove_node(popped_id);
         }
-        info!("Popped scope (id = {popped_id})");
-        info!("Scope stack: {:?}", self.last_stack());
+        trace!("Popped scope (id = {popped_id})");
+        trace!("Scope stack: {:?}", self.mem_node_stack);
     }
 
     fn back_scope(&mut self) {
@@ -288,17 +289,17 @@ impl MemoryTrait for VMMemory {
             self.pop_scope();
         }
         self.mem_node_stack.pop();
-        info!("Went back a scope (id = {})", self.current_node_id());
-        info!("Scope stack: {:?}", self.last_stack());
+        trace!("Went back a scope (id = {})", self.current_node_id());
+        trace!("Scope stack: {:?}", self.mem_node_stack);
     }
 
     fn set_var(&mut self, var: usize, value: Value) {
         self.current_node_mut()
             .num_to_value_mut()
-            .insert(var, RefCell::new(value));
+            .insert(var, Rc::new(RefCell::new(value)));
     }
 
-    fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError> {
+    fn get_var(&self, var: usize) -> Result<Rc<RefCell<Value>>, BytecodeError> {
         self.current_node()
             .num_to_value()
             .get(&var)
@@ -319,18 +320,22 @@ impl MemoryTrait for VMMemory {
     }
 
     fn push(&mut self, value: Value) {
-        self.current_node_mut().stack().push(value);
+        self.stack.push(value);
     }
 
     fn pop(&mut self) -> Option<Value> {
-        self.current_node_mut().stack().pop()
+        self.stack.pop()
     }
 
     fn take_stack(&mut self) -> Vec<Value> {
-        std::mem::replace(self.current_node_mut().stack(), vec![])
+        std::mem::replace(&mut self.stack, vec![])
     }
 
     fn replace_stack(&mut self, stack: Vec<Value>) {
-        std::mem::replace(self.current_node_mut().stack(), stack);
+        std::mem::replace(&mut self.stack, stack);
+    }
+
+    fn stack(&self) -> &[Value] {
+        &*self.stack
     }
 }

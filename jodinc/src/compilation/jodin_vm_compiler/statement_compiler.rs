@@ -13,6 +13,7 @@ use jodin_common::error::JodinErrorType;
 
 use jasm_macros::{cond, if_, pop, return_, scope, value, var, while_};
 use jodin_common::block;
+use jodin_common::core::operator::Operator;
 use jodin_common::core::tags::TagTools;
 use jodin_common::types::StorageModifier;
 use std::cell::RefCell;
@@ -135,6 +136,25 @@ impl MicroCompiler<JodinVM, AssemblyBlock> for StatementCompiler {
                     (cond) { statement }
                 })
             }
+            JodinNodeType::AssignmentExpression {
+                maybe_assignment_operator,
+                lhs,
+                rhs,
+            } => match maybe_assignment_operator {
+                None => {
+                    let mut expr_c = ExpressionCompiler::new(&self.tracker);
+                    let mut assign_to = expr_c.create_compilable(lhs)?.normalize();
+                    if let Some(Asm::Deref) = assign_to.last() {
+                        assign_to.pop();
+                    }
+                    let value = expr_c.create_compilable(rhs)?;
+
+                    block.insert_asm(block![value, assign_to, Asm::SetRef,])
+                }
+                Some(op) => {
+                    panic!("assignment {op} not supported yet")
+                }
+            },
             _ => {
                 // return Err(JodinError::new(
                 //     JodinErrorType::InvalidTreeTypeGivenToCompiler("...".to_string()),

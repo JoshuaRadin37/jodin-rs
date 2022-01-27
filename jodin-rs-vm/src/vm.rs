@@ -4,7 +4,7 @@ use crate::{ArithmeticsTrait, MemoryTrait, VMTryLoadable, VirtualMachine, CALL, 
 
 use jodin_common::assembly::instructions::{Asm, Assembly, Decode, GetAsm};
 use jodin_common::assembly::location::AsmLocation;
-use jodin_common::assembly::value::Value;
+use jodin_common::assembly::value::{JRef, Value};
 use jodin_common::identifier::Identifier;
 
 use std::collections::hash_map::{DefaultHasher, Entry};
@@ -130,7 +130,7 @@ where
         );
         match message {
             "print" => {
-                let s = args.remove(0).to_string();
+                let s = format!("{:#}", args.remove(0));
                 match &mut self.stdout {
                     None => {
                         print!("{}", s);
@@ -190,13 +190,11 @@ where
                 self.memory.push(cloned);
             }
             "@load_scope" => {
-                let stack = self.memory.take_stack();
                 let scope = args.remove(0);
                 let mut hasher = DefaultHasher::default();
                 scope.try_hash(&mut hasher).unwrap();
                 let hashed = hasher.finish();
                 self.memory.load_scope(hashed);
-                self.memory.replace_stack(stack);
             }
             "@save_scope" => {
                 let scope = args.remove(0);
@@ -206,27 +204,19 @@ where
                 self.memory.save_current_scope(hashed);
             }
             "@push_scope" => {
-                let stack = self.memory.take_stack();
                 self.memory.push_scope();
-                self.memory.replace_stack(stack);
             }
             "@pop_scope" => {
-                let stack = self.memory.take_stack();
                 self.memory.pop_scope();
-                self.memory.replace_stack(stack);
             }
             "@global_scope" => {
-                let stack = self.memory.take_stack();
                 self.memory.global_scope();
-                self.memory.replace_stack(stack);
             }
             "@back_scope" => {
-                let stack = self.memory.take_stack();
                 self.memory.back_scope();
-                self.memory.replace_stack(stack);
             }
             "@print_stack" => {
-                debug!("memory: {:#?}", self.memory);
+                println!("memory: {:#?}", self.memory);
                 self.memory.push(Value::Empty);
             }
             _ => panic!("{:?} is not a native method", message),
@@ -509,7 +499,8 @@ where
                     .memory
                     .get_var(v as usize)
                     .expect(format!("no var set: {:#?}", self.memory).as_str());
-                let value: Value = val.into();
+                let as_jref = JRef::from(val);
+                let value: Value = Value::Reference(as_jref);
                 self.memory.push(value);
             }
             &Asm::ClearVar(_v) => {}
@@ -626,6 +617,17 @@ where
                 };
                 self.memory.push(Value::from(boolean));
             }
+            Asm::SetRef => {
+                let ptr = self.memory.pop().unwrap();
+                let value = self.memory.pop().unwrap();
+                match ptr {
+                    Value::Reference(r) => {
+                        let mut borrowed = r.borrow_mut();
+                        *borrowed = value;
+                    }
+                    other => panic!("Invalid value for set ref (expected ref, found = {other})"),
+                }
+            }
             a => panic!("Invalid instruction: {:?}", a),
         }
         Ok(next_instruction)
@@ -677,6 +679,7 @@ where
         if self.run(&*label).expect("VM Error encountered") != 0 {
             panic!("VM Failed")
         }
+        self.memory.back_scope();
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
@@ -689,9 +692,10 @@ where
                 let ref instruction = self.instructions[pc].clone();
                 info!(
                     target: "virtual_machine",
-                    "[{function:^18}] 0x{pc:016X}: {asm:?}",
+                    "[{function:^18}] 0x{pc:016X}: {asm: <24}  {top}",
                     function=Identifier::abbreviate_identifier(self.pc_to_recent_id(pc), 18),
-                    asm=instruction
+                    asm=format!("{:?}", instruction),
+                    top=self.memory.stack().last().map(|s| format!("(top = {})", s)).unwrap_or(String::new())
                 );
                 let next = self.interpret_instruction(instruction, pc)?;
                 self.set_program_counter(next);
@@ -711,7 +715,6 @@ where
             Some(Value::UInteger(u)) => Ok(u as u32),
             Some(v) => Err(VMError::ExitCodeInvalidType(v)),
         };
-        self.memory.back_scope();
         output
     }
 

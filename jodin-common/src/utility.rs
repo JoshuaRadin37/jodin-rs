@@ -1,6 +1,9 @@
 //! Contains helper traits and function that can be used anywhere in the project
 
+use smallvec::SmallVec;
 use std::fmt::{Display, Formatter};
+use std::io;
+use std::io::Write;
 
 /// Create a string with an ident of some size,
 pub fn with_indent<S: AsRef<str>>(s: S, indent: u32) -> String {
@@ -124,6 +127,53 @@ impl<T, E> Flatten<T, E> for Result<Result<T, E>, E> {
 
 pub fn usum<F: Fn(usize) -> usize>(from: usize, to: usize, f: F) -> usize {
     (from..=to).into_iter().map(|index| f(index)).sum()
+}
+
+pub struct LoggedWrite<W: io::Write> {
+    log_level: log::Level,
+    writer: W,
+    buffer: SmallVec<[u8; 256]>,
+    message: String,
+}
+
+impl<W: io::Write> LoggedWrite<W> {
+    pub fn new(log_level: log::Level, writer: W, prefix: impl Into<Option<String>>) -> Self {
+        LoggedWrite {
+            log_level,
+            writer,
+            buffer: SmallVec::new(),
+            message: prefix.into().unwrap_or("".to_string()),
+        }
+    }
+}
+
+impl<W: io::Write> Write for LoggedWrite<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.buffer.extend_from_slice(buf);
+        let mut split = self.buffer.split(|&s| s == b'\n');
+        for line in split {
+            let string = String::from_utf8_lossy(line);
+            if self.message.is_empty() {
+                log!(self.log_level, "{}", string);
+            } else {
+                log!(self.log_level, "{}: {}", self.message, string);
+            }
+        }
+        if let Some((pos, _)) = self
+            .buffer
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|&(pos, &b)| b == b'\n')
+        {
+            self.buffer.drain(0..=pos);
+        }
+        self.writer.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
 }
 
 #[cfg(test)]

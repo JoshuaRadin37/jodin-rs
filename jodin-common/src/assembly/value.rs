@@ -4,10 +4,13 @@ use crate::core::literal::Literal;
 
 use crate::error::{JodinError, JodinResult};
 use anyhow::anyhow;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{write, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use std::rc::Rc;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Value {
@@ -19,13 +22,61 @@ pub enum Value {
     Str(String),
     Dictionary(HashMap<String, Value>),
     Array(Vec<Value>),
-    Reference(Box<RefCell<Value>>),
+    Reference(JRef),
     Bytecode(Bytecode),
     Function(AsmLocation),
     /// The native value is used to refer to two different states. When alone, the Native value
     /// is a reference to the actual virtual machine. When used as the value of an entry of an
     /// attribute that's being checked for, this means to pretend that there's no entry at all.
     Native,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct JRef {
+    inner: Rc<RefCell<Value>>,
+}
+
+impl JRef {
+    pub fn new(v: impl Into<Value>) -> Self {
+        let value = v.into();
+        Self {
+            inner: Rc::new(RefCell::new(value)),
+        }
+    }
+}
+
+impl From<Rc<RefCell<Value>>> for JRef {
+    fn from(r: Rc<RefCell<Value>>) -> Self {
+        Self { inner: r }
+    }
+}
+
+impl Deref for JRef {
+    type Target = RefCell<Value>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl Serialize for JRef {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let value = self.inner.borrow().clone();
+        value.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for JRef {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+        Ok(JRef::new(value))
+    }
 }
 
 impl Display for Value {
@@ -35,16 +86,32 @@ impl Display for Value {
                 write!(f, "void")
             }
             Value::Byte(b) => {
-                write!(f, "{}u8", b)
+                if f.alternate() {
+                    write!(f, "{}", b)
+                } else {
+                    write!(f, "{}u8", b)
+                }
             }
             Value::Float(fl) => {
-                write!(f, "{}f64", fl)
+                if f.alternate() {
+                    write!(f, "{}", fl)
+                } else {
+                    write!(f, "{}f64", fl)
+                }
             }
             Value::Integer(i) => {
-                write!(f, "{:+}i64", i)
+                if f.alternate() {
+                    write!(f, "{}", i)
+                } else {
+                    write!(f, "{:+}i64", i)
+                }
             }
             Value::UInteger(i) => {
-                write!(f, "{}u64", i)
+                if f.alternate() {
+                    write!(f, "{}", i)
+                } else {
+                    write!(f, "{}u64", i)
+                }
             }
             Value::Str(s) => {
                 write!(f, "{}", s)
@@ -123,7 +190,7 @@ impl Value {
             Value::Reference(_) => {
                 panic!("Can not have a reference to a reference")
             }
-            v => Value::Reference(Box::new(RefCell::new(v))),
+            v => Value::Reference(JRef::new(v)),
         }
     }
 
@@ -274,6 +341,6 @@ where
 
 impl From<RefCell<Value>> for Value {
     fn from(r: RefCell<Value>) -> Self {
-        Value::Reference(Box::new(r))
+        Value::Reference(JRef { inner: Rc::new(r) })
     }
 }

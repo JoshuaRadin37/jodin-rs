@@ -349,6 +349,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "simplelog",
+ "smallvec",
  "static_assertions",
  "strum",
  "strum_macros",

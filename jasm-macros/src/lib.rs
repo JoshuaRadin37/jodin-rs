@@ -250,8 +250,8 @@ macro_rules! expr {
     };
     (==, $l:expr, $r:expr) => {
         $crate::expr!(&,
-            $crate::expr!(>0,$crate::expr!(-, $l, $r)),
-            $crate::expr!(>0,$crate::expr!(-, $r, $l))
+            $crate::expr!(>0,$crate::expr!(-, $l.clone(), $r.clone())),
+            $crate::expr!(>0,$crate::expr!(-, $r.clone(), $l.clone()))
         )
     };
     (!=, $l:expr, $r:expr) => {

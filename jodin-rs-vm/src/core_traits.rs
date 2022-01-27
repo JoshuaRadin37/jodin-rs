@@ -10,6 +10,7 @@ use jodin_common::assembly::value::Value;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::rc::Rc;
 
 pub trait VirtualMachine {
     /// Interprets an instruction and returns the next instruction
@@ -46,9 +47,9 @@ pub trait MemoryTrait: Debug {
     /// Sets the memory to the global scope. Works similarly to a load
     fn global_scope(&mut self);
     /// Saves the current scope using some value to identify it for later.
-    fn save_current_scope<H: Hash>(&mut self, identifier: H);
+    fn save_current_scope<H: Hash + Debug>(&mut self, identifier: H);
     /// Loads a scope into memory
-    fn load_scope<H: Hash>(&mut self, identifier: H);
+    fn load_scope<H: Hash + Debug>(&mut self, identifier: H);
     /// Pushes a new scope. New scopes have access to variables in previous scopes.
     fn push_scope(&mut self);
     /// Pops the top-most scope. If scope is not saved anywhere, all information is lost.
@@ -60,7 +61,7 @@ pub trait MemoryTrait: Debug {
     fn back_scope(&mut self);
 
     fn set_var(&mut self, var: usize, value: Value);
-    fn get_var(&self, var: usize) -> Result<RefCell<Value>, BytecodeError>;
+    fn get_var(&self, var: usize) -> Result<Rc<RefCell<Value>>, BytecodeError>;
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError>;
     fn next_var_number(&self) -> usize;
 
@@ -68,6 +69,7 @@ pub trait MemoryTrait: Debug {
     fn pop(&mut self) -> Option<Value>;
     fn take_stack(&mut self) -> Vec<Value>;
     fn replace_stack(&mut self, stack: Vec<Value>);
+    fn stack(&self) -> &[Value];
 }
 
 /// This defines the way that arithmetics should be performed.
