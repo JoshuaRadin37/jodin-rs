@@ -16,6 +16,7 @@ use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 
 pub struct VM<'l, M, A>
 where
@@ -78,6 +79,12 @@ where
     M: MemoryTrait,
     A: ArithmeticsTrait,
 {
+    pub fn run_with_time(&mut self, start_label: &str) -> (Result<u32, VMError>, Duration) {
+        let start = Instant::now();
+        let result = self.run(start_label);
+        (result, start.elapsed())
+    }
+
     pub fn instructions(&self) -> &Vec<Asm> {
         &self.instructions
     }
@@ -627,6 +634,14 @@ where
                     }
                     other => panic!("Invalid value for set ref (expected ref, found = {other})"),
                 }
+                info!(
+                    "VARS: {:#?}",
+                    self.memory
+                        .var_dict()
+                        .into_iter()
+                        .map(|(num, value)| (num, format!("{value}")))
+                        .collect::<HashMap<usize, String>>()
+                );
             }
             a => panic!("Invalid instruction: {:?}", a),
         }

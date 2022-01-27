@@ -44,6 +44,13 @@ mod helper_structs {
         pub fn num_to_value_mut(&mut self) -> &mut HashMap<usize, Rc<RefCell<Value>>> {
             &mut self.num_to_value
         }
+
+        pub fn var_dict(&self) -> HashMap<usize, Value> {
+            self.num_to_value
+                .iter()
+                .map(|(&num, val)| (num, val.borrow().clone()))
+                .collect()
+        }
     }
 
     impl MemNode {
@@ -317,6 +324,10 @@ impl MemoryTrait for VMMemory {
 
     fn next_var_number(&self) -> usize {
         self.id_pool.borrow_mut().next_id().unwrap()
+    }
+
+    fn var_dict(&self) -> HashMap<usize, Value> {
+        self.current_node().var_dict()
     }
 
     fn push(&mut self, value: Value) {

@@ -8,6 +8,7 @@ use jodin_common::assembly::instructions::{Asm, Assembly, GetAsm};
 use jodin_common::assembly::value::Value;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
@@ -64,6 +65,7 @@ pub trait MemoryTrait: Debug {
     fn get_var(&self, var: usize) -> Result<Rc<RefCell<Value>>, BytecodeError>;
     fn clear_var(&mut self, var: usize) -> Result<(), BytecodeError>;
     fn next_var_number(&self) -> usize;
+    fn var_dict(&self) -> HashMap<usize, Value>;
 
     fn push(&mut self, value: Value);
     fn pop(&mut self) -> Option<Value>;

@@ -133,7 +133,11 @@ impl Display for Value {
                 )
             }
             Value::Reference(r) => {
-                write!(f, "*{}", (&**r).borrow())
+                if f.alternate() {
+                    write!(f, "*{}", (&**r).borrow())
+                } else {
+                    write!(f, "{:p}", r.inner.as_ptr())
+                }
             }
             Value::Bytecode(b) => {
                 write!(f, "{:?}", b)

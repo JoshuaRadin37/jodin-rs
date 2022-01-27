@@ -3,6 +3,7 @@
 use jodin_common::error::JodinError;
 use jodin_common::init_logging;
 use std::sync::{Mutex, RwLock};
+use std::time::Instant;
 
 use jodin_common::utility::LoggedWrite;
 use jodin_rs_vm::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
@@ -15,7 +16,7 @@ use log::{debug, info, Level, LevelFilter};
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Info);
+    init_logging(LevelFilter::Off);
     let builder = ProjectBuilder::new("fibonacci").use_string(
         r#"
            
@@ -24,7 +25,17 @@ fn fibonacci() {
                 if (n < 2) {
                     output = n;
                 } else {
-                    output = fibonacci(n - 1) + fibonacci(n - 2);
+                    // output = 1;
+                    // let one: int = 0;
+                    // let two: int = 1;
+                    // let i: int = 2;
+                    // while (i <= n) {
+                    //     output = one + two; // 1 1
+                    //     one = two; // 1 0
+                    //     two = output; // 0 1
+                    //     i = i + 1;
+                    // }
+                    return fibonacci(n - 1) + fibonacci(n - 2);
                 }
                 return output;
             }
@@ -40,7 +51,7 @@ fn fibonacci() {
             
             fn main() -> unsigned int {
                 let index: int = 0;
-                while (index <= 10) {
+                while (index <= 20) {
                     println(fibonacci(index));
                     // println(index);
                     index = index + 1;
@@ -77,10 +88,16 @@ fn fibonacci() {
         .expect("Should be able to build");
 
     debug!("VM: {:#?}", vm);
-    let r = vm.run("main").unwrap();
+    let (r, duration) = vm.run_with_time("main");
+    let r = r.unwrap();
+    println!();
+    println!(
+        "VM completed running in {:.4} seconds",
+        duration.as_secs_f32()
+    );
     drop(vm);
     drop(logged_buffer);
-    println!();
+
     assert_eq!(r, 0);
 
     let output = String::from_utf8(buffer).expect("Output should be utf-8");
@@ -99,7 +116,13 @@ fn fibonacci() {
         }
     }
 
-    let expected = (0..=10).into_iter().map(|n| fib(n)).collect::<Vec<i32>>();
+    let start = Instant::now();
+    let expected = (0..=20).into_iter().map(|n| fib(n)).collect::<Vec<i32>>();
+    let elapsed = start.elapsed();
+
+    println!("Native code ran in {:.4} seconds", elapsed.as_secs_f32());
+
+    println!("Found values = {:?}", vm_calculated);
 
     assert_eq!(
         vm_calculated, expected,

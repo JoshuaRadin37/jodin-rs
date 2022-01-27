@@ -49,6 +49,13 @@ impl MemoryTrait for MinimumMemory {
         1
     }
 
+    fn var_dict(&self) -> HashMap<usize, Value> {
+        self.vars
+            .iter()
+            .map(|(&num, val)| (num, val.borrow().clone()))
+            .collect()
+    }
+
     fn push(&mut self, value: Value) {
         self.stack.push(value);
     }
