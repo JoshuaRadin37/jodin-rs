@@ -1,5 +1,13 @@
 plugins {
-	id("groovy")
-	id("groovy-gradle-plugin")
+	id "groovy"
+	id "groovy-gradle-plugin"
 }
 
+gradlePlugin {
+	plugins {
+		jodinBasePlugin {
+			id = "joshradin.jodin.base"
+			implementationClass = "joshradin.jodin.JodinBase"
+		}
+	}
+}
