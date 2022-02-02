@@ -1,0 +1,5 @@
+plugins {
+	id("groovy")
+	id("groovy-gradle-plugin")
+}
+
