@@ -315,21 +315,45 @@ macro_rules! asm_style_jodin_assembly {
     (@ @ $($tt:tt)*) => {
         $crate::jasm![$($tt)*]
     };
-    (@ pub $id:ident ; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
-        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::label!(pub $id); )
+
+    (@ jasm $e:expr; $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::jasm!($e); )
     };
-    (@ $id:ident ;  $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
-        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::label!($id); )
+
+
+
+
+    (@ pub $id:ident ; $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::label!(pub $id); )
     };
-    (@ push $e:expr; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
-        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::push!($e); )
+    (@ $id:ident ;  $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::label!($id); )
     };
-    (@ return $e:expr; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
-        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::return_!($e); )
+    (@ push $e:expr; $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::push!($e); )
     };
+    (@ return $($e:expr)?; $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::return_!($($e)?); )
+    };
+
+
+    (@ native $e:expr; $($kw:ident $($arg:expr)? ;)* @ $($output:tt)*) => {
+        {
+            let (native, count): (&str, usize) = $e;
+            $crate::asm_style_jodin_assembly!(@ $($kw $($arg)? ;)* @ $($output)* $crate::Asm::native_method(native, count); )
+        }
+    };
+
 
     ($($tt:tt)*) => {
         $crate::asm_style_jodin_assembly!(@ $($tt)* @)
+    };
+}
+
+#[macro_export]
+macro_rules! asm_jodin {
+    ($($tt:tt)*) => {
+        $crate::sm_style_jodin_assembly!($($tt)*)
     };
 }
 

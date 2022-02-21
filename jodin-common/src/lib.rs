@@ -65,7 +65,7 @@ extern crate static_assertions;
 #[macro_use]
 extern crate serde_derive;
 
-use simplelog::*;
+pub use simplelog::*;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 

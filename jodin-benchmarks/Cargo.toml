@@ -7,6 +7,8 @@ edition = "2021"
 
 [dev-dependencies]
 criterion = "0.3"
+jodin-tests-common = { path = "../jodin-tests-common"}
+jasm-macros = { path = "../jasm-macros"}
 
 [[bench]]
 name = "native_calls"

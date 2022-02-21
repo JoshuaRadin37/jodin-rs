@@ -470,6 +470,8 @@ name = "jodin-benchmarks"
 version = "0.1.0"
 dependencies = [
  "criterion",
+ "jasm-macros",
+ "jodin-tests-common",
 ]
 
 [[package]]

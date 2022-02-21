@@ -662,9 +662,9 @@ where
             let mut label: Option<&String> = None;
             let mut is_static = false;
             match &asm {
-                Asm::Label(lbl) => Some(lbl),
-                Asm::PublicLabel(lbl) => Some(lbl),
-                Asm::Static => is_static = true,
+                Asm::Label(lbl) => { label = Some(lbl); },
+                Asm::PublicLabel(lbl) => { label = Some(lbl); },
+                Asm::Static => { is_static = true; },
                 _ => { },
             };
 
