@@ -243,11 +243,56 @@ impl From<bool> for Value {
     }
 }
 
-impl From<f64> for Value {
-    fn from(f: f64) -> Self {
-        Value::Float(f)
+impl From<u8> for Value {
+    fn from(b: u8) -> Self {
+        Value::Byte(b)
     }
 }
+
+impl From<u16> for Value {
+    fn from(b: u16) -> Self {
+        Value::UInteger(b as u64)
+    }
+}
+
+impl From<u32> for Value {
+    fn from(b: u32) -> Self {
+        Value::UInteger(b as u64)
+    }
+}
+
+impl From<u64> for Value {
+    fn from(b: u64) -> Self {
+        Value::UInteger(b as u64)
+    }
+}
+
+
+impl From<usize> for Value {
+    fn from(b: usize) -> Self {
+        Value::UInteger(b as u64)
+    }
+}
+
+
+impl From<i8> for Value {
+    fn from(b: i8) -> Self {
+        Value::Integer(b as i64)
+    }
+}
+
+impl From<i16> for Value {
+    fn from(b: i16) -> Self {
+        Value::Integer(b as i64)
+    }
+}
+
+impl From<i32> for Value {
+    fn from(b: i32) -> Self {
+        Value::Integer(b as i64)
+    }
+}
+
 
 impl From<i64> for Value {
     fn from(f: i64) -> Self {
@@ -255,11 +300,22 @@ impl From<i64> for Value {
     }
 }
 
-impl From<u64> for Value {
-    fn from(f: u64) -> Self {
-        Value::UInteger(f)
+
+impl From<isize> for Value {
+    fn from(b: isize) -> Self {
+        Value::Integer(b as i64)
     }
 }
+
+
+
+impl From<f64> for Value {
+    fn from(f: f64) -> Self {
+        Value::Float(f)
+    }
+}
+
+
 
 impl From<&str> for Value {
     fn from(f: &str) -> Self {

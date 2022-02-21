@@ -314,6 +314,27 @@ impl InsertAsm<String> for AssemblyBlock {
     }
 }
 
+macro_rules! insert_asm_value {
+    ($ty:ty) => {
+        impl InsertAsm<$ty> for AssemblyBlock {
+            fn insert_asm_at_position(&mut self, index: usize, asm: $ty) -> bool {
+                self.insert_asm_at_position(index, Asm::push(asm))
+            }
+        }
+    };
+}
+
+insert_asm_value!(u8);
+insert_asm_value!(u16);
+insert_asm_value!(u32);
+insert_asm_value!(u64);
+insert_asm_value!(usize);
+insert_asm_value!(i8);
+insert_asm_value!(i16);
+insert_asm_value!(i32);
+insert_asm_value!(i64);
+insert_asm_value!(isize);
+
 pub struct SeperatedAsm<A1, A2>
 where
     AssemblyBlock: InsertAsm<A1>,

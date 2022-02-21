@@ -7,9 +7,12 @@ pub use jodin_common::{
 
 #[macro_export]
 macro_rules! jasm {
+    (ASM_STYLE $($tt:tt)*) => {
+        $crate::asm_style_jodin_assembly!($($tt)*)
+    };
     ($($tt:tt)*) => {
         {
-            let blk: $crate::AssemblyBlock = block![$($tt)*];
+            let blk: $crate::AssemblyBlock = $crate::block![$($tt)*];
             blk.normalize()
         }
     };
@@ -306,6 +309,31 @@ macro_rules! scope {
     };
 }
 
+#[macro_export]
+macro_rules! asm_style_jodin_assembly {
+
+    (@ @ $($tt:tt)*) => {
+        $crate::jasm![$($tt)*]
+    };
+    (@ pub $id:ident ; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::label!(pub $id); )
+    };
+    (@ $id:ident ;  $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::label!($id); )
+    };
+    (@ push $e:expr; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::push!($e); )
+    };
+    (@ return $e:expr; $($kw:ident $arg:expr ;)* @ $($output:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($kw $arg ;)* @ $($output)* $crate::return_!($e); )
+    };
+
+    ($($tt:tt)*) => {
+        $crate::asm_style_jodin_assembly!(@ $($tt)* @)
+    };
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,7 +345,7 @@ mod tests {
             var!(0 => pop!());
             var!(1 => value!(1u64));
             cond!(
-                for (var!(2 = var!(0)); expr!(>, var!(2), value!(0u64)); var!(2 => expr!(+, var!(2), value!(1u64)))) {
+                for (var!(2 => var!(0)); expr!(>, var!(2), value!(0u64)); var!(2 => expr!(+, var!(2), value!(1u64)))) {
                     block![
                         expr!(*, var!(2), var!(1));
                         var!(1 => pop!());
