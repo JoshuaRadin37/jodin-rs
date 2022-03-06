@@ -17,6 +17,7 @@ use std::ops::{Add, Deref};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
+use more_collection_macros::{map, set};
 
 pub struct VM<'l, M, A>
 where
@@ -436,7 +437,8 @@ where
                             instruction_pointer - ((-diff) as usize)
                         }
                     }
-                    AsmLocation::Label(l) => self.label_to_instruction[l],
+                    AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                        .expect(format!("No instruction found for label (label={})", l).as_str()),
                 }
             }
             Asm::CondGoto(location) => {
@@ -456,7 +458,8 @@ where
                                 instruction_pointer - ((-diff) as usize)
                             }
                         }
-                        AsmLocation::Label(l) => self.label_to_instruction[l],
+                        AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                            .expect(format!("No instruction found for label (label={})", l).as_str()),
                     }
                 }
             }
@@ -655,12 +658,16 @@ where
     fn load<Assembly: GetAsm>(&mut self, asm: Assembly) {
         let start_index = self.instructions.len();
         let as_asm = asm.get_asm();
-        let mut new_labels = HashMap::new();
+        let mut new_labels = map![];
+        let mut static_instructions = set![];
         for (index, asm) in as_asm.into_iter().enumerate() {
-            let label = match &asm {
-                Asm::Label(lbl) => Some(lbl),
-                Asm::PublicLabel(lbl) => Some(lbl),
-                _ => None,
+            let mut label: Option<&String> = None;
+            let mut is_static = false;
+            match &asm {
+                Asm::Label(lbl) => { label = Some(lbl); },
+                Asm::PublicLabel(lbl) => { label = Some(lbl); },
+                Asm::Static => { is_static = true; },
+                _ => { },
             };
 
             if let Some(asm_label) = label {
@@ -680,27 +687,42 @@ where
                     }
                 }
             }
+            if is_static {
+                static_instructions.insert(start_index + index);
+            }
+
             self.instructions.push(asm);
+
         }
         info!("Created new labels = {:?}", new_labels);
+
+
+        for static_instruction_index in static_instructions {
+            info!("Running static code at {static_instruction_index}");
+            self.run_from_index(static_instruction_index);
+        }
+
+
     }
 
     fn load_static<Assembly: GetAsm>(&mut self, asm: Assembly) {
         let start_index = self.instructions.len();
-        let label = "@@STATIC".to_string();
-        self.label_to_instruction.insert(label.clone(), start_index);
         self.load(asm);
         self.memory.global_scope();
-        if self.run(&*label).expect("VM Error encountered") != 0 {
+        if self.run_from_index(start_index).expect("VM Error encountered") != 0 {
             panic!("VM Failed")
         }
         self.memory.back_scope();
     }
 
     fn run(&mut self, start_label: &str) -> Result<u32, VMError> {
-        self.cont = true;
         let start_counter = self.label_to_instruction[start_label];
-        self.counter_stack.push(start_counter);
+        self.run_from_index(start_counter)
+    }
+
+    fn run_from_index(&mut self, index: usize) -> Result<u32, VMError> {
+        self.cont = true;
+        self.counter_stack.push(index);
         loop {
             while self.cont && (1..=self.instructions.len() - 1).contains(&self.program_counter()) {
                 let pc = self.program_counter();
@@ -732,6 +754,7 @@ where
         };
         output
     }
+
 
     fn fault(&mut self, fault: Fault) {
         let target = self.fault_table.get_fault_jump(&fault);
@@ -854,5 +877,13 @@ impl<A, M: MemoryTrait> VMBuilder<'_, A, M> {
     pub fn memory(mut self, memory: M) -> Self {
         self.memory = Some(memory);
         self
+    }
+}
+
+impl<'l, A: ArithmeticsTrait, M: MemoryTrait> TryFrom<VMBuilder<'l, A, M>> for VM<'l, M, A> {
+    type Error = VMError;
+
+    fn try_from(value: VMBuilder<'l, A, M>) -> Result<Self, Self::Error> {
+        value.build()
     }
 }

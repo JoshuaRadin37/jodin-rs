@@ -76,6 +76,7 @@ impl MemoryTrait for MinimumMemory {
     }
 }
 
+#[derive(Default)]
 pub struct MinimumALU;
 
 impl ArithmeticsTrait for MinimumALU {

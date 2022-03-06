@@ -25,7 +25,7 @@ pub trait VirtualMachine {
     /// beyond the global context. Prevents loading new code into the VM during this phase.
     fn enclosed(&mut self, asm: &Assembly) -> Value;
 
-    /// Loads some asm into a the virtual machine for future use
+    /// Loads some asm into a the virtual machine for future use. Automatically runs code within "static" blocks
     fn load<A: GetAsm>(&mut self, asm: A);
 
     /// Loads some asm into the virtual machine, then RUNS said ASM
@@ -33,6 +33,9 @@ pub trait VirtualMachine {
 
     /// Runs the VM starting at a label
     fn run(&mut self, start_label: &str) -> Result<u32, VMError>;
+
+    /// Runs the VM starting at a label
+    fn run_from_index(&mut self, index: usize) -> Result<u32, VMError>;
 
     /// Forces the VM to encounter a fault
     fn fault(&mut self, fault: Fault);

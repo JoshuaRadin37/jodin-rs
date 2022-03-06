@@ -8,6 +8,8 @@ members = [
     "jodinc",
     "jodin-tests",
     "jodin-common",
-    "jasm-macros"
+    "jasm-macros",
+    "jodin-benchmarks",
+    "jodin-tests-common"
 ]
 

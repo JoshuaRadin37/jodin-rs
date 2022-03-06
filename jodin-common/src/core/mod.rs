@@ -8,6 +8,7 @@ pub mod literal;
 pub mod operator;
 pub mod privacy;
 pub mod tags;
+pub mod function_names;
 
 /// This should be used as the name of the callable native object that can be used within jodin programs.
 ///

@@ -1,0 +1,31 @@
+[package]
+name = "jodin-tests-common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["jodin-common", "jvm", "jodin_compiler"]
+common = ["jodin-common"]
+jvm = ["jodin-rs-vm", "jasm-macros"]
+jodin_compiler = ["jodinc"]
+
+[dependencies]
+
+
+[dependencies.jodin-common]
+path = "../jodin-common"
+optional = true
+
+[dependencies.jodin-rs-vm]
+path = "../jodin-rs-vm"
+optional = true
+
+[dependencies.jasm-macros]
+path = "../jasm-macros"
+optional = true
+
+[dependencies.jodinc]
+path = "../jodinc"
+optional = true

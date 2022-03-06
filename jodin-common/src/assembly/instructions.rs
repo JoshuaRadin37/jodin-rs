@@ -17,6 +17,9 @@ pub enum Asm {
     /// A public facing label
     PublicLabel(String),
 
+    /// Marks the start of static code. A return statement breaks out of static code
+    Static,
+
     Nop,
 
     Halt,

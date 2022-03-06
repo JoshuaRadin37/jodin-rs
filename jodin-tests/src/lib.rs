@@ -25,16 +25,6 @@ fn fibonacci() {
                 if (n < 2) {
                     output = n;
                 } else {
-                    // output = 1;
-                    // let one: int = 0;
-                    // let two: int = 1;
-                    // let i: int = 2;
-                    // while (i <= n) {
-                    //     output = one + two; // 1 1
-                    //     one = two; // 1 0
-                    //     two = output; // 0 1
-                    //     i = i + 1;
-                    // }
                     return fibonacci(n - 1) + fibonacci(n - 2);
                 }
                 return output;

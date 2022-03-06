@@ -13,6 +13,8 @@ use std::io::Write;
 pub const RELATIVE_LABEL_MARKER: char = '@';
 /// Present at the beginning of a label Marks that the label it is to be removed
 pub const REMOVE_LABEL_MARKER: char = '#';
+/// Present at the beginning of a label marks that the label should be searched for
+pub const NONLOCAL_LABEL_MARKER: char = '$';
 
 /// An assembly block marks the scope of local labels
 #[derive(Debug, Default, Clone)]
@@ -29,9 +31,10 @@ impl AssemblyBlock {
 
     /// Create an assembly block with an optional name
     pub fn new<'s, O: Into<Option<&'s String>>>(name: O) -> Self {
+        let name = name.into().map(|s| s.clone());
         Self {
-            name: name.into().map(|s| s.clone()),
-            assembly: vec![],
+            name,
+            assembly: vec![]
         }
     }
 
@@ -56,7 +59,75 @@ impl AssemblyBlock {
         // .remove_unused()
     }
 
+    fn search_for_label(current_namespace: &Identifier, label: &String, found_labels: &HashSet<String>) -> Option<String> {
+        let mut cloned = Some(current_namespace.clone());
+        println!("Looking for nonlocal label: {}", label);
+        println!("Labels: {:?}", found_labels);
+        while let Some(namespace) = cloned {
+            let label = Self::normalize_label(&namespace, label);
+            println!("Checking if {} exists", label);
+            if found_labels.contains(&label) {
+                return Some(label);
+            }
+            if namespace.is_empty() {
+                cloned = None;
+            } else {
+                cloned = Some(namespace.into_parent().unwrap_or(Identifier::empty()));
+            }
+        }
+        None
+    }
+
+    fn find_all_labels(&self, current_namespace: &Identifier) -> HashSet<String> {
+
+        fn helper(asm: &[AssemblyBlockComponent], current_namespace: &Identifier, output: &mut HashSet<String>) {
+            let mut next = vec![];
+
+            for comp in asm {
+                match comp {
+                    AssemblyBlockComponent::SingleInstruction(s) => {
+                        let asm = s.clone();
+                        match asm {
+                            Asm::Label(lbl) if lbl.starts_with(RELATIVE_LABEL_MARKER) => {
+                                let true_label = AssemblyBlock::normalize_label(current_namespace, &lbl);
+                                output.insert(true_label);
+                            }
+                            Asm::Label(lbl) if lbl.starts_with(REMOVE_LABEL_MARKER) => {}
+                            Asm::Label(lbl) if lbl.starts_with(NONLOCAL_LABEL_MARKER) => {
+                                let found = AssemblyBlock::search_for_label(current_namespace, &lbl.replace(NONLOCAL_LABEL_MARKER, ""), output);
+                                output.insert(found.expect("no parent found"));
+                            }
+                            Asm::Label(lbl) => {
+                                output.insert(lbl);
+                            }
+                            _ => { },
+                        }
+                    }
+                    AssemblyBlockComponent::Block(b) => {
+                        next.push(b);
+                    }
+                }
+            }
+
+            for block in next {
+                let namespace = Identifier::new_concat(
+                    current_namespace,
+                    block.name.as_ref().unwrap_or(&String::new()),
+                );
+                helper(&block.assembly[..], &namespace, output);
+            }
+        }
+        let mut output = HashSet::new();
+        helper(&self.assembly[..], current_namespace, &mut output);
+        output
+    }
+
+
     fn _normalize(&self, current_namespace: &Identifier) -> Assembly {
+        println!("Current namespace: {current_namespace}");
+        let searched = self.find_all_labels(current_namespace);
+
+
         let mut output = Assembly::new();
         for comp in &self.assembly {
             match comp {
@@ -68,18 +139,34 @@ impl AssemblyBlock {
                             output.push(Asm::label(true_label));
                         }
                         Asm::Label(lbl) if lbl.starts_with(REMOVE_LABEL_MARKER) => {}
+                        Asm::Label(lbl) if lbl.starts_with(NONLOCAL_LABEL_MARKER) => {
+                            let found = Self::search_for_label(current_namespace, &lbl.replace(NONLOCAL_LABEL_MARKER, ""), &searched);
+                            output.push(Asm::label(found.expect("no parent found")));
+                        }
                         Asm::Goto(AsmLocation::Label(lbl))
                             if lbl.starts_with(RELATIVE_LABEL_MARKER) =>
                         {
                             let true_label = Self::normalize_label(current_namespace, &lbl);
                             output.push(Asm::Goto(AsmLocation::Label(true_label)));
                         }
+                        Asm::Goto(AsmLocation::Label(lbl))
+                        if lbl.starts_with(NONLOCAL_LABEL_MARKER) =>
+                            {
+                                let found = Self::search_for_label(current_namespace, &lbl.replace(NONLOCAL_LABEL_MARKER, ""), &searched);
+                                output.push(Asm::Goto(AsmLocation::Label(found.expect("no parent found"))));
+                            }
                         Asm::CondGoto(AsmLocation::Label(lbl))
                             if lbl.starts_with(RELATIVE_LABEL_MARKER) =>
                         {
                             let true_label = Self::normalize_label(current_namespace, &lbl);
                             output.push(Asm::CondGoto(AsmLocation::Label(true_label)));
                         }
+                        Asm::CondGoto(AsmLocation::Label(lbl))
+                        if lbl.starts_with(NONLOCAL_LABEL_MARKER) =>
+                            {
+                                let found = Self::search_for_label(current_namespace, &lbl.replace(NONLOCAL_LABEL_MARKER, ""), &searched);
+                                output.push(Asm::CondGoto(AsmLocation::Label(found.expect("no parent found"))));
+                            }
                         other => output.push(other),
                     }
                 }
@@ -167,6 +254,12 @@ impl From<Assembly> for AssemblyBlock {
 /// it.
 pub fn rel_label<S: AsRef<str>>(relative: S) -> String {
     format!("{}{}", RELATIVE_LABEL_MARKER, relative.as_ref())
+}
+
+/// Creates a label instruction with the [`NONLOCAL_LABEL_MARKER`](NONLOCAL_LABEL_MARKER) proceeding
+/// it.
+pub fn nonlocal_label<S: AsRef<str>>(relative: S) -> String {
+    format!("{}{}", NONLOCAL_LABEL_MARKER, relative.as_ref())
 }
 
 pub fn temp_label(lbl: impl AsRef<str>) -> String {
@@ -313,6 +406,27 @@ impl InsertAsm<String> for AssemblyBlock {
         self.insert_asm_at_position(index, Asm::label(asm))
     }
 }
+
+macro_rules! insert_asm_value {
+    ($ty:ty) => {
+        impl InsertAsm<$ty> for AssemblyBlock {
+            fn insert_asm_at_position(&mut self, index: usize, asm: $ty) -> bool {
+                self.insert_asm_at_position(index, Asm::push(asm))
+            }
+        }
+    };
+}
+
+insert_asm_value!(u8);
+insert_asm_value!(u16);
+insert_asm_value!(u32);
+insert_asm_value!(u64);
+insert_asm_value!(usize);
+insert_asm_value!(i8);
+insert_asm_value!(i16);
+insert_asm_value!(i32);
+insert_asm_value!(i64);
+insert_asm_value!(isize);
 
 pub struct SeperatedAsm<A1, A2>
 where

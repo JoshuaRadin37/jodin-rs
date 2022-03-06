@@ -3,7 +3,7 @@ use jodin_common::assembly::location::AsmLocation;
 use jodin_common::assembly::value::Value;
 use jodin_common::init_logging;
 use jodin_rs_vm::core_traits::VirtualMachine;
-use jodin_rs_vm::function_names::RECEIVE_MESSAGE;
+use jodin_common::core::function_names::RECEIVE_MESSAGE;
 use jodin_rs_vm::mvp::{MinimumALU, MinimumMemory};
 use jodin_rs_vm::vm::VMBuilder;
 use log::{debug, LevelFilter};
