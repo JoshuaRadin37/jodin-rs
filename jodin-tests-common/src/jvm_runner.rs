@@ -169,7 +169,7 @@ mod tests {
             ASM_STYLE
             pub main;
                 push HELLO_WORLD;
-                native ("print", 1)
+                native ("print", 1);
                 push HELLO_WORLD;
                 push 2u32;
                 native ("write", 2);

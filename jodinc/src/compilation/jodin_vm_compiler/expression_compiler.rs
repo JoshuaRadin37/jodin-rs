@@ -16,7 +16,7 @@ use jodin_common::assembly::instructions::Asm;
 use jasm_macros::expr;
 use jodin_common::assembly::value::Value;
 use jodin_common::block;
-use jodin_rs_vm::function_names::CALL;
+use jodin_common::core::function_names::CALL;
 use std::cell::RefCell;
 use std::rc::Rc;
 

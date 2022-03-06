@@ -437,7 +437,8 @@ where
                             instruction_pointer - ((-diff) as usize)
                         }
                     }
-                    AsmLocation::Label(l) => self.label_to_instruction[l],
+                    AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                        .expect(format!("No instruction found for label (label={})", l).as_str()),
                 }
             }
             Asm::CondGoto(location) => {
@@ -457,7 +458,8 @@ where
                                 instruction_pointer - ((-diff) as usize)
                             }
                         }
-                        AsmLocation::Label(l) => self.label_to_instruction[l],
+                        AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                            .expect(format!("No instruction found for label (label={})", l).as_str()),
                     }
                 }
             }

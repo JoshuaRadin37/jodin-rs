@@ -15,7 +15,7 @@ pub fn print(c: &mut Criterion) {
                                 ASM_STYLE
                                 pub main;
                                     push HELLO_WORLD;
-                                    native ("print", 1)
+                                    native ("print", 1);
                                     return 0u32;
                                 ]
                         )

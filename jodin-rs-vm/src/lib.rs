@@ -32,13 +32,12 @@ extern crate num_derive;
 extern crate log;
 
 use crate::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
-use crate::function_names::{CALL, RECEIVE_MESSAGE};
+use jodin_common::core::function_names::{CALL, RECEIVE_MESSAGE};
 
 pub mod core_traits;
 pub use core_traits::*;
 pub mod error;
 pub mod fault;
-pub mod function_names;
 pub mod kernel;
 pub mod loadables;
 pub mod mvp;

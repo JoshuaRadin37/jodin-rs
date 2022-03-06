@@ -14,3 +14,8 @@ jasm-macros = { path = "../jasm-macros"}
 name = "native_calls"
 path = "benches/vm/native_calls.rs"
 harness = false
+
+[[bench]]
+name = "advanced_functions"
+path = "benches/vm/advanced_functions.rs"
+harness = false

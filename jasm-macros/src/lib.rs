@@ -1,9 +1,20 @@
 //! Contains the macros and structures needed to make good jasm
 
+use std::sync::atomic::{AtomicU64, Ordering};
 pub use jodin_common::{
-    assembly::{asm_block::*, instructions::*},
+    core::{
+        NATIVE_OBJECT,
+        function_names::*
+    },
+    assembly::{asm_block::*, instructions::*, value::Value, location::AsmLocation},
     block,
 };
+
+pub static BLOCK_NUM: AtomicU64 = AtomicU64::new(0);
+
+pub fn next_block() -> u64 {
+    BLOCK_NUM.fetch_add(1, Ordering::Acquire)
+}
 
 #[macro_export]
 macro_rules! jasm {
@@ -19,12 +30,71 @@ macro_rules! jasm {
 }
 
 #[macro_export]
+macro_rules! call {
+    (NATIVE $(, $param:expr)*) => {
+        $crate::call!($crate::Value::new($crate::NATIVE_OBJECT))
+    };
+    (~ $id:ident $(, $param:expr)*) => {
+        {
+            let location = $crate::AsmLocation::Label(stringify!($id).to_string());
+            let value = $crate::Value::Function(location);
+            $crate::call!(value $(, $param)*)
+        }
+    };
+    ($obj:expr $(, $param:expr)*) => {
+        $crate::call! (@
+            $obj, $crate::CALL, $($param),*
+        )
+    };
+    (@ $obj:expr, $msg:expr, $($param:expr),*) => {
+        {
+            $crate::block![
+                $crate::pack! [$($param),* ];
+                $crate::push! [ $msg ];
+                $crate::push! [ $obj ];
+                $crate::Asm::SendMessage;
+            ]
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! pack {
+    ($($val:expr),* $(,)?) => {
+        {
+            let values = vec![
+                $($val),*
+            ];
+            let values_count = values.len();
+            let mut output = block![];
+            for value in values {
+                output.insert_asm(
+                   value
+                );
+            }
+            output.insert_asm($crate::Asm::Pack(values_count));
+            output
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! var {
     ($var_id:expr => $value:expr) => {
         $crate::jasm![$value, $crate::Asm::SetVar($var_id)]
     };
+    ( => $var_id:expr) => {
+        $crate::Asm::SetVar($var_id)
+    };
     ($var_id:expr) => {
         $crate::Asm::GetVar($var_id)
+    };
+}
+
+#[macro_export]
+macro_rules! dvar {
+    ($var_id:expr) => {
+         $crate::jasm![$crate::Asm::GetVar($var_id); $crate::Asm::Deref;]
     };
 }
 
@@ -33,9 +103,19 @@ macro_rules! label {
     (pub $id:ident) => {
         $crate::Asm::pub_label(stringify!($id))
     };
+    (nonlocal $id:ident) => {
+        $crate::Asm::label($crate::nonlocal_label(stringify!($id)))
+    };
+    (nonlocal $id:expr) => {
+        $crate::Asm::label($crate::nonlocal_label($id.to_string()))
+    };
     ($id:ident) => {
         $crate::Asm::label($crate::rel_label(stringify!($id)))
     };
+    ($id:expr) => {
+        $crate::Asm::label($crate::rel_label($id.to_string()))
+    };
+
 }
 
 #[macro_export]
@@ -46,6 +126,9 @@ macro_rules! goto {
     (pub $id:ident) => {
         $crate::Asm::goto(stringify!($id))
     };
+    (nonlocal $id:ident) => {
+        $crate::Asm::goto($crate::nonlocal_label(stringify!($id)))
+    };
 }
 
 #[macro_export]
@@ -55,6 +138,9 @@ macro_rules! cond_goto {
     };
     (pub $id:ident) => {
         $crate::Asm::cond_goto(stringify!($id))
+    };
+    (nonlocal $id:ident) => {
+        crate::Asm::cond_goto($crate::nonlocal_label(stringify!($id)))
     };
 }
 
@@ -102,23 +188,20 @@ macro_rules! cond {
         $($if_false:expr)?
     }) => {
         $crate::block![
-            if_block: $cond,
+            format!("if_block_{}", $crate::next_block()) =>
+            $cond,
             // if not zero (aka falls through if condition is false)
             $crate::cond_goto!(if_true),
             $crate::label!(if_false),
             $crate::block![
-                if_false:
                 $($if_false,)?
-                $crate::Asm::Nop
+                 $crate::goto!(nonlocal end_if),
             ],
-            $crate::goto!(end_if),
             $crate::label!(if_true),
             $crate::block![
-                if_true:
                 $($if_true,)?
-                $crate::Asm::Nop
+                $crate::goto!(nonlocal end_if)
             ],
-            $crate::goto!(end_if),
             $crate::label!(end_if)
         ]
     };
@@ -126,7 +209,7 @@ macro_rules! cond {
         $crate::cond! (if ($cond) { $($if_true)? } else { })
     };
     (while ($cond:expr) { $($if_true:expr)?} ) => {
-        $crate::block![while_block:
+        $crate::block![format!("while_block_{}", $crate::next_block()) =>
             $crate::label!(start_while),
             $cond,
             $crate::cond_goto!(start_while_block),
@@ -142,7 +225,7 @@ macro_rules! cond {
         ]
     };
     (for ($start:expr; $cond:expr; $delta:expr) { $($if_true:expr)? } ) => {
-        $crate::block![for_block:
+        $crate::block![format!("for_block_{}", $crate::next_block()) =>
             $start,
             $crate::cond!{
                 while ($cond) {
@@ -188,38 +271,40 @@ macro_rules! for_ {
 
 #[macro_export]
 macro_rules! expr {
+
+
     (+, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Add
         ]
     };
     (*, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Multiply
         ]
     };
     (-, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Subtract
         ]
     };
     (/, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Divide
         ]
     };
     (%, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Remainder
         ]
     };
@@ -227,27 +312,27 @@ macro_rules! expr {
     // boolean
     (!, $e:expr) => {
         $crate::block![
-            $e,
-            $crate::Asm::Not,
+            $crate::expr!($e);
+            $crate::Asm::Not;
         ]
     };
     (>0, $e:expr) => {
         $crate::block![
-            $e,
+            $crate::expr!($e),
             $crate::Asm::GT0,
         ]
     };
     (&, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::And
         ]
     };
     (|, $l:expr, $r:expr) => {
         $crate::block![
-            $r;
-            $l;
+            $crate::expr!($r);
+            $crate::expr!($l);
             $crate::Asm::Or
         ]
     };
@@ -261,6 +346,25 @@ macro_rules! expr {
         $crate::expr!(!,
             $crate::expr!(==, $l, $r)
         )
+    };
+    (>u, $l:expr, $r:expr) => {
+
+            $crate::or!(
+                $crate::expr!(>, $l.clone(), $r.clone()),
+                $crate::expr!(
+                    >,
+                    $l.clone(),
+                    $crate::expr!(-, $l.clone(), $r.clone())
+                )
+            )
+
+    };
+    (<u, $l:expr, $r:expr) => {
+            $crate::expr!(
+                >u,
+                $r,
+                $l
+            )
     };
     (>, $l:expr, $r:expr) => {
         $crate::expr!(>0, $crate::expr!(-, $l, $r))
@@ -278,12 +382,42 @@ macro_rules! expr {
             $crate::expr!(<, $l, $r)
         )
     };
+    (*, $e:expr) => {
+        $crate::block![
+            $crate::expr!($e);
+            $crate::Asm::Deref;
+        ]
+    };
+    ($e:expr) => {
+        $e
+    };
+
 }
 
 #[macro_export]
 macro_rules! boolify {
     ($e:expr) => {
         $crate::block![$e, $crate::Asm::Boolify]
+    };
+}
+
+#[macro_export]
+macro_rules! or {
+    ($($e:expr),* $(,)?) => {
+        $crate::block![
+            format!("or_chain_{}", $crate::next_block()) =>
+            $(
+                $crate::if_! [
+                    ($e) {
+                        $crate::block![
+                            $crate::push!(1u8);
+                            $crate::goto!(nonlocal end);
+                        ]
+                    }
+                ];
+            )*
+            $crate::label!(end);
+        ]
     };
 }
 
@@ -356,6 +490,8 @@ macro_rules! asm_jodin {
         $crate::sm_style_jodin_assembly!($($tt)*)
     };
 }
+
+
 
 
 #[cfg(test)]

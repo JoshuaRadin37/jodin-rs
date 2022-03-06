@@ -9,6 +9,7 @@ strict = []
 
 [dependencies]
 jodin-common = { path="../jodin-common"}
+jasm-macros = { path="../jasm-macros" }
 
 num = "0.4"
 num-derive = "0.3"
@@ -23,3 +24,7 @@ log = "0.4.14"
 paris = "1.5.8"
 thiserror = "1.0.30"
 more_collection_macros = "0.2.1"
+
+[dev-dependencies]
+jodin-tests-common = { path="../jodin-tests-common" }
+
