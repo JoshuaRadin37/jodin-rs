@@ -8,10 +8,14 @@ use jodin_rs_vm::vm::VMBuilder;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::FileType;
 
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Output};
+use temp_dir::TempDir;
+use walkdir::WalkDir;
+use jodin_common::assembly::instructions::{Assembly, GetAsm};
 
 #[derive(Debug)]
 pub struct ProjectBuilder {
@@ -93,6 +97,20 @@ impl ProjectBuilder {
         self
     }
 
+    pub fn compile_to_jasm(self) -> Result<Assembly, Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let compiled = self.compile_to_path(temp_dir.path().to_path_buf())?;
+        let mut output = Assembly::new();
+        for entry in WalkDir::new(compiled) {
+            let entry = entry?.into_path();
+            if std::fs::metadata(&entry)?.is_file() {
+                let compilable = CompilationObject::try_from(entry)?;
+                output.extend(compilable.get_asm());
+            }
+        }
+        Ok(output)
+    }
+
     /// Runs a jodin compiler on the input
     ///
     /// # Result
@@ -147,9 +165,14 @@ impl ProjectBuilder {
             return Err("target_directory is not present".into());
         }
         output_path.push("jodin-tests");
-        output_path.push(self.project_name);
+        output_path.push(self.project_name.clone());
 
         std::fs::create_dir_all(&output_path)?;
+
+        self.compile_to_path(output_path)
+    }
+
+    fn compile_to_path(self, output_path: PathBuf) -> Result<PathBuf, Box<dyn Error>> {
         trace!("Outputting to directory: {:?}", output_path);
         let mut compiler = IncrementalCompiler::new(
             &output_path,

@@ -577,7 +577,9 @@ dependencies = [
  "static_assertions",
  "strum",
  "strum_macros",
+ "temp-dir",
  "thiserror",
+ "walkdir",
 ]
 
 [[package]]
@@ -1205,6 +1207,12 @@ dependencies = [
  "quote",
  "unicode-xid",
 ]
+
+[[package]]
+name = "temp-dir"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af547b166dd1ea4b472165569fc456cfb6818116f854690b0ff205e636523dab"
 
 [[package]]
 name = "term"

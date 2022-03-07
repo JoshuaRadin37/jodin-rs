@@ -14,6 +14,8 @@ use jodinc::test_runner::ProjectBuilder;
 use lazy_static::lazy_static;
 use log::{debug, info, Level, LevelFilter};
 
+pub mod type_system;
+
 #[test]
 fn fibonacci() {
     init_logging(LevelFilter::Off);

@@ -32,6 +32,7 @@ use std::path::{Path, PathBuf};
 mod expression_compiler;
 mod function_compiler;
 mod statement_compiler;
+mod class_compiler;
 
 /// The jodin compiler
 pub struct JodinVM(Version);
