@@ -19,3 +19,7 @@ harness = false
 name = "advanced_functions"
 path = "benches/vm/advanced_functions.rs"
 harness = false
+[[bench]]
+name = "compiled_math"
+path = "benches/compiled/compiled_math.rs"
+harness = false

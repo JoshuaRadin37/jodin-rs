@@ -64,3 +64,4 @@ fn fibonacci() {
         fibonacci_test(n);
     }
 }
+
