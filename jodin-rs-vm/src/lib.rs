@@ -31,6 +31,9 @@ extern crate num_derive;
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate anyhow;
+
 use crate::core_traits::{ArithmeticsTrait, MemoryTrait, VirtualMachine};
 use jodin_common::core::function_names::{CALL, RECEIVE_MESSAGE};
 

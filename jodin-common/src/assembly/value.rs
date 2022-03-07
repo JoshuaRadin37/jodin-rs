@@ -189,6 +189,11 @@ impl Value {
         Value::Dictionary(Default::default())
     }
 
+    pub fn location(label: impl AsRef<str>) -> Self {
+        let label =label.as_ref().to_string();
+        Value::Function(AsmLocation::Label(label))
+    }
+
     pub fn into_reference(self) -> Self {
         match self {
             Value::Reference(_) => {

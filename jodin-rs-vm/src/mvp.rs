@@ -140,4 +140,13 @@ impl ArithmeticsTrait for MinimumALU {
     fn shift_right(&self, _a: Value, _b: Value) -> Value {
         todo!()
     }
+
+    fn greater_than(&self, a: Value, b: Value) -> Value {
+        match (a, b) {
+            (Value::UInteger(a), Value::UInteger(b)) => Value::from(a > b),
+            (Value::Integer(a), Value::Integer(b)) => Value::from(a > b),
+            (Value::Float(a), Value::Float(b)) => Value::from(a > b),
+            (a, b) => panic!("Invalid operation operands (l: {}, b: {})", a, b),
+        }
+    }
 }

@@ -32,7 +32,7 @@ macro_rules! jasm {
 #[macro_export]
 macro_rules! call {
     (NATIVE $(, $param:expr)*) => {
-        $crate::call!($crate::Value::new($crate::NATIVE_OBJECT))
+        $crate::call!($crate::Value::Native, $($param),*)
     };
     (~ $id:ident $(, $param:expr)*) => {
         {
@@ -59,10 +59,25 @@ macro_rules! call {
 }
 
 #[macro_export]
+macro_rules! native {
+    ($id:ident $(,$param:expr)* $(,)?) => {
+        $crate::native!(stringify!($id), $($param),*)
+    };
+    ($method:literal $(,$param:expr)* $(,)?) => {
+        $crate::call!(NATIVE, $crate::Value::from($method) $(, $param)*)
+    };
+}
+
+
+#[macro_export]
 macro_rules! pack {
-    ($($val:expr),* $(,)?) => {
+    () => {
+        push!(std::vec::Vec::<$crate::Value>::new())
+
+    };
+    ($($val:expr),+ $(,)?) => {
         {
-            let values = vec![
+            let values: std::vec::Vec<_> = vec![
                 $($val),*
             ];
             let values_count = values.len();
@@ -187,23 +202,28 @@ macro_rules! cond {
     } else {
         $($if_false:expr)?
     }) => {
+        {
+            let block = $crate::next_block();
         $crate::block![
-            format!("if_block_{}", $crate::next_block()) =>
+            format!("if_block_{}", block) =>
             $cond,
             // if not zero (aka falls through if condition is false)
             $crate::cond_goto!(if_true),
             $crate::label!(if_false),
             $crate::block![
+                format!("if_block_{}_false", block) =>
                 $($if_false,)?
                  $crate::goto!(nonlocal end_if),
             ],
             $crate::label!(if_true),
             $crate::block![
+                format!("if_block_{}_true", block) =>
                 $($if_true,)?
                 $crate::goto!(nonlocal end_if)
             ],
             $crate::label!(end_if)
         ]
+        }
     };
     (if ($cond:expr) { $($if_true:expr)? }) => {
         $crate::cond! (if ($cond) { $($if_true)? } else { })
@@ -347,27 +367,12 @@ macro_rules! expr {
             $crate::expr!(==, $l, $r)
         )
     };
-    (>u, $l:expr, $r:expr) => {
-
-            $crate::or!(
-                $crate::expr!(>, $l.clone(), $r.clone()),
-                $crate::expr!(
-                    >,
-                    $l.clone(),
-                    $crate::expr!(-, $l.clone(), $r.clone())
-                )
-            )
-
-    };
-    (<u, $l:expr, $r:expr) => {
-            $crate::expr!(
-                >u,
-                $r,
-                $l
-            )
-    };
     (>, $l:expr, $r:expr) => {
-        $crate::expr!(>0, $crate::expr!(-, $l, $r))
+        $crate::block![
+            $r;
+            $l;
+            $crate::Asm::Gt;
+        ]
     };
     (<, $l:expr, $r:expr) => {
         $crate::expr!(>, $r, $l)
@@ -403,20 +408,14 @@ macro_rules! boolify {
 
 #[macro_export]
 macro_rules! or {
-    ($($e:expr),* $(,)?) => {
+    ($first:expr  $(,)?) => {
+        $first
+    };
+    ($first:expr $(, $other:expr)* $(,)?) => {
         $crate::block![
-            format!("or_chain_{}", $crate::next_block()) =>
-            $(
-                $crate::if_! [
-                    ($e) {
-                        $crate::block![
-                            $crate::push!(1u8);
-                            $crate::goto!(nonlocal end);
-                        ]
-                    }
-                ];
-            )*
-            $crate::label!(end);
+            $first;
+            $crate::or!($($other),*);
+            $crate::Asm::BooleanOr;
         ]
     };
 }
@@ -442,6 +441,7 @@ macro_rules! scope {
         $crate::Asm::native_method("@back_scope", None)
     };
 }
+
 
 #[macro_export]
 macro_rules! asm_style_jodin_assembly {
@@ -516,5 +516,28 @@ mod tests {
             return_!(var!(1));
         };
         println!("{blk:#?}")
+    }
+
+    #[test]
+    fn unsigned_lt() {
+        let asm = expr!(<, 1u32, 2u32);
+        println!("{asm:#?}");
+    }
+
+    #[test]
+    fn native_method() {
+        let native_asm = native!("@print_stack");
+        println!("native_asm: {native_asm:#?}");
+        let normalized = native_asm.normalize();
+        assert_eq!(
+            normalized,
+            vec![
+                Asm::push(Value::from("@print_stack")),
+                Asm::Pack(1),
+                Asm::push(CALL),
+                Asm::push(Value::Native),
+                Asm::SendMessage
+            ]
+        )
     }
 }

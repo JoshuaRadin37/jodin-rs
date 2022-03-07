@@ -490,6 +490,7 @@ dependencies = [
  "lazy_static",
  "log",
  "logos",
+ "more_collection_macros",
  "num-derive",
  "num-traits",
  "pathdiff",
@@ -510,6 +511,7 @@ dependencies = [
 name = "jodin-rs-vm"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bitfield",
  "byteorder",
  "itertools",

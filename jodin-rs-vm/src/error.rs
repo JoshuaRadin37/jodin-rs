@@ -19,6 +19,8 @@ pub enum VMError {
     #[error("Jodin error: {0}")]
     JodinError(#[from] JodinError),
     #[error(transparent)]
+    AnyHowError(#[from] anyhow::Error),
+    #[error(transparent)]
     Other(#[from] Box<dyn StdError>),
 }
 
@@ -27,3 +29,4 @@ impl From<io::Error> for VMError {
         Self::IoError(e)
     }
 }
+

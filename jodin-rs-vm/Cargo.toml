@@ -24,6 +24,7 @@ log = "0.4.14"
 paris = "1.5.8"
 thiserror = "1.0.30"
 more_collection_macros = "0.2.1"
+anyhow = "1.0.55"
 
 [dev-dependencies]
 jodin-tests-common = { path="../jodin-tests-common" }

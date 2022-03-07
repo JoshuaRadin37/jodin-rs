@@ -10,7 +10,7 @@ use crate::assembly::value::Value;
 pub const PTR_SIZE: usize = std::mem::size_of::<usize>();
 
 /// The VM's bytecode are op codes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub enum Asm {
     Label(String),
@@ -82,6 +82,8 @@ pub enum Asm {
 
     /// Checks if top of stack is greater than 0
     GT0,
+    /// Checks if the first popped val is > then the second popped val
+    Gt,
 
     /// & two values on the stack
     And,
@@ -96,6 +98,13 @@ pub enum Asm {
     /// - !0 -> 1
     /// - 0 -> 0
     Boolify,
+
+    // boolean ops
+
+    BooleanAnd,
+    BooleanOr,
+    BooleanNot,
+    BooleanXor,
 
     /// Enables the _dynamic_ aspect in this location. Pops 3 values from the stack.
     /// The first is the object being sent a message. The second is the "name" of the message.
