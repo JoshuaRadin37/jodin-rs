@@ -11,9 +11,10 @@ fn create_fib_sequence_asm(n: u32) -> Assembly {
         main:
         label!(pub main);
         return_!(call!(~ fibonacci, n));
+
+        label!(pub fibonacci);
         scope!(global);
         scope!(push);
-        label!(pub fibonacci);
         var!(=> 0);
         if_!(
             (expr!(<, dvar!(0), 2u32)) {
@@ -24,14 +25,11 @@ fn create_fib_sequence_asm(n: u32) -> Assembly {
                 ]
             } else {
                 block![
-                        dvar!(0);
                         expr!(+,
                                 call!(~ fibonacci, expr!(-, dvar!(0), 1u32)),
                                 call!(~ fibonacci, expr!(-, dvar!(0), 2u32))
                             );
-                        var!(=> 1);
-                        var!(=> 0);
-                        var!(1);
+                        scope!(back);
                         return_! ();
                     ]
             }

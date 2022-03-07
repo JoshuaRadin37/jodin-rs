@@ -9,28 +9,29 @@ use jodin_tests_common::jvm_runner::JVMRunner;
 
 fn create_fib_sequence_asm(n: u32) -> Assembly {
     let block = block![
-       label!(pub main);
+        main:
+        label!(pub main);
         return_!(call!(~ fibonacci, n));
+
         label!(pub fibonacci);
+        scope!(global);
+        scope!(push);
         var!(=> 0);
         if_!(
             (expr!(<, dvar!(0), 2u32)) {
                 block![
                     dvar!(0);
+                    scope!(back);
                     return_!();
                 ]
             } else {
                 block![
-                        dvar!(0);
-                        call!(~ fibonacci, expr!(-, dvar!(0), 1u32));
-                        native!("@print_stack");
-                        var!(=> 1);
-                        var!(=> 0);
-                        call!(~ fibonacci, expr!(-, dvar!(0), 1u32));
-                        var!(=> 2);
-                        var!(=> 0);
-                        native!("@print_stack");
-                        return_! (expr!(+, dvar!(1), dvar!(2)));
+                        expr!(+,
+                                call!(~ fibonacci, expr!(-, dvar!(0), 1u32)),
+                                call!(~ fibonacci, expr!(-, dvar!(0), 2u32))
+                            );
+                        scope!(back);
+                        return_! ();
                     ]
             }
         );
@@ -59,7 +60,6 @@ fn fibonacci_test(n: u32) {
 
 #[test]
 fn fibonacci() {
-    init_logging(LevelFilter::Info);
     for n in 2..=10 {
         fibonacci_test(n);
     }
