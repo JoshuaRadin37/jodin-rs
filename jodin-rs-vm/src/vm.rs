@@ -137,6 +137,13 @@ where
                 .join(", ")
         );
         match message {
+            "@call" => {
+                if let Value::Str(method) = args.remove(0) {
+                    self.native_method(&method, args)
+                } else{
+                    panic!("Must have a string as the first argument if message is {CALL}")
+                }
+            }
             "print" => {
                 let s = format!("{:#}", args.remove(0));
                 match &mut self.stdout {
@@ -225,7 +232,6 @@ where
             }
             "@print_stack" => {
                 println!("memory: {:#?}", self.memory);
-                self.memory.push(Value::Empty);
             }
             _ => panic!("{:?} is not a native method", message),
         }
@@ -580,13 +586,32 @@ where
                 let vector = Vec::from(vector);
                 self.memory.push(Value::Array(vector));
             }
-            asm @ (Asm::Subtract | Asm::Add | Asm::Multiply) => {
+            boolean_asm @ (Asm::BooleanAnd | Asm::BooleanOr | Asm::BooleanXor ) => {
+                let left = self.memory.pop().expect("couldn't pop");
+                let right = self.memory.pop().expect("couldn't pop");
+                if let (Value::Byte(left), Value::Byte(right)) = (left, right) {
+                    let left = left != 0;
+                    let right = right != 0;
+                    info!("Comparing {left} and {right} with op {boolean_asm:?}");
+                    let output = match boolean_asm {
+                        Asm::BooleanAnd => Value::from(left && right),
+                        Asm::BooleanOr => Value::from(left || right),
+                        Asm::BooleanXor => Value::from(left ^ right),
+                        _ => unreachable!(),
+                    };
+                    self.memory.push(output);
+                } else {
+                    return Err(anyhow!("Can only use two booleans for bi-boolean ops").into())
+                }
+            }
+            asm @ (Asm::Subtract | Asm::Add | Asm::Multiply | Asm::Gt) => {
                 let left = self.memory.pop().expect("couldn't pop");
                 let right = self.memory.pop().expect("couldn't pop");
                 let output = match asm {
                     Asm::Subtract => self.alu.sub(left, right),
                     Asm::Add => self.alu.add(left, right),
                     Asm::Multiply => self.alu.mult(left, right),
+                    Asm::Gt => self.alu.greater_than(left, right),
                     _ => unreachable!(),
                 };
                 self.memory.push(output);

@@ -1,40 +1,55 @@
 #[macro_use]
 extern crate jasm_macros;
 
-use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+use jasm_macros::Assembly;
 use jodin_tests_common::jvm_runner::JVMRunner;
 
-pub fn fibonacci(c: &mut Criterion) {
 
-
-
-    let fib_sequence =
-    jasm![
+fn create_fib_sequence_asm(n: u32) -> Assembly {
+    let block = block![
+        main:
         label!(pub main);
-        push!(5u32);
+        return_!(call!(~ fibonacci, n));
+
         label!(pub fibonacci);
+        scope!(global);
+        scope!(push);
         var!(=> 0);
         if_!(
-            (expr!(<, dvar!(0), 2usize)) {
-                return_!(dvar!(0));
+            (expr!(<, dvar!(0), 2u32)) {
+                block![
+                    dvar!(0);
+                    scope!(back);
+                    return_!();
+                ]
             } else {
-                return_! (
-                    expr!(+,
-                        call!(~ fibonacci, expr!(-, dvar!(0), 1i32)),
-                        call!(~ fibonacci, expr!(-, dvar!(0), 2i32))
-                    )
-                )
+                block![
+                        expr!(+,
+                                call!(~ fibonacci, expr!(-, dvar!(0), 1u32)),
+                                call!(~ fibonacci, expr!(-, dvar!(0), 2u32))
+                            );
+                        scope!(back);
+                        return_! ();
+                    ]
             }
         );
     ];
+    block.normalize()
+}
 
-    c.bench_function(
-        "fibonacci",
-        |b| {
+pub fn fibonacci(c: &mut Criterion) {
+    let fib_value = 10;
+
+    c.bench_with_input(
+        BenchmarkId::new("fibonacci", fib_value),
+        &fib_value,
+        |b, &n| {
             b.iter_batched(
                 || {
+                    let asm = create_fib_sequence_asm(n);
                     JVMRunner::default()
-                        .with_jasm(fib_sequence.clone())
+                        .with_jasm(asm)
                 },
                 |runner| {
                     runner.execute().unwrap()
