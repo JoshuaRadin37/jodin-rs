@@ -162,10 +162,6 @@ impl CompilationObject {
         }
     }
 
-    pub fn writer(&self) -> PaddedWriter<File> {
-        let file = File::create(&self.file_location).unwrap();
-        PaddedWriter::new(file)
-    }
 }
 
 impl Display for CompilationObject {

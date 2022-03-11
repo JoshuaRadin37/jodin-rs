@@ -19,6 +19,7 @@ use jodin_common::unit::{CompilationObject, TranslationUnit};
 
 use std::borrow::Borrow;
 use std::collections::{HashMap, VecDeque};
+use std::ffi::OsString;
 use std::fmt::{Display, Formatter, Write as fmtWrite};
 use std::fs::OpenOptions;
 use std::hash::Hash;
@@ -39,6 +40,7 @@ pub struct JodinVM(Version);
 impl Target for JodinVM {}
 
 pub struct JodinVMCompiler<'c> {
+    originating_file_path: Option<PathBuf>,
     writer_override: Option<Box<dyn io::Write + 'c>>,
     lifetime: PhantomData<&'c ()>,
 }
@@ -55,15 +57,22 @@ impl<'c> JodinVMCompiler<'c> {
             boxed
         });
         JodinVMCompiler {
+            originating_file_path: None,
             writer_override: as_box,
             lifetime: PhantomData::default(),
         }
+    }
+
+
+    pub fn set_originating_file_path(&mut self, originating_file_path: impl AsRef<Path>) {
+        self.originating_file_path = Some(originating_file_path.as_ref().to_path_buf());
     }
 }
 
 impl Default for JodinVMCompiler<'static> {
     fn default() -> Self {
         Self {
+            originating_file_path: None,
             writer_override: None,
             lifetime: PhantomData::default(),
         }
@@ -72,35 +81,106 @@ impl Default for JodinVMCompiler<'static> {
 
 impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
     fn compile(&mut self, tree: &JodinNode, settings: &CompilationSettings) -> JodinResult<()> {
-        let modules = split_by_module(tree);
-        let context = Context::new();
-        for module in modules {
-            info!("Compiling module {:?}", module.identifier);
-            match &mut self.writer_override {
-                None => {
-                    let builder = module.builder(&settings.target_directory);
-                    for member in module.objects() {
-                        let resolved_id = member.resolved_id()?;
-                        info!("Compiling {:?}", resolved_id);
-                        let mut object_compiler =
-                            builder.translation_object_compiler(resolved_id.this());
-                        object_compiler.compile(member, settings)?;
-                    }
-                    let static_obj: CompilationObject = module.static_object(&builder)?;
-                    let ref mut writer = static_obj.writer();
-                    Compilable::<JodinVM>::compile(static_obj, &context, writer)?;
-                }
-                Some(s) => {
-                    let _writer = PaddedWriter::new(s);
-                    // module.compile(&context, &mut writer)?;
-                    todo!()
-                }
-            };
+        // let modules = split_by_module(tree);
+        //
+        //
+        // let context = Context::new();
+        // for module in modules {
+        //     info!("Compiling module {:?}", module.identifier);
+        //     match &mut self.writer_override {
+        //         None => {
+        //             let builder = module.builder(&settings.target_directory);
+        //             for member in module.objects() {
+        //                 let resolved_id = member.resolved_id()?;
+        //                 info!("Compiling {:?}", resolved_id);
+        //                 let mut object_compiler =
+        //                     builder.translation_object_compiler(resolved_id.this());
+        //                 object_compiler.compile(member, settings)?;
+        //             }
+        //             let static_obj: CompilationObject = module.static_object(&builder)?;
+        //             let ref mut writer = static_obj.writer();
+        //             Compilable::<JodinVM>::compile(static_obj, &context, writer)?;
+        //         }
+        //         Some(s) => {
+        //             let _writer = PaddedWriter::new(s);
+        //             // module.compile(&context, &mut writer)?;
+        //             todo!()
+        //         }
+        //     };
+        // }
+
+        let to_compile: &JodinNode;
+        let mut namespace: Option<Identifier> = None;
+
+        match tree.r#type() {
+            JodinNodeType::InNamespace {
+                namespace: found_namespace, inner
+            } => {
+                namespace = Some(found_namespace.resolved_id()?.clone());
+                to_compile = inner;
+            }
+            JodinNodeType::TopLevelDeclarations { .. } => {
+                to_compile = tree;
+            }
+            _ => return Err(JodinError::new(JodinErrorType::InvalidTreeTypeGivenToCompiler("Must be a valid top level declartion".to_string())))
         }
 
-        Ok(())
+
+
+
+        let file_name = match &self.originating_file_path {
+            None => { OsString::from("a.out") }
+            Some(file) => { file.file_name().unwrap().to_os_string() }
+        };
+
+        let id_to_path = match &namespace {
+            None => { PathBuf::new() }
+            Some(id) => { PathBuf::from(id.clone()) }
+        };
+
+
+        let output_path = PathBuf::from_iter(&[
+            settings.target_directory.as_path(),
+            id_to_path.as_path(),
+            Path::new(&file_name)
+        ]);
+
+        info!("Compiling to file {output_path:?}");
+        let mut file_compiler = SingleUseCompiler::new(
+            output_path.clone(), namespace.unwrap_or(Identifier::empty())
+        );
+
+        let compilable = file_compiler.create_compilable(to_compile)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(output_path)?;
+
+        let mut writer = PaddedWriter::new(file);
+
+       Compilable::<JodinVM>::compile(compilable, &Context::new(), &mut writer)
     }
 }
+
+
+pub struct SingleUseCompiler {
+    file: PathBuf,
+    in_module: Identifier
+}
+
+impl SingleUseCompiler {
+    pub fn new(file: PathBuf, in_module: Identifier) -> Self {
+        SingleUseCompiler { file, in_module }
+    }
+}
+
+impl MicroCompiler<JodinVM, CompilationObject> for SingleUseCompiler {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<CompilationObject> {
+        todo!()
+    }
+}
+
 
 pub struct ObjectCompilerBuilder {
     dir_path: PathBuf,

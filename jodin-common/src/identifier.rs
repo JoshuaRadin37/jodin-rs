@@ -12,6 +12,7 @@ use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter::{FromIterator, FusedIterator};
 use std::ops::{Add, Div, RangeBounds, Shl, Shr};
+use std::path::PathBuf;
 use std::str::FromStr;
 
 /// Contains this id and an optional parent
@@ -564,6 +565,12 @@ impl Div for &Identifier {
     }
 }
 
+impl From<Identifier> for PathBuf {
+    fn from(id: Identifier) -> Self {
+        PathBuf::from_iter(id.iter())
+    }
+}
+
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
@@ -576,6 +583,9 @@ impl Iterator for IdentifierIterator {
         self.id.pop_back()
     }
 }
+
+
+
 
 /// A wrapper type that can attach an identifier to a type that doesn't implement [Namespaced].
 ///

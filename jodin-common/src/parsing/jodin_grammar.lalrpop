@@ -386,6 +386,7 @@ JumpStatement: ParseResult = {
 
 pub JodinFile: JodinResult<JodinNode> = { TopLevelDeclarations, SpecialInNamespace }
 
+
 pub TopLevelDeclarations: JodinResult<JodinNode> = {
     <decs:TopLevelDeclarationsList> => JodinNodeType::TopLevelDeclarations {decs: decs? }.into_result()
 }
@@ -728,6 +729,6 @@ extern {
         "fn" => Tok::FunctionPointer,
         "let" => Tok::Let,
         "foreach" => Tok::Foreach,
-        "extern" => Tok::Extern
+        "extern" => Tok::Extern,
     }
 }
