@@ -5,6 +5,7 @@ use jodin_common::ast::JodinNode;
 use jodin_common::compilation::MicroCompiler;
 use jodin_common::error::JodinResult;
 use jodin_common::types::type_environment::{TypeEnvironment, TypeEnvironmentManager};
+use jodin_common::types::TypeTag;
 use crate::compilation::jodin_vm_compiler::VariableUseTracker;
 use crate::compilation::JodinVM;
 
@@ -19,6 +20,7 @@ impl<'types> ClassCompiler<'types> {
 
 impl<'types> MicroCompiler<JodinVM, AssemblyBlock> for ClassCompiler<'types> {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<AssemblyBlock> {
-        todo!()
+        let tag = tree.get_tag::<TypeTag>()?;
+        // tag.jodin_type()
     }
 }
