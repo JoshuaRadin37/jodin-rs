@@ -26,21 +26,11 @@ impl<'a, 'b: 'a> JodinRsApp<'a, 'b> {
         Self(clap_app!(jodin_rs =>
             (version: "0.1.0")
             (author: "Joshua Radin <jradin16@gmail.com>")
-            (about: "Interpreter for jodin written in rust")
+            (about: "Compiler fo jodin")
             (@arg debug: -d --debug_level +takes_value "set the debug level, from 0 to 5")
-            (@arg tast: --tast "outputs the tast (after id and type pass) into a file")
-            (@arg ast: --ast "outputs the ast (before any passes) into a file")
-            (@arg pt: --pt "outputs the parse tree into a file")
             (@arg include: -I --include +takes_value ... "include the contents of a directory for indexing")
             (@arg target_dir: -T --target_dir +takes_value "where generated files should be emitted")
-            (@subcommand check =>
-                (about: "Runs the parser, doesn't run any passes over the ast besides building it")
-                (@arg INPUT: +required +takes_value ... "the file inputs")
-            )
-            (@subcommand run =>
-                (about: "Runs the interpreter")
-                (@arg INPUT: +required +takes_value ... "the file inputs")
-            )
+            (@arg INPUT: +required +takes_value ... "the file inputs")
         ))
     }
 

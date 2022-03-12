@@ -1,19 +1,20 @@
 use jodin_common::compilation_settings::CompilationSettings;
-use jodin_common::error::{JodinErrorType, JodinResult};
+use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
 use jodin_common::init_logging;
 use jodinc::cli::JodinRsApp;
 
 use jodinc::passes::frontend::FilesToJodinNodeTool;
 
 use jodinc::process_jodin_node;
-use log::LevelFilter;
+use log::{error, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
+use jodinc::compilation::incremental::IncrementalCompiler;
 
-fn main() -> JodinResult<()> {
+fn main() {
     let cli = JodinRsApp::new();
     let matches = cli.into_matches();
     let mut settings = CompilationSettings::default();
@@ -38,6 +39,7 @@ fn main() -> JodinResult<()> {
             Ok(2) => LevelFilter::Warn,
             Ok(3) => LevelFilter::Info,
             Ok(4) => LevelFilter::Debug,
+            Ok(5) => LevelFilter::Trace,
             Ok(o) => panic!("No debug level {}", o),
             Err(_) => panic!("invalid value for debug"),
         };
@@ -46,12 +48,8 @@ fn main() -> JodinResult<()> {
         init_logging(LevelFilter::Info)
     }
 
-    let (_command, command_args) = match matches.subcommand() {
-        (command, Some(args)) => (command, args),
-        _ => panic!("No subcommand used, must either use run or check"),
-    };
 
-    let inputs = command_args.values_of("INPUT").unwrap();
+    let inputs = matches.values_of("INPUT").unwrap();
     let mut full_paths = vec![];
 
     for input in inputs {
@@ -75,48 +73,30 @@ fn main() -> JodinResult<()> {
             }
         }
     }
-    //println!("{:?}", full_paths);
-    let mut builder = FilesToJodinNodeTool::new(&settings);
-    let result = builder.invoke(full_paths);
-    if let Err(e) = result {
-        match e.into_err_and_bt() {
-            (JodinErrorType::ParserError(e, file), bt) => {
-                let error = if let Some(_path) = file {
-                    // e.with_path(path.as_str())
-                    e
-                } else {
-                    e
-                };
 
-                eprintln!("{:#}", error);
-                eprintln!("{:?}", bt);
-                exit(-1);
-            }
-            (error, bt) => {
-                eprintln!("{:?}", error);
-                eprintln!("{:?}", bt);
-                exit(-1);
+    let mut incremental = IncrementalCompiler::new(settings.target_directory.clone(), settings);
+
+    let mut errors = vec![];
+
+    for path in full_paths {
+        match incremental.compile_file(path) {
+            Ok(()) => {}
+            Err(e) => {
+                errors.push(e);
             }
         }
     }
 
-    let node = builder.finish()?;
-    // println!("{:?}", node);
-    let optimized = process_jodin_node(node)?;
-    //  println!("{:?}", optimized);
-
-    if settings.output_tast {
-        let string = format!("{:#?}", optimized);
-        let mut new_path = PathBuf::from("final_tast");
-        new_path.set_extension("tast");
-        let newer_path = settings.output_file_path(new_path);
-        let mut file = File::create(newer_path)?;
-        writeln!(file, "{}", string)?;
+    match errors.as_slice() {
+        &[] => return,
+        errors => {
+            for error in errors {
+                error!("{error}");
+                for line in format!("{:?}", error.backtrace()).lines() {
+                    error!("{}", line);
+                }
+            }
+        }
     }
 
-    let buffer = String::new();
-    // compile_c99(optimized, &settings, &mut buffer)?;
-    println!("####START C OUTPUT####");
-    println!("{}", buffer);
-    Ok(())
 }

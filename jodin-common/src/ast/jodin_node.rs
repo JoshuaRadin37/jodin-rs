@@ -151,7 +151,7 @@ impl JodinNode {
         self.get_tags_by_type(tag_type)
             .into_iter()
             .nth(0)
-            .ok_or(JodinErrorType::TagNotPresent.into())
+            .ok_or(JodinErrorType::TagNotPresent(self.tag_ids()).into())
     }
 
     /// Gets all tags for a certain tag type
@@ -199,7 +199,7 @@ impl JodinNode {
         self.get_tags::<T>()
             .into_iter()
             .nth(0)
-            .ok_or(JodinErrorType::TagNotPresent.into())
+            .ok_or(JodinErrorType::TagNotPresent(self.tag_ids()).into())
     }
 
     /// Get all tags using the type of the tag.
@@ -245,11 +245,11 @@ impl JodinNode {
     /// # Example
     ///
     /// ```
-    /// use jodin_common::ast::JodinNode;
-    /// use jodin_common::ast::JodinNodeType;
-    /// use jodin_common::identifier::Identifier;
-    /// use jodin_common::core::tags::DummyTag;
-    /// let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
+    /// # use jodin_common::ast::JodinNode;
+    /// # use jodin_common::ast::JodinNodeType;
+    /// # use jodin_common::identifier::Identifier;
+    /// # use jodin_common::core::tags::DummyTag;
+    /// # let mut node = JodinNode::new(JodinNodeType::Identifier(Identifier::from("id")));
     /// node.add_tag(DummyTag);
     ///
     /// let tags: Vec<&mut DummyTag> = node.get_tags_mut();
@@ -263,6 +263,14 @@ impl JodinNode {
     /// Gets all of the tags within the node.
     pub fn tags(&self) -> &Vec<Box<dyn Tag>> {
         &self.tags
+    }
+
+    /// Gets a list of tag ids present
+    pub fn tag_ids(&self) -> Vec<String> {
+        self.tags
+            .iter()
+            .map(|tag| tag.tag_type())
+            .collect()
     }
 
     /// Creates an empty JodinNode

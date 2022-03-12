@@ -52,8 +52,8 @@ pub enum JodinErrorType {
     #[error("Tag can not be casted")]
     TagCastError,
     /// The requested tag is not present in the node.
-    #[error("Tag is not present")]
-    TagNotPresent,
+    #[error("Tag is not present (available: {0:?})")]
+    TagNotPresent(Vec<String>),
     /// The parser threw an error.
     #[error("The parser threw an error (file: {1:?}): {0}")]
     ParserError(
