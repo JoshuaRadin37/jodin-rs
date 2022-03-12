@@ -91,8 +91,10 @@ fn main() {
         &[] => return,
         errors => {
             for error in errors {
-                error!("{}", error);
-                error!("{:?}", error.backtrace())
+                error!("{error}");
+                for line in format!("{:?}", error.backtrace()).lines() {
+                    error!("{}", line);
+                }
             }
         }
     }
