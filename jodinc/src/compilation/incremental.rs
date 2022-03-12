@@ -2,9 +2,9 @@
 //! See feature [#74] for more information on the implementation
 //!
 //! # Basics:
-//!The compiler should allow for incremental compilation.
+//! The compiler should allow for incremental compilation.
 //!
-//!The compiler should allow for directories to be specified that contains compiler jodin code that can be used by later compilation units. This should allow for incremental compilation as well. Unsure how to fully implement this yet.
+//! The compiler should allow for directories to be specified that contains compiler jodin code that can be used by later compilation units. This should allow for incremental compilation as well. Unsure how to fully implement this yet.
 //!
 //! # Implementation
 //! The output file type should be `.jobj`, and should output based on namespace and not declaration file.
@@ -32,6 +32,8 @@ use jodin_common::parsing::parse_program;
 use jodin_common::unit::{CompilationObject, Incremental, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
+use std::fs::File;
+use std::io::BufReader;
 
 use std::path::{Path, PathBuf};
 
@@ -63,6 +65,20 @@ impl IncrementalCompiler {
         let optimized = optimize(analyzed)?;
 
         let mut compiler = JodinVMCompiler::default();
+
+        compiler.compile(&optimized, &self.compilation_settings)
+    }
+
+    /// Compiles a single file into a compilation objects
+    pub fn compile_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), JodinError> {
+        let input = std::fs::read_to_string(&file)?;
+        let parsed = parse_program(input)?;
+        let (analyzed, _env) = analyze_with_preload(parsed, &self.translation_units)?;
+
+        let optimized = optimize(analyzed)?;
+
+        let mut compiler = JodinVMCompiler::default();
+        compiler.set_originating_file_path(file);
 
         compiler.compile(&optimized, &self.compilation_settings)
     }

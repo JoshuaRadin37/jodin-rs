@@ -15,7 +15,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::fs::File;
 use std::io::Write;
 use std::mem;
-use std::ops::Deref;
+use std::ops::{Add, AddAssign, Deref};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -162,6 +162,44 @@ impl CompilationObject {
         }
     }
 
+    pub fn merge(self, other: Self) -> Result<Self, JodinError> {
+        if &self.file_location != &other.file_location {
+            return Err(anyhow!("Compilation objects must have same location (left= {:?}, right= {:?})", self.file_location, other.file_location).into());
+        }
+
+        let mut units = self.units;
+        units.extend(other.units);
+
+        let mut jasm = self.jasm;
+        jasm.extend(other.jasm);
+
+        Ok(Self::new(self.file_location, self.module, units, jasm))
+    }
+
+    pub fn merge_from(&mut self, other: Self) -> Result<(), JodinError> {
+        if &self.file_location != &other.file_location {
+            return Err(anyhow!("Compilation objects must have same location (left= {:?}, right= {:?})", self.file_location, other.file_location).into());
+        }
+        self.units.extend(other.units);
+        self.jasm.extend(other.jasm);
+        Ok(())
+    }
+
+}
+
+impl Add for CompilationObject {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        self.merge(rhs).unwrap()
+    }
+}
+
+
+impl AddAssign for CompilationObject {
+    fn add_assign(&mut self, rhs: Self) {
+       self.merge_from(rhs).unwrap()
+    }
 }
 
 impl Display for CompilationObject {

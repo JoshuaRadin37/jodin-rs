@@ -11,10 +11,10 @@ use jodin_common::compilation::{
 };
 use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::core::privacy::VisibilityTag;
-use jodin_common::core::tags::TagTools;
+use jodin_common::core::tags::{ResolvedIdentityTag, TagTools};
 use jodin_common::error::JodinErrorType;
 use jodin_common::identifier::Identifier;
-use jodin_common::types::StorageModifier;
+use jodin_common::types::{AsIntermediate, StorageModifier, TypeTag};
 use jodin_common::unit::{CompilationObject, TranslationUnit};
 
 use std::borrow::Borrow;
@@ -29,6 +29,8 @@ use std::marker::PhantomData;
 
 use jodin_common::block;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
+use jodin_common::types::resolved_type::ResolvedType;
 
 mod expression_compiler;
 mod function_compiler;
@@ -177,7 +179,43 @@ impl SingleUseCompiler {
 
 impl MicroCompiler<JodinVM, CompilationObject> for SingleUseCompiler {
     fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<CompilationObject> {
-        todo!()
+        let variable_tracker: Arc<_> = Default::default();
+
+        let mut assembly = AssemblyBlock::new(None);
+        let mut translation_units = vec![];
+
+        let mut created: Vec<CompilationObject> = vec![];
+
+        match tree.inner() {
+            JodinNodeType::InNamespace { namespace: _, inner } => {
+                created.push(self.create_compilable(inner)?);
+            }
+            JodinNodeType::TopLevelDeclarations { decs } => {
+                for dec in decs {
+                    created.push(self.create_compilable(dec)?);
+                }
+            }
+            JodinNodeType::FunctionDefinition { .. } => {
+                let mut function_c = FunctionCompiler::from(&variable_tracker);
+                let block = function_c.create_compilable(tree)?;
+                assembly.insert_asm(block);
+
+                let j_type = tree.get_tag::<TypeTag>()?.jodin_type();
+                let id = tree.resolved_id()?;
+                let vis = tree.get_tag::<VisibilityTag>()?.visibility();
+
+                translation_units.push(TranslationUnit::new(vis.clone(), j_type.clone(), id));
+            }
+            _ => {
+                panic!("invalid tree given to compiler: {:?}", tree);
+            }
+        }
+
+        let mut output = CompilationObject::new(self.file.clone(), self.in_module.clone(), translation_units, assembly.normalize());
+        for object in created {
+            output += object;
+        }
+        Ok(output)
     }
 }
 
