@@ -1,9 +1,8 @@
 //! The library for the jodin compiler/interpreter.
 //!
 //! Jodin is an object-oriented programming language designed with the intent to be compiled into
-//! C code.
+//! jodin-vm bytecode.
 //!
-//! Code is compi
 //!
 //! # Example
 //!
@@ -62,11 +61,14 @@ use jodin_common::ast::JodinNode;
 use jodin_common::error::{JodinError, JodinResult};
 use jodin_common::types::type_environment::TypeEnvironment;
 
+
 pub mod cli;
 pub mod compilation;
 pub mod error_reporting;
 pub mod passes;
 pub mod test_runner;
+pub mod safe_api;
+
 
 /// processes the jodin node tree
 pub fn process_jodin_node(node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
