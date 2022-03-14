@@ -267,10 +267,7 @@ impl JodinNode {
 
     /// Gets a list of tag ids present
     pub fn tag_ids(&self) -> Vec<String> {
-        self.tags
-            .iter()
-            .map(|tag| tag.tag_type())
-            .collect()
+        self.tags.iter().map(|tag| tag.tag_type()).collect()
     }
 
     /// Creates an empty JodinNode

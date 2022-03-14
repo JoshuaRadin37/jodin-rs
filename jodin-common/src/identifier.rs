@@ -584,9 +584,6 @@ impl Iterator for IdentifierIterator {
     }
 }
 
-
-
-
 /// A wrapper type that can attach an identifier to a type that doesn't implement [Namespaced].
 ///
 /// [Namespaced]: Namespaced

@@ -7,6 +7,7 @@ use jodin_common::assembly::location::AsmLocation;
 use jodin_common::assembly::value::{JRef, Value};
 use jodin_common::identifier::Identifier;
 
+use more_collection_macros::{map, set};
 use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
@@ -17,7 +18,6 @@ use std::ops::{Add, Deref};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
-use more_collection_macros::{map, set};
 
 pub struct VM<'l, M, A>
 where
@@ -140,7 +140,7 @@ where
             "@call" => {
                 if let Value::Str(method) = args.remove(0) {
                     self.native_method(&method, args)
-                } else{
+                } else {
                     panic!("Must have a string as the first argument if message is {CALL}")
                 }
             }
@@ -443,7 +443,9 @@ where
                             instruction_pointer - ((-diff) as usize)
                         }
                     }
-                    AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                    AsmLocation::Label(l) => *self
+                        .label_to_instruction
+                        .get(l)
                         .expect(format!("No instruction found for label (label={})", l).as_str()),
                 }
             }
@@ -464,8 +466,9 @@ where
                                 instruction_pointer - ((-diff) as usize)
                             }
                         }
-                        AsmLocation::Label(l) => *self.label_to_instruction.get(l)
-                            .expect(format!("No instruction found for label (label={})", l).as_str()),
+                        AsmLocation::Label(l) => *self.label_to_instruction.get(l).expect(
+                            format!("No instruction found for label (label={})", l).as_str(),
+                        ),
                     }
                 }
             }
@@ -586,7 +589,7 @@ where
                 let vector = Vec::from(vector);
                 self.memory.push(Value::Array(vector));
             }
-            boolean_asm @ (Asm::BooleanAnd | Asm::BooleanOr | Asm::BooleanXor ) => {
+            boolean_asm @ (Asm::BooleanAnd | Asm::BooleanOr | Asm::BooleanXor) => {
                 let left = self.memory.pop().expect("couldn't pop");
                 let right = self.memory.pop().expect("couldn't pop");
                 if let (Value::Byte(left), Value::Byte(right)) = (left, right) {
@@ -601,7 +604,7 @@ where
                     };
                     self.memory.push(output);
                 } else {
-                    return Err(anyhow!("Can only use two booleans for bi-boolean ops").into())
+                    return Err(anyhow!("Can only use two booleans for bi-boolean ops").into());
                 }
             }
             asm @ (Asm::Subtract | Asm::Add | Asm::Multiply | Asm::Gt) => {
@@ -689,10 +692,16 @@ where
             let mut label: Option<&String> = None;
             let mut is_static = false;
             match &asm {
-                Asm::Label(lbl) => { label = Some(lbl); },
-                Asm::PublicLabel(lbl) => { label = Some(lbl); },
-                Asm::Static => { is_static = true; },
-                _ => { },
+                Asm::Label(lbl) => {
+                    label = Some(lbl);
+                }
+                Asm::PublicLabel(lbl) => {
+                    label = Some(lbl);
+                }
+                Asm::Static => {
+                    is_static = true;
+                }
+                _ => {}
             };
 
             if let Some(asm_label) = label {
@@ -717,24 +726,24 @@ where
             }
 
             self.instructions.push(asm);
-
         }
         info!("Created new labels = {:?}", new_labels);
-
 
         for static_instruction_index in static_instructions {
             info!("Running static code at {static_instruction_index}");
             self.run_from_index(static_instruction_index);
         }
-
-
     }
 
     fn load_static<Assembly: GetAsm>(&mut self, asm: Assembly) {
         let start_index = self.instructions.len();
         self.load(asm);
         self.memory.global_scope();
-        if self.run_from_index(start_index).expect("VM Error encountered") != 0 {
+        if self
+            .run_from_index(start_index)
+            .expect("VM Error encountered")
+            != 0
+        {
             panic!("VM Failed")
         }
         self.memory.back_scope();
@@ -779,7 +788,6 @@ where
         };
         output
     }
-
 
     fn fault(&mut self, fault: Fault) {
         let target = self.fault_table.get_fault_jump(&fault);

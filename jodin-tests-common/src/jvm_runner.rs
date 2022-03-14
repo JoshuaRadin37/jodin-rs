@@ -79,7 +79,6 @@ impl<M: MemoryTrait, A: ArithmeticsTrait> JVMRunner<M, A> {
         let result = vm.run(main_label.as_str())?;
         drop(vm);
 
-
         let out = String::from_utf8(out)?;
         let err = String::from_utf8(err)?;
         Ok(JVMResult(result, out, err))
@@ -144,8 +143,8 @@ impl JVMResult {
 mod tests {
     use crate::jvm_runner::JVMRunner;
     use jasm_macros::{jasm, label, pop, return_};
-    use jodin_common::{init_logging, LevelFilter};
     use jodin_common::assembly::prelude::Asm;
+    use jodin_common::{init_logging, LevelFilter};
 
     #[test]
     fn create_jvm_runner() {
@@ -158,7 +157,11 @@ mod tests {
                 return;
         ]);
         let res = runner.execute().expect("Shouldn't fail");
-        assert!(res.is_success(), "basic run shouldn't fail (exit code = {})", res.exit_code());
+        assert!(
+            res.is_success(),
+            "basic run shouldn't fail (exit code = {})",
+            res.exit_code()
+        );
     }
 
     #[test]
@@ -176,8 +179,20 @@ mod tests {
                 return 0u32;
         ]);
         let res = runner.execute().expect("Shouldn't fail");
-        assert!(res.is_success(), "basic run shouldn't fail (exit code = {})", res.exit_code());
-        assert_eq!(res.out(), HELLO_WORLD, "Expected stdout output to be {HELLO_WORLD:?}");
-        assert_eq!(res.err(), HELLO_WORLD, "Expected stderr output to be {HELLO_WORLD:?}");
+        assert!(
+            res.is_success(),
+            "basic run shouldn't fail (exit code = {})",
+            res.exit_code()
+        );
+        assert_eq!(
+            res.out(),
+            HELLO_WORLD,
+            "Expected stdout output to be {HELLO_WORLD:?}"
+        );
+        assert_eq!(
+            res.err(),
+            HELLO_WORLD,
+            "Expected stderr output to be {HELLO_WORLD:?}"
+        );
     }
 }

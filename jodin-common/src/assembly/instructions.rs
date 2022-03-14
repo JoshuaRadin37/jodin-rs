@@ -100,7 +100,6 @@ pub enum Asm {
     Boolify,
 
     // boolean ops
-
     BooleanAnd,
     BooleanOr,
     BooleanNot,

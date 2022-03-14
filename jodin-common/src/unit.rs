@@ -164,7 +164,12 @@ impl CompilationObject {
 
     pub fn merge(self, other: Self) -> Result<Self, JodinError> {
         if &self.file_location != &other.file_location {
-            return Err(anyhow!("Compilation objects must have same location (left= {:?}, right= {:?})", self.file_location, other.file_location).into());
+            return Err(anyhow!(
+                "Compilation objects must have same location (left= {:?}, right= {:?})",
+                self.file_location,
+                other.file_location
+            )
+            .into());
         }
 
         let mut units = self.units;
@@ -178,13 +183,17 @@ impl CompilationObject {
 
     pub fn merge_from(&mut self, other: Self) -> Result<(), JodinError> {
         if &self.file_location != &other.file_location {
-            return Err(anyhow!("Compilation objects must have same location (left= {:?}, right= {:?})", self.file_location, other.file_location).into());
+            return Err(anyhow!(
+                "Compilation objects must have same location (left= {:?}, right= {:?})",
+                self.file_location,
+                other.file_location
+            )
+            .into());
         }
         self.units.extend(other.units);
         self.jasm.extend(other.jasm);
         Ok(())
     }
-
 }
 
 impl Add for CompilationObject {
@@ -195,10 +204,9 @@ impl Add for CompilationObject {
     }
 }
 
-
 impl AddAssign for CompilationObject {
     fn add_assign(&mut self, rhs: Self) {
-       self.merge_from(rhs).unwrap()
+        self.merge_from(rhs).unwrap()
     }
 }
 

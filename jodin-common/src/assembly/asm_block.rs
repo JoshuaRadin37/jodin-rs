@@ -2,14 +2,14 @@
 
 use crate::assembly::instructions::{Asm, Assembly};
 use crate::assembly::location::AsmLocation;
+use crate::assembly::value::Value;
 use crate::compilation::{Compilable, Context, PaddedWriter, Target};
 use crate::error::JodinResult;
 use crate::identifier::Identifier;
+use more_collection_macros::set;
 use std::collections::HashSet;
 use std::fmt::{Debug, Display, Formatter};
 use std::io::Write;
-use more_collection_macros::set;
-use crate::assembly::value::Value;
 
 /// Present at the beginning of a label Marks that the label is relative to the most recent namespace
 pub const RELATIVE_LABEL_MARKER: char = '@';
@@ -36,7 +36,7 @@ impl AssemblyBlock {
         let name = name.into().map(|s| s.clone());
         Self {
             name,
-            assembly: vec![]
+            assembly: vec![],
         }
     }
 
@@ -51,7 +51,11 @@ impl AssemblyBlock {
     /// Normalizes the block into standard assembly. Relatives `@<label>` and removes `#<labels>`.
     pub fn normalize(&self) -> Assembly {
         let mut to_normalize = self.clone();
-        let base_namespace = self.name.as_ref().map(Identifier::new).unwrap_or(Identifier::empty());
+        let base_namespace = self
+            .name
+            .as_ref()
+            .map(Identifier::new)
+            .unwrap_or(Identifier::empty());
         to_normalize.resolve_relative_labels(&base_namespace);
         let all_labels = to_normalize.find_all_labels();
         to_normalize.resolve_nonlocal_labels(&all_labels, &base_namespace);
@@ -60,10 +64,11 @@ impl AssemblyBlock {
 
     fn reformat_nonlocal(label: String, nonlocal_hash: u64) -> String {
         let len = label.len();
-        let label_hash: u64 = label.char_indices()
-            .fold(0, |acc, (index, ch)| {
-                acc.wrapping_add(u64::from(ch).wrapping_mul(31u64.wrapping_pow((len - (index + 1)) as u32)))
-            });
+        let label_hash: u64 = label.char_indices().fold(0, |acc, (index, ch)| {
+            acc.wrapping_add(
+                u64::from(ch).wrapping_mul(31u64.wrapping_pow((len - (index + 1)) as u32)),
+            )
+        });
         (nonlocal_hash ^ label_hash).to_string()
     }
 
@@ -82,7 +87,9 @@ impl AssemblyBlock {
                         *lbl = normalized;
                     }
                 }
-                AssemblyBlockComponent::SingleInstruction(Asm::CondGoto(AsmLocation::Label(lbl))) => {
+                AssemblyBlockComponent::SingleInstruction(Asm::CondGoto(AsmLocation::Label(
+                    lbl,
+                ))) => {
                     if lbl.starts_with(RELATIVE_LABEL_MARKER) {
                         let normalized = Self::normalize_label(current_namespace, lbl);
                         *lbl = normalized;
@@ -90,21 +97,24 @@ impl AssemblyBlock {
                 }
                 AssemblyBlockComponent::Block(b) => {
                     let ref next_namespace = match &b.name {
-                        None => { current_namespace.clone() }
-                        Some(name) => { current_namespace + &Identifier::from(name) }
+                        None => current_namespace.clone(),
+                        Some(name) => current_namespace + &Identifier::from(name),
                     };
                     b.resolve_relative_labels(next_namespace);
                 }
-                _ => { }
+                _ => {}
             }
         }
     }
 
-    fn find_nonlocal_label(label: &String, all_labels: &HashSet<String>, current_namespace: &Identifier) -> Option<String> {
+    fn find_nonlocal_label(
+        label: &String,
+        all_labels: &HashSet<String>,
+        current_namespace: &Identifier,
+    ) -> Option<String> {
         let ref label = label[1..].to_string();
         let mut namespace_ptr = Some(current_namespace.clone());
         while let Some(namespace) = namespace_ptr {
-
             let normalized = Self::normalize_label(&namespace, label);
             if all_labels.contains(&normalized) {
                 return Some(normalized);
@@ -119,38 +129,50 @@ impl AssemblyBlock {
         None
     }
 
-    fn resolve_nonlocal_labels(&mut self, all_labels: &HashSet<String>, current_namespace: &Identifier) {
+    fn resolve_nonlocal_labels(
+        &mut self,
+        all_labels: &HashSet<String>,
+        current_namespace: &Identifier,
+    ) {
         for asm_comp in &mut self.assembly {
             match asm_comp {
                 AssemblyBlockComponent::SingleInstruction(Asm::Label(lbl)) => {
                     if lbl.starts_with(NONLOCAL_LABEL_MARKER) {
-                        let normalized = Self::find_nonlocal_label(lbl, all_labels, current_namespace)
-                            .expect(format!("Couldn't find a label in parents named {lbl}").as_str());
+                        let normalized =
+                            Self::find_nonlocal_label(lbl, all_labels, current_namespace).expect(
+                                format!("Couldn't find a label in parents named {lbl}").as_str(),
+                            );
                         *lbl = normalized;
                     }
                 }
                 AssemblyBlockComponent::SingleInstruction(Asm::Goto(AsmLocation::Label(lbl))) => {
                     if lbl.starts_with(NONLOCAL_LABEL_MARKER) {
-                        let normalized = Self::find_nonlocal_label(lbl, all_labels, current_namespace)
-                            .expect(format!("Couldn't find a label in parents named {lbl}").as_str());
+                        let normalized =
+                            Self::find_nonlocal_label(lbl, all_labels, current_namespace).expect(
+                                format!("Couldn't find a label in parents named {lbl}").as_str(),
+                            );
                         *lbl = normalized;
                     }
                 }
-                AssemblyBlockComponent::SingleInstruction(Asm::CondGoto(AsmLocation::Label(lbl))) => {
+                AssemblyBlockComponent::SingleInstruction(Asm::CondGoto(AsmLocation::Label(
+                    lbl,
+                ))) => {
                     if lbl.starts_with(NONLOCAL_LABEL_MARKER) {
-                        let normalized = Self::find_nonlocal_label(lbl, all_labels, current_namespace)
-                            .expect(format!("Couldn't find a label in parents named {lbl}").as_str());
+                        let normalized =
+                            Self::find_nonlocal_label(lbl, all_labels, current_namespace).expect(
+                                format!("Couldn't find a label in parents named {lbl}").as_str(),
+                            );
                         *lbl = normalized;
                     }
                 }
                 AssemblyBlockComponent::Block(b) => {
                     let ref next_namespace = match &b.name {
-                        None => { current_namespace.clone() }
-                        Some(name) => { current_namespace + &Identifier::from(name) }
+                        None => current_namespace.clone(),
+                        Some(name) => current_namespace + &Identifier::from(name),
                     };
                     b.resolve_nonlocal_labels(all_labels, next_namespace);
                 }
-                _ => { }
+                _ => {}
             }
         }
     }
@@ -167,15 +189,13 @@ impl AssemblyBlock {
                 AssemblyBlockComponent::Block(b) => {
                     output.extend(b.find_all_labels());
                 }
-                _ => { }
+                _ => {}
             }
         }
         output
     }
 
-
     fn _normalize(self, current_namespace: &Identifier) -> Assembly {
-
         let mut output = Assembly::new();
         for comp in self.assembly {
             match comp {

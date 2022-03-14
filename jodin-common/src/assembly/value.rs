@@ -190,7 +190,7 @@ impl Value {
     }
 
     pub fn location(label: impl AsRef<str>) -> Self {
-        let label =label.as_ref().to_string();
+        let label = label.as_ref().to_string();
         Value::Function(AsmLocation::Label(label))
     }
 
@@ -272,13 +272,11 @@ impl From<u64> for Value {
     }
 }
 
-
 impl From<usize> for Value {
     fn from(b: usize) -> Self {
         Value::UInteger(b as u64)
     }
 }
-
 
 impl From<i8> for Value {
     fn from(b: i8) -> Self {
@@ -298,13 +296,11 @@ impl From<i32> for Value {
     }
 }
 
-
 impl From<i64> for Value {
     fn from(f: i64) -> Self {
         Value::Integer(f)
     }
 }
-
 
 impl From<isize> for Value {
     fn from(b: isize) -> Self {
@@ -312,15 +308,11 @@ impl From<isize> for Value {
     }
 }
 
-
-
 impl From<f64> for Value {
     fn from(f: f64) -> Self {
         Value::Float(f)
     }
 }
-
-
 
 impl From<&str> for Value {
     fn from(f: &str) -> Self {

@@ -29,4 +29,3 @@ impl From<io::Error> for VMError {
         Self::IoError(e)
     }
 }
-

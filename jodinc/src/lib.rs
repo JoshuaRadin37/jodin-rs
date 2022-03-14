@@ -61,14 +61,12 @@ use jodin_common::ast::JodinNode;
 use jodin_common::error::{JodinError, JodinResult};
 use jodin_common::types::type_environment::TypeEnvironment;
 
-
 pub mod cli;
 pub mod compilation;
 pub mod error_reporting;
 pub mod passes;
-pub mod test_runner;
 pub mod safe_api;
-
+pub mod test_runner;
 
 /// processes the jodin node tree
 pub fn process_jodin_node(node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {

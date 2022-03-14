@@ -1,10 +1,9 @@
 #[macro_use]
 extern crate jasm_macros;
 
-use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use jasm_macros::Assembly;
 use jodin_tests_common::jvm_runner::JVMRunner;
-
 
 fn create_fib_sequence_asm(n: u32) -> Assembly {
     let block = block![
@@ -48,15 +47,12 @@ pub fn fibonacci(c: &mut Criterion) {
             b.iter_batched(
                 || {
                     let asm = create_fib_sequence_asm(n);
-                    JVMRunner::default()
-                        .with_jasm(asm)
+                    JVMRunner::default().with_jasm(asm)
                 },
-                |runner| {
-                    runner.execute().unwrap()
-                },
-                BatchSize::SmallInput
+                |runner| runner.execute().unwrap(),
+                BatchSize::SmallInput,
             )
-        }
+        },
     );
 }
 

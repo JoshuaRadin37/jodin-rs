@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate jasm_macros;
 
-use log::{info, LevelFilter, trace};
 use jodin_common::assembly::asm_block::AssemblyBlock;
 use jodin_common::assembly::instructions::Assembly;
 use jodin_common::init_logging;
 use jodin_tests_common::jvm_runner::JVMRunner;
+use log::{info, trace, LevelFilter};
 
 fn create_fib_sequence_asm(n: u32) -> Assembly {
     let block = block![
@@ -43,19 +43,22 @@ fn create_fib_sequence_asm(n: u32) -> Assembly {
 fn rust_fib(n: u32) -> u32 {
     match n {
         0..=1 => n,
-        n => rust_fib(n - 1) + rust_fib(n - 2)
+        n => rust_fib(n - 1) + rust_fib(n - 2),
     }
 }
 
 fn fibonacci_test(n: u32) {
     let asm = create_fib_sequence_asm(n);
 
-    let runner = JVMRunner::default()
-        .with_jasm(asm);
+    let runner = JVMRunner::default().with_jasm(asm);
     let result = runner.execute().unwrap();
     let expected = rust_fib(n);
 
-    assert_eq!(result.exit_code(), expected, "Incorrectly calculated fibonacci({n})");
+    assert_eq!(
+        result.exit_code(),
+        expected,
+        "Incorrectly calculated fibonacci({n})"
+    );
 }
 
 #[test]
@@ -64,4 +67,3 @@ fn fibonacci() {
         fibonacci_test(n);
     }
 }
-

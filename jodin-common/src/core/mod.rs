@@ -2,13 +2,13 @@
 //! used in the project is stored.
 
 pub mod external;
+pub mod function_names;
 pub mod identifier_resolution;
 pub mod import;
 pub mod literal;
 pub mod operator;
 pub mod privacy;
 pub mod tags;
-pub mod function_names;
 
 /// This should be used as the name of the callable native object that can be used within jodin programs.
 ///

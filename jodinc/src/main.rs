@@ -5,6 +5,7 @@ use jodinc::cli::JodinRsApp;
 
 use jodinc::passes::frontend::FilesToJodinNodeTool;
 
+use jodinc::compilation::incremental::IncrementalCompiler;
 use jodinc::process_jodin_node;
 use log::{error, LevelFilter};
 use std::fs::File;
@@ -12,7 +13,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use jodinc::compilation::incremental::IncrementalCompiler;
 
 fn main() {
     let cli = JodinRsApp::new();
@@ -47,7 +47,6 @@ fn main() {
     } else {
         init_logging(LevelFilter::Info)
     }
-
 
     let inputs = matches.values_of("INPUT").unwrap();
     let mut full_paths = vec![];
@@ -98,5 +97,4 @@ fn main() {
             }
         }
     }
-
 }
