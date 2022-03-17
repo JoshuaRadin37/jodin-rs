@@ -2,11 +2,12 @@
 
 use crate::ast::node_type::JodinNodeType;
 use crate::core::tags::{ExtraProperties, ResolvedIdentityTag, Tag, TagUtilities};
-use crate::error::{JodinErrorType, JodinResult};
+use crate::error::{JodinError, JodinErrorType, JodinResult};
 use crate::utility::{Acceptor, Tree, Visitor};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::error::Error;
 
 use crate::core::literal::{ConstantCast, Literal};
 use crate::core::operator::TryConstEvaluation;
@@ -15,11 +16,12 @@ use crate::types::intermediate_type::TypeSpecifier;
 use crate::types::primitives::Primitive;
 use num_traits::AsPrimitive;
 use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 use std::ops::{Deref, Index};
 use std::rc::{Rc, Weak};
 
 #[derive(Default)]
-struct JodinNodeIndex {
+pub struct JodinNodeIndex {
     value: RefCell<usize>,
     parent: RefCell<Option<Weak<JodinNodeIndex>>>,
 }
@@ -94,6 +96,29 @@ impl JodinNode {
     /// Consume the JodinNode to get it's inner type.
     pub fn into_inner(self) -> JodinNodeType {
         *self.jodin_node_type
+    }
+
+    /// Deconstructs the jodin node into its component parts
+    pub fn deconstruct(self) -> (JodinNodeType, Vec<Box<dyn Tag>>, Rc<JodinNodeIndex>) {
+        let JodinNode {
+            jodin_node_type,
+            tags,
+            index,
+        } = self;
+        (*jodin_node_type, tags, index)
+    }
+
+    /// Reconstruct a jodin node from its inner parts
+    pub fn reconstruct(
+        inner: JodinNodeType,
+        tags: Vec<Box<dyn Tag>>,
+        index: Rc<JodinNodeIndex>,
+    ) -> Self {
+        Self {
+            jodin_node_type: Box::new(inner),
+            tags,
+            index,
+        }
     }
 
     /// The inner type of the node.
@@ -291,6 +316,10 @@ impl JodinNode {
         let directions = self.get_directions();
         NodeReference { directions, info }
     }
+
+    pub fn tryer(self) -> TryJodinNode {
+        TryJodinNode::new(self)
+    }
 }
 
 impl FromIterator<JodinNode> for JodinNode {
@@ -431,6 +460,51 @@ impl<'n> Acceptor<'n, NodeReference> for JodinNode {
 
     fn accept(&'n self, visitor: NodeReference) -> Self::Output {
         self.accept(&visitor)
+    }
+}
+
+pub struct TryJodinNode {
+    inner: JodinNodeType,
+    tags: Vec<Box<dyn Tag>>,
+    index: Rc<JodinNodeIndex>,
+}
+
+impl TryJodinNode {
+    pub fn new(node: JodinNode) -> Self {
+        let (i, t, index) = node.deconstruct();
+        Self {
+            inner: i,
+            tags: t,
+            index,
+        }
+    }
+
+    pub fn try_with<F, R, E>(self, func: F) -> Result<R, JodinError>
+    where
+        F: FnOnce(JodinNodeType, &TryHelper<R, E>) -> Result<R, (JodinNodeType, E)>,
+        E: 'static + Into<JodinError>,
+    {
+        let helper = TryHelper::<R, E>::new();
+        match (func)(self.inner, &helper) {
+            Ok(o) => Ok(o),
+            Err((node, error)) => Err(JodinErrorType::NodeError {
+                node: JodinNode::reconstruct(node, self.tags, self.index),
+                inner: Box::new(error.into()),
+            }
+            .into()),
+        }
+    }
+}
+
+pub struct TryHelper<R, E: Into<JodinError>>(PhantomData<(R, E)>);
+
+impl<R, E: Into<JodinError>> TryHelper<R, E> {
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+
+    pub fn err(&self, node: JodinNodeType, error: E) -> Result<R, (JodinNodeType, E)> {
+        Err((node, error))
     }
 }
 

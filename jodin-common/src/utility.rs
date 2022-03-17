@@ -53,6 +53,32 @@ pub trait IntoBox: Sized {
 
 impl<T: Sized> IntoBox for T {}
 
+/// Box parts of a result struct
+pub trait ResultBox<T, E> {
+    fn boxed_ok(self) -> Result<Box<T>, E>
+    where
+        T: Sized;
+    fn boxed_err(self) -> Result<T, Box<E>>
+    where
+        E: Sized;
+}
+
+impl<T, E> ResultBox<T, E> for Result<T, E> {
+    fn boxed_ok(self) -> Result<Box<T>, E>
+    where
+        T: Sized,
+    {
+        self.map(|ok| ok.boxed())
+    }
+
+    fn boxed_err(self) -> Result<T, Box<E>>
+    where
+        E: Sized,
+    {
+        self.map_err(|err| err.boxed())
+    }
+}
+
 /// A human readable interpretation of a value. This can be the same as display, but may
 /// be different. For example, a date object can have a display implementation
 /// showing the the exact date, while the human readable version would show the approximate

@@ -148,6 +148,12 @@ pub enum JodinErrorType {
     /// A UTF8 error
     #[error(transparent)]
     UTF8Error(#[from] FromUtf8Error),
+    /// A node error
+    #[error("Node Error (inner = {inner})")]
+    NodeError {
+        node: JodinNode,
+        inner: Box<JodinError>,
+    },
 }
 
 /// Contains both the error type and an approximate backtrace for where the error occurred.
