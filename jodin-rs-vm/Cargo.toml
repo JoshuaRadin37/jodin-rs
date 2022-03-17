@@ -4,12 +4,17 @@ version = "0.1.0"
 edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "jodin"
+
 [features]
 strict = []
 
 [dependencies]
 jodin-common = { path="../jodin-common"}
 jasm-macros = { path="../jasm-macros" }
+jodin-vm-plugins = { path="../jodin-vm-plugins" }
+jodin-vm-kernel = { path="../jodin-vm-kernel"}
 
 num = "0.4"
 num-derive = "0.3"
@@ -25,6 +30,7 @@ paris = "1.5.8"
 thiserror = "1.0.30"
 more_collection_macros = "0.2.1"
 anyhow = "1.0.55"
+
 
 [dev-dependencies]
 jodin-tests-common = { path="../jodin-tests-common" }

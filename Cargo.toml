@@ -10,6 +10,8 @@ members = [
     "jodin-common",
     "jasm-macros",
     "jodin-benchmarks",
-    "jodin-tests-common"
+    "jodin-tests-common",
+    "jodin-vm-plugins",
+    "jodin-vm-kernel"
 ]
 
