@@ -5,7 +5,6 @@ use std::any::Any;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::{CStr, OsStr};
-use std::os::windows::raw::HANDLE;
 use std::path::Path;
 use uuid::Uuid;
 
