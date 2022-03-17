@@ -24,6 +24,17 @@ pub trait Stack {
 
 pub trait VMHandle {
     fn native(&mut self, method: &str, values: &[Value], output: &mut Option<Value>);
+
+    fn execute(&mut self, asm: Assembly);
+
+    fn send_fault(&mut self, fault: Fault);
+
+    /// Receive a fault from the VM
+    fn recv_fault(&mut self, fault_recv: &mut Option<Fault>);
+    /// Tell the vm that the fault handler has been completed, and to return back to wherever 
+    /// it was previously
+    fn trampoline(&mut self);
+    
 }
 
 /// A plugin which allows you to add functionality to the jodin VM
