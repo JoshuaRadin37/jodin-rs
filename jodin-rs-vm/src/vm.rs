@@ -7,6 +7,9 @@ use jodin_common::assembly::location::AsmLocation;
 use jodin_common::assembly::value::{JRef, Value};
 use jodin_common::identifier::Identifier;
 
+use jodin_vm_plugins::plugins::{LoadablePlugin, PluginManager, Stack, VMHandle};
+use jodin_vm_plugins::Plugin;
+use more_collection_macros::{map, set};
 use std::collections::hash_map::{DefaultHasher, Entry};
 use std::collections::{HashMap, VecDeque};
 use std::ffi::OsStr;
@@ -16,8 +19,8 @@ use std::io::{stderr, stdout, Read, Write};
 use std::ops::{Add, Deref};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
-use more_collection_macros::{map, set};
 
 pub struct VM<'l, M, A>
 where
@@ -42,6 +45,8 @@ where
 
     fault_table: FaultJumpTable,
     kernel_mode: bool,
+
+    plugin_manager: Arc<RwLock<PluginManager>>,
 }
 
 impl<'l, M, A> Debug for VM<'l, M, A>
@@ -137,13 +142,6 @@ where
                 .join(", ")
         );
         match message {
-            "@call" => {
-                if let Value::Str(method) = args.remove(0) {
-                    self.native_method(&method, args)
-                } else{
-                    panic!("Must have a string as the first argument if message is {CALL}")
-                }
-            }
             "print" => {
                 let s = format!("{:#}", args.remove(0));
                 match &mut self.stdout {
@@ -204,6 +202,19 @@ where
                 self.memory.push(target);
                 self.memory.push(cloned);
             }
+            "dynamic_call" => {
+                if let Value::Str(function) = args.remove(0) {
+                    let plugin_manager = self.plugin_manager.read().unwrap();
+                    let mut stack = self.stack();
+                    let mut handle = DefaultVmHandle::new(self);
+                    let result = plugin_manager
+                        .call_function(&*function, &mut stack, &mut handle)
+                        .expect("failed!");
+                    self.memory.push(result);
+                } else {
+                    panic!("Expected a value of type String")
+                }
+            }
             "@load_scope" => {
                 let scope = args.remove(0);
                 let mut hasher = DefaultHasher::default();
@@ -233,8 +244,19 @@ where
             "@print_stack" => {
                 println!("memory: {:#?}", self.memory);
             }
+            "@call" => {
+                if let Value::Str(method) = args.remove(0) {
+                    self.native_method(&method, args)
+                } else {
+                    panic!("Must have a string as the first argument if message is {CALL}")
+                }
+            }
             _ => panic!("{:?} is not a native method", message),
         }
+    }
+
+    fn stack(&self) -> VMStack<M> {
+        unsafe { VMStack::new(&mut *(&self.memory as *const M as *mut M)) }
     }
 
     fn send_message(
@@ -347,20 +369,6 @@ where
                 .collect::<Vec<_>>()
                 .join(", ")
         );
-        let name = match &asm_location {
-            AsmLocation::ByteIndex(i) => {
-                let ref instruction = self.instructions[*i];
-                if let Asm::Label(name) = instruction {
-                    name.clone()
-                } else {
-                    panic!("Functions must either be called with a label or start with a label")
-                }
-            }
-            AsmLocation::InstructionDiff(_) => {
-                panic!("Illegal for calling functions")
-            }
-            AsmLocation::Label(l) => l.to_string(),
-        };
         args.reverse();
         for arg in args {
             self.memory.push(arg);
@@ -370,7 +378,17 @@ where
             AsmLocation::InstructionDiff(_) => {
                 panic!("Illegal for calling functions")
             }
-            AsmLocation::Label(l) => self.label_to_instruction[l],
+            AsmLocation::Label(l) => {
+                let read = self.plugin_manager.read().unwrap();
+                if read.loaded_label(l) {
+                    let ref mut stack = self.stack();
+                    let ref mut handle = DefaultVmHandle::new(self);
+                    let output = read.call_function(l.as_ref(), stack, handle).unwrap();
+                    self.memory.push(output);
+                    return None;
+                }
+                self.label_to_instruction[l]
+            }
         };
         debug!("Returning next PC to function at index 0x{:016X}", next_pc);
         self.counter_stack.push(0);
@@ -404,6 +422,23 @@ where
     }
 
     fn handle_native_fault(&mut self, _handle: &FaultHandle) {}
+
+    pub fn load_plugin<P: LoadablePlugin>(&mut self) {
+        self.with_plugin(P::new())
+    }
+
+    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) {
+        self.plugin_manager.write().unwrap().with_plugin(plugin);
+    }
+
+    pub fn load_dynamic_plugin<S: AsRef<OsStr>>(&mut self, path: S) -> Result<(), VMError> {
+        unsafe {
+            let path = path.as_ref();
+            self.plugin_manager.write().unwrap().load_plugin(path)?;
+            println!("Loaded {:?}", path);
+            Ok(())
+        }
+    }
 }
 
 impl<M, A> VirtualMachine for VM<'_, M, A>
@@ -443,7 +478,9 @@ where
                             instruction_pointer - ((-diff) as usize)
                         }
                     }
-                    AsmLocation::Label(l) => *self.label_to_instruction.get(l)
+                    AsmLocation::Label(l) => *self
+                        .label_to_instruction
+                        .get(l)
                         .expect(format!("No instruction found for label (label={})", l).as_str()),
                 }
             }
@@ -464,8 +501,9 @@ where
                                 instruction_pointer - ((-diff) as usize)
                             }
                         }
-                        AsmLocation::Label(l) => *self.label_to_instruction.get(l)
-                            .expect(format!("No instruction found for label (label={})", l).as_str()),
+                        AsmLocation::Label(l) => *self.label_to_instruction.get(l).expect(
+                            format!("No instruction found for label (label={})", l).as_str(),
+                        ),
                     }
                 }
             }
@@ -586,7 +624,7 @@ where
                 let vector = Vec::from(vector);
                 self.memory.push(Value::Array(vector));
             }
-            boolean_asm @ (Asm::BooleanAnd | Asm::BooleanOr | Asm::BooleanXor ) => {
+            boolean_asm @ (Asm::BooleanAnd | Asm::BooleanOr | Asm::BooleanXor) => {
                 let left = self.memory.pop().expect("couldn't pop");
                 let right = self.memory.pop().expect("couldn't pop");
                 if let (Value::Byte(left), Value::Byte(right)) = (left, right) {
@@ -601,7 +639,7 @@ where
                     };
                     self.memory.push(output);
                 } else {
-                    return Err(anyhow!("Can only use two booleans for bi-boolean ops").into())
+                    return Err(anyhow!("Can only use two booleans for bi-boolean ops").into());
                 }
             }
             asm @ (Asm::Subtract | Asm::Add | Asm::Multiply | Asm::Gt) => {
@@ -689,10 +727,16 @@ where
             let mut label: Option<&String> = None;
             let mut is_static = false;
             match &asm {
-                Asm::Label(lbl) => { label = Some(lbl); },
-                Asm::PublicLabel(lbl) => { label = Some(lbl); },
-                Asm::Static => { is_static = true; },
-                _ => { },
+                Asm::Label(lbl) => {
+                    label = Some(lbl);
+                }
+                Asm::PublicLabel(lbl) => {
+                    label = Some(lbl);
+                }
+                Asm::Static => {
+                    is_static = true;
+                }
+                _ => {}
             };
 
             if let Some(asm_label) = label {
@@ -717,24 +761,24 @@ where
             }
 
             self.instructions.push(asm);
-
         }
         info!("Created new labels = {:?}", new_labels);
-
 
         for static_instruction_index in static_instructions {
             info!("Running static code at {static_instruction_index}");
             self.run_from_index(static_instruction_index);
         }
-
-
     }
 
     fn load_static<Assembly: GetAsm>(&mut self, asm: Assembly) {
         let start_index = self.instructions.len();
         self.load(asm);
         self.memory.global_scope();
-        if self.run_from_index(start_index).expect("VM Error encountered") != 0 {
+        if self
+            .run_from_index(start_index)
+            .expect("VM Error encountered")
+            != 0
+        {
             panic!("VM Failed")
         }
         self.memory.back_scope();
@@ -779,7 +823,6 @@ where
         };
         output
     }
-
 
     fn fault(&mut self, fault: Fault) {
         let target = self.fault_table.get_fault_jump(&fault);
@@ -849,6 +892,7 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> VMBuilder<'l, A, M> {
             handler: None,
             fault_table: Default::default(),
             kernel_mode: false,
+            plugin_manager: Arc::new(RwLock::new(PluginManager::new())),
         };
         for obj_path in object_path {
             obj_path.try_load_into_vm(&mut vm)?;
@@ -910,5 +954,50 @@ impl<'l, A: ArithmeticsTrait, M: MemoryTrait> TryFrom<VMBuilder<'l, A, M>> for V
 
     fn try_from(value: VMBuilder<'l, A, M>) -> Result<Self, Self::Error> {
         value.build()
+    }
+}
+
+pub struct VMStack<'vm, M: MemoryTrait> {
+    memory: &'vm mut M,
+}
+
+impl<'vm, M: MemoryTrait> VMStack<'vm, M> {
+    pub fn new(memory: &'vm mut M) -> Self {
+        Self { memory }
+    }
+}
+
+impl<'vm, M: MemoryTrait> Stack for VMStack<'vm, M> {
+    fn empty(&self) -> bool {
+        self.memory.stack().is_empty()
+    }
+
+    fn push(&mut self, value: Value) {
+        self.memory.push(value);
+    }
+
+    fn pop(&mut self, output: &mut Option<Value>) {
+        *output = self.memory.pop();
+    }
+}
+
+pub struct DefaultVmHandle<'a, 'vm, A: ArithmeticsTrait, M: MemoryTrait> {
+    vm: &'a mut VM<'vm, M, A>,
+}
+
+impl<'a, 'vm, A: ArithmeticsTrait, M: MemoryTrait> VMHandle for DefaultVmHandle<'a, 'vm, A, M> {
+    fn native(&mut self, method: &str, values: &[Value], output: &mut Option<Value>) {
+        self.vm.native_method(method, Vec::from(values));
+        if !method.starts_with("@") {
+            *output = self.vm.memory.pop();
+        }
+    }
+}
+
+impl<'a, 'vm, A: ArithmeticsTrait, M: MemoryTrait> DefaultVmHandle<'a, 'vm, A, M> {
+    pub fn new(vm: &VM<'vm, M, A>) -> Self {
+        Self {
+            vm: unsafe { &mut *(vm as *const _ as *mut _) },
+        }
     }
 }

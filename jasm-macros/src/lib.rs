@@ -1,14 +1,11 @@
 //! Contains the macros and structures needed to make good jasm
 
-use std::sync::atomic::{AtomicU64, Ordering};
 pub use jodin_common::{
-    core::{
-        NATIVE_OBJECT,
-        function_names::*
-    },
-    assembly::{asm_block::*, instructions::*, value::Value, location::AsmLocation},
+    assembly::{asm_block::*, instructions::*, location::AsmLocation, value::Value},
     block,
+    core::{function_names::*, NATIVE_OBJECT},
 };
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub static BLOCK_NUM: AtomicU64 = AtomicU64::new(0);
 
@@ -64,10 +61,9 @@ macro_rules! native {
         $crate::native!(stringify!($id), $($param),*)
     };
     ($method:literal $(,$param:expr)* $(,)?) => {
-        $crate::call!(NATIVE, $crate::Value::from($method) $(, $param)*)
+        $crate::call!(NATIVE, $crate::Value::from($method) $(, $crate::Value::from($param))*)
     };
 }
-
 
 #[macro_export]
 macro_rules! pack {
@@ -130,7 +126,6 @@ macro_rules! label {
     ($id:expr) => {
         $crate::Asm::label($crate::rel_label($id.to_string()))
     };
-
 }
 
 #[macro_export]
@@ -442,7 +437,6 @@ macro_rules! scope {
     };
 }
 
-
 #[macro_export]
 macro_rules! asm_style_jodin_assembly {
 
@@ -490,9 +484,6 @@ macro_rules! asm_jodin {
         $crate::sm_style_jodin_assembly!($($tt)*)
     };
 }
-
-
-
 
 #[cfg(test)]
 mod tests {

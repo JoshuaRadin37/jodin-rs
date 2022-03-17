@@ -518,6 +518,8 @@ dependencies = [
  "jasm-macros",
  "jodin-common",
  "jodin-tests-common",
+ "jodin-vm-kernel",
+ "jodin-vm-plugins",
  "lazy_static",
  "log",
  "more_collection_macros",
@@ -549,6 +551,24 @@ dependencies = [
  "jodin-common",
  "jodin-rs-vm",
  "jodinc",
+]
+
+[[package]]
+name = "jodin-vm-kernel"
+version = "0.1.0"
+dependencies = [
+ "jodin-common",
+ "jodin-vm-plugins",
+]
+
+[[package]]
+name = "jodin-vm-plugins"
+version = "0.1.0"
+dependencies = [
+ "jodin-common",
+ "libloading",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]
@@ -632,6 +652,16 @@ name = "libc"
 version = "0.2.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
+
+[[package]]
+name = "libloading"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efbc0f03f9a775e9f6aed295c6a1ba2253c5757a9e03d55c6caa46a681abcddd"
+dependencies = [
+ "cfg-if",
+ "winapi",
+]
 
 [[package]]
 name = "lock_api"
@@ -1307,6 +1337,15 @@ name = "utf8-ranges"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4ae116fef2b7fea257ed6440d3cfcff7f190865f170cdad00bb6465bf18ecba"
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom",
+]
 
 [[package]]
 name = "vec_map"
