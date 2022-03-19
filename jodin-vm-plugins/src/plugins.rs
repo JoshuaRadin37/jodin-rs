@@ -1,5 +1,7 @@
 use crate::error::PluginError;
+use jodin_common::assembly::instructions::Assembly;
 use jodin_common::assembly::value::Value;
+use jodin_common::core::function_names::CALL;
 use libloading::{Library, Symbol};
 use std::any::Any;
 use std::collections::hash_map::Entry;
@@ -25,16 +27,28 @@ pub trait Stack {
 pub trait VMHandle {
     fn native(&mut self, method: &str, values: &[Value], output: &mut Option<Value>);
 
-    fn execute(&mut self, asm: Assembly);
+    fn call_function(&mut self, method: &str, values: &[Value], output: &mut Option<Value>) {
+        let mut full_vals = vec![Value::location(method), Value::from(CALL)];
+        full_vals.push(Value::from_iter(values.iter().cloned()));
+        full_vals.reverse();
+        self.native("invoke", &full_vals[..], output);
+    }
+}
 
-    fn send_fault(&mut self, fault: Fault);
+pub fn native<V: VMHandle + ?Sized>(
+    handle: &mut V,
+    method: &str,
+    values: &[Value],
+) -> Option<Value> {
+    let mut output = None;
+    handle.native(method, values, &mut output);
+    output
+}
 
-    /// Receive a fault from the VM
-    fn recv_fault(&mut self, fault_recv: &mut Option<Fault>);
-    /// Tell the vm that the fault handler has been completed, and to return back to wherever 
-    /// it was previously
-    fn trampoline(&mut self);
-    
+pub fn call<V: VMHandle + ?Sized>(handle: &mut V, method: &str, values: &[Value]) -> Value {
+    let mut output = None;
+    handle.call_function(method, values, &mut output);
+    output.unwrap()
 }
 
 /// A plugin which allows you to add functionality to the jodin VM

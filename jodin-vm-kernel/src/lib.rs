@@ -1,6 +1,6 @@
 use jodin_common::assembly::value::Value;
 use jodin_vm_plugins::declare_plugin;
-use jodin_vm_plugins::plugins::{LoadablePlugin, Stack, VMHandle};
+use jodin_vm_plugins::plugins::{call, LoadablePlugin, Stack, VMHandle};
 use jodin_vm_plugins::Plugin;
 use std::ffi::CStr;
 
@@ -9,6 +9,7 @@ impl KernelPlugin {
     pub fn start(&self, handle: &mut dyn VMHandle) -> Result<Value, String> {
         println!("Hello, World!");
         handle.native("@print_stack", &[], &mut None);
+        call(handle, "print", &[Value::from("hello")]);
         Ok(Value::UInteger(0))
     }
 }

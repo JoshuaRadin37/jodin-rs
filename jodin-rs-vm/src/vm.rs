@@ -344,7 +344,7 @@ where
             }
             Value::Function(f) => {
                 if message != CALL {
-                    panic!("Can only call function objects")
+                    panic!("Can only send {} to function objects", CALL)
                 }
                 return self.call(f, args);
             }
@@ -387,7 +387,11 @@ where
                     self.memory.push(output);
                     return None;
                 }
-                self.label_to_instruction[l]
+                *self
+                    .label_to_instruction
+                    .get(l)
+                    .ok_or_else(|| format!("No entry found for label {l}"))
+                    .unwrap()
             }
         };
         debug!("Returning next PC to function at index 0x{:016X}", next_pc);
