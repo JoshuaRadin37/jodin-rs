@@ -181,3 +181,59 @@ macro_rules! declare_plugin {
         }
     };
 }
+
+#[macro_export]
+macro_rules! dynamic_plugin {
+    ($id:ident, $location:literal) => {
+        pub struct $id {
+            inner: Box<dyn $crate::plugins::Plugin>,
+        }
+
+        impl $crate::plugins::Plugin for $id {
+            fn labels(&self, buffer: &mut [&'static str]) {
+                self.inner.labels(buffer);
+            }
+
+            fn labels_count(&self) -> i32 {
+                self.inner.labels_count()
+            }
+
+            fn call_label(
+                &self,
+                label: &str,
+                stack: &mut dyn $crate::plugins::Stack,
+                handle: &mut dyn $crate::plugins::VMHandle,
+                output: &mut Option<Result<$crate::Value, String>>,
+            ) {
+                self.inner.call_label(label, stack, handle, output);
+            }
+        }
+
+        impl $crate::plugins::LoadablePlugin for $id {
+            fn new() -> Self {
+                use std::path::Path;
+                use $crate::plugins::Plugin;
+                use $crate::{Library, Symbol};
+
+                type PluginCreate = unsafe fn() -> *mut dyn Plugin;
+
+                let location: &'static str = $location;
+                let path = Path::new(location);
+                if !path.exists() {
+                    panic!("{:?} does not exist!", path)
+                }
+                unsafe {
+                    let lib = Library::new(location)
+                        .expect(format!("No library could be loaded at {location}").as_ref());
+
+                    let constructor: Symbol<PluginCreate> = lib
+                        .get(b"_plugin_create")
+                        .expect("No symbol with name _plugin_create");
+                    let boxed_raw = (*constructor)();
+                    let plugin = Box::from_raw(boxed_raw);
+                    Self { inner: plugin }
+                }
+            }
+        }
+    };
+}
