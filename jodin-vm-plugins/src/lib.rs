@@ -9,3 +9,5 @@ use crate::plugins::VMHandle;
 pub use plugins::Plugin;
 
 pub use libloading::{Library, Symbol};
+
+pub mod core;

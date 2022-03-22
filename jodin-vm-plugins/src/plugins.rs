@@ -61,10 +61,13 @@ pub fn load_plugin<V: VMHandle + ?Sized, P: IntoPlugin>(handle: &mut V, plugin: 
 }
 
 /// A plugin which allows you to add functionality to the jodin VM
+#[allow(unused_variables)]
 pub trait Plugin: Any + Send + Sync {
-    fn labels(&self, buffer: &mut [&'static str]);
+    fn labels(&self, buffer: &mut [&'static str]) {}
 
-    fn labels_count(&self) -> i32;
+    fn labels_count(&self) -> i32 {
+        0
+    }
 
     fn call_label(
         &self,
@@ -72,7 +75,8 @@ pub trait Plugin: Any + Send + Sync {
         stack: &mut dyn Stack,
         handle: &mut dyn VMHandle,
         output: &mut Option<Result<Value, String>>,
-    );
+    ) {
+    }
 
     fn assembly(&self) -> Assembly {
         vec![]
@@ -149,6 +153,14 @@ impl PluginManager {
         }
     }
 
+    /// Can only load a plugin of a certain type at a time
+    pub fn plugin_loaded(&self, plugin: &Box<dyn Plugin>) -> bool {
+        self.plugins
+            .values()
+            .map(|item| (**item).type_id())
+            .any(|id| (**plugin).type_id().eq(&id))
+    }
+
     /// Loads a plugin for the virtual machine
     ///
     /// If successful, returns the count of created labels
@@ -159,7 +171,7 @@ impl PluginManager {
     pub unsafe fn load_plugin<P: AsRef<OsStr>>(
         &mut self,
         filename: P,
-    ) -> Result<&dyn Plugin, PluginError> {
+    ) -> Result<Option<&dyn Plugin>, PluginError> {
         type PluginCreate = unsafe fn() -> *mut dyn Plugin;
 
         let filename = filename.as_ref();
@@ -177,12 +189,16 @@ impl PluginManager {
         Ok(self.register_plugin(plugin))
     }
 
-    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) -> &dyn Plugin {
+    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) -> Option<&dyn Plugin> {
         let plugin: Box<dyn Plugin> = Box::new(plugin);
         self.register_plugin(plugin)
     }
 
-    fn register_plugin(&mut self, plugin: Box<dyn Plugin>) -> &dyn Plugin {
+    fn register_plugin(&mut self, plugin: Box<dyn Plugin>) -> Option<&dyn Plugin> {
+        if self.plugin_loaded(&plugin) {
+            return None;
+        }
+
         let uuid = loop {
             let uuid = Uuid::new_v4();
             if !self.plugins.contains_key(&uuid) {
@@ -196,7 +212,7 @@ impl PluginManager {
         for label in buffer {
             self.loaded_labels.insert(label.to_string(), uuid);
         }
-        &**plugin
+        Some(&**plugin)
     }
 
     pub fn loaded_label<S: AsRef<str>>(&self, label: S) -> bool {

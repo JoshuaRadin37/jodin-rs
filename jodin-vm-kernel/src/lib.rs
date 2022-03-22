@@ -9,6 +9,7 @@ impl KernelPlugin {
     pub fn start(&self, handle: &mut dyn VMHandle) -> Result<Value, String> {
         println!("Hello, World!");
         handle.native("@print_stack", &[], &mut None);
+        handle.call_function("print", &[Value::from("Hello, World!")], &mut None);
         Ok(Value::UInteger(0))
     }
 }
@@ -42,8 +43,7 @@ impl Plugin for KernelPlugin {
     }
 
     fn on_load(&self, handle: &mut dyn VMHandle) {
-        println!("Hello, World! (ON LOAD)");
-        handle.lo
+        println!("Hello, World! (ON LOAD)")
     }
 }
 

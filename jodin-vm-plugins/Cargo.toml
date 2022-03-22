@@ -11,3 +11,4 @@ jodin-common = { path="../jodin-common" }
 libloading = "0.7.3"
 uuid = { version = "0.8.2", features=["v4"] }
 thiserror = "1.0.30"
+log = "0.4.14"

@@ -428,12 +428,12 @@ where
     fn handle_native_fault(&mut self, _handle: &FaultHandle) {}
 
     #[inline]
-    pub fn plugin<P: LoadablePlugin>(&mut self) {
+    pub fn plugin<P: LoadablePlugin>(&mut self) -> bool {
         self.with_plugin(P::new)
     }
 
     #[inline]
-    pub fn with_plugin<F, P>(&mut self, plugin_init: F)
+    pub fn with_plugin<F, P>(&mut self, plugin_init: F) -> bool
     where
         F: FnOnce() -> P,
         P: Plugin,
@@ -441,22 +441,27 @@ where
         self.using_plugin(plugin_init())
     }
 
-    pub fn using_plugin<P: Plugin>(&mut self, plugin: P) {
-        let assembly = plugin.assembly();
-        self.instructions.extend(assembly);
+    pub fn using_plugin<P: Plugin>(&mut self, plugin: P) -> bool {
         let mut guard = self.plugin_manager.write().unwrap();
-        let plugin = guard.with_plugin(plugin);
-        self.init_plugin(plugin);
+        if let Some(plugin) = guard.with_plugin(plugin) {
+            let assembly = plugin.assembly();
+            self.instructions.extend(assembly);
+            self.init_plugin(plugin);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn load_dynamic_plugin<S: AsRef<OsStr>>(&mut self, path: S) -> Result<(), VMError> {
         unsafe {
             let path = path.as_ref();
             let mut guard = self.plugin_manager.write().unwrap();
-            let plugin = guard.load_plugin(path)?;
-            println!("Loaded {:?}", path);
-            self.instructions.extend(plugin.assembly());
-            self.init_plugin(plugin);
+            if let Some(plugin) = guard.load_plugin(path)? {
+                println!("Loaded {:?}", path);
+                self.instructions.extend(plugin.assembly());
+                self.init_plugin(plugin);
+            }
             Ok(())
         }
     }

@@ -5,19 +5,27 @@ use jodin_rs_vm::mvp::MinimumALU;
 use jodin_rs_vm::scoped_memory::VMMemory;
 use jodin_rs_vm::vm::VMBuilder;
 use jodin_vm_kernel::KernelPlugin;
+use jodin_vm_plugins::core::debug::LoggingPlugin;
 use jodin_vm_plugins::dynamic_plugin;
 use log::LevelFilter;
 use std::process::exit;
 
 fn main() {
-    // init_logging(LevelFilter::Info);
+    init_logging(LevelFilter::Info);
     let mut vm_builder = VMBuilder::new()
         .memory(VMMemory::default())
         .alu(MinimumALU)
         .build()
         .unwrap();
 
-    vm_builder.plugin::<KernelPlugin>();
+    assert!(
+        vm_builder.plugin::<KernelPlugin>(),
+        "couldn't load kernel plugin"
+    );
+    assert!(
+        vm_builder.plugin::<LoggingPlugin>(),
+        "couldn't load logging plugin"
+    );
 
     vm_builder.load(jasm![
         label!(pub start);
