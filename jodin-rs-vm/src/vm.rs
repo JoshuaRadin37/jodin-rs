@@ -427,21 +427,43 @@ where
 
     fn handle_native_fault(&mut self, _handle: &FaultHandle) {}
 
-    pub fn load_plugin<P: LoadablePlugin>(&mut self) {
-        self.with_plugin(P::new())
+    #[inline]
+    pub fn plugin<P: LoadablePlugin>(&mut self) {
+        self.with_plugin(P::new)
     }
 
-    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) {
-        self.plugin_manager.write().unwrap().with_plugin(plugin);
+    #[inline]
+    pub fn with_plugin<F, P>(&mut self, plugin_init: F)
+    where
+        F: FnOnce() -> P,
+        P: Plugin,
+    {
+        self.using_plugin(plugin_init())
+    }
+
+    pub fn using_plugin<P: Plugin>(&mut self, plugin: P) {
+        let assembly = plugin.assembly();
+        self.instructions.extend(assembly);
+        let mut guard = self.plugin_manager.write().unwrap();
+        let plugin = guard.with_plugin(plugin);
+        self.init_plugin(plugin);
     }
 
     pub fn load_dynamic_plugin<S: AsRef<OsStr>>(&mut self, path: S) -> Result<(), VMError> {
         unsafe {
             let path = path.as_ref();
-            self.plugin_manager.write().unwrap().load_plugin(path)?;
+            let mut guard = self.plugin_manager.write().unwrap();
+            let plugin = guard.load_plugin(path)?;
             println!("Loaded {:?}", path);
+            self.instructions.extend(plugin.assembly());
+            self.init_plugin(plugin);
             Ok(())
         }
+    }
+
+    fn init_plugin(&self, plugin: &dyn Plugin) {
+        let ref mut vm_handle = DefaultVmHandle::new(self);
+        plugin.on_load(vm_handle);
     }
 }
 
@@ -995,6 +1017,10 @@ impl<'a, 'vm, A: ArithmeticsTrait, M: MemoryTrait> VMHandle for DefaultVmHandle<
         if !method.starts_with("@") {
             *output = self.vm.memory.pop();
         }
+    }
+
+    fn load_plugin(&mut self, plugin: Box<dyn Plugin>) {
+        self.vm.using_plugin(plugin);
     }
 }
 

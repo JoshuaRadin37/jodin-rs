@@ -9,19 +9,15 @@ use jodin_vm_plugins::dynamic_plugin;
 use log::LevelFilter;
 use std::process::exit;
 
-dynamic_plugin!(KernelPluginDynamic, "target/debug/jodin_vm_kernel.dll");
-
 fn main() {
-    init_logging(LevelFilter::Info);
+    // init_logging(LevelFilter::Info);
     let mut vm_builder = VMBuilder::new()
         .memory(VMMemory::default())
         .alu(MinimumALU)
         .build()
         .unwrap();
 
-    const KERNEL: &str = "target/debug/jodin_vm_kernel.dll";
-
-    vm_builder.load_plugin::<KernelPluginDynamic>();
+    vm_builder.plugin::<KernelPlugin>();
 
     vm_builder.load(jasm![
         label!(pub start);

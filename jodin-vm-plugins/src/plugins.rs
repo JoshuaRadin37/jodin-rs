@@ -7,6 +7,7 @@ use std::any::Any;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::ffi::{CStr, OsStr};
+use std::ops::Deref;
 use std::path::Path;
 use uuid::Uuid;
 
@@ -33,6 +34,8 @@ pub trait VMHandle {
         full_vals.reverse();
         self.native("invoke", &full_vals[..], output);
     }
+
+    fn load_plugin(&mut self, plugin: Box<dyn Plugin>);
 }
 
 pub fn native<V: VMHandle + ?Sized>(
@@ -51,6 +54,12 @@ pub fn call<V: VMHandle + ?Sized>(handle: &mut V, method: &str, values: &[Value]
     output.unwrap()
 }
 
+pub fn load_plugin<V: VMHandle + ?Sized, P: IntoPlugin>(handle: &mut V, plugin: P) {
+    let plugin = plugin.into_plugin();
+    let plugin_boxed: Box<dyn Plugin> = Box::new(plugin);
+    handle.load_plugin(plugin_boxed);
+}
+
 /// A plugin which allows you to add functionality to the jodin VM
 pub trait Plugin: Any + Send + Sync {
     fn labels(&self, buffer: &mut [&'static str]);
@@ -64,10 +73,58 @@ pub trait Plugin: Any + Send + Sync {
         handle: &mut dyn VMHandle,
         output: &mut Option<Result<Value, String>>,
     );
+
+    fn assembly(&self) -> Assembly {
+        vec![]
+    }
+
+    fn on_load(&self, handle: &mut dyn VMHandle) {}
+}
+
+impl Plugin for Box<dyn Plugin> {
+    fn labels(&self, buffer: &mut [&'static str]) {
+        (**self).labels(buffer)
+    }
+
+    fn labels_count(&self) -> i32 {
+        (**self).labels_count()
+    }
+
+    fn call_label(
+        &self,
+        label: &str,
+        stack: &mut dyn Stack,
+        handle: &mut dyn VMHandle,
+        output: &mut Option<Result<Value, String>>,
+    ) {
+        (**self).call_label(label, stack, handle, output)
+    }
+
+    fn assembly(&self) -> Assembly {
+        (**self).assembly()
+    }
+
+    fn on_load(&self, handle: &mut dyn VMHandle) {
+        (**self).on_load(handle)
+    }
 }
 
 pub trait LoadablePlugin: Plugin {
     fn new() -> Self;
+}
+
+pub trait IntoPlugin {
+    type Target: Plugin;
+
+    fn into_plugin(self) -> Self::Target;
+}
+
+impl<P: Plugin> IntoPlugin for P {
+    type Target = P;
+
+    fn into_plugin(self) -> Self::Target {
+        self
+    }
 }
 
 impl<D: Default + Plugin> LoadablePlugin for D {
@@ -102,7 +159,7 @@ impl PluginManager {
     pub unsafe fn load_plugin<P: AsRef<OsStr>>(
         &mut self,
         filename: P,
-    ) -> Result<usize, PluginError> {
+    ) -> Result<&dyn Plugin, PluginError> {
         type PluginCreate = unsafe fn() -> *mut dyn Plugin;
 
         let filename = filename.as_ref();
@@ -120,12 +177,12 @@ impl PluginManager {
         Ok(self.register_plugin(plugin))
     }
 
-    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) -> usize {
+    pub fn with_plugin<P: Plugin>(&mut self, plugin: P) -> &dyn Plugin {
         let plugin: Box<dyn Plugin> = Box::new(plugin);
         self.register_plugin(plugin)
     }
 
-    fn register_plugin(&mut self, plugin: Box<dyn Plugin>) -> usize {
+    fn register_plugin(&mut self, plugin: Box<dyn Plugin>) -> &dyn Plugin {
         let uuid = loop {
             let uuid = Uuid::new_v4();
             if !self.plugins.contains_key(&uuid) {
@@ -134,14 +191,12 @@ impl PluginManager {
         };
         self.plugins.insert(uuid, plugin);
         let plugin = self.plugins.get(&uuid).unwrap();
-        let mut count = plugin.labels_count() as usize;
-        let mut buffer = vec![""; count];
+        let mut buffer = vec![""; plugin.labels_count() as usize];
         plugin.labels(&mut buffer);
         for label in buffer {
             self.loaded_labels.insert(label.to_string(), uuid);
-            count += 1;
         }
-        count
+        &**plugin
     }
 
     pub fn loaded_label<S: AsRef<str>>(&self, label: S) -> bool {

@@ -9,7 +9,6 @@ impl KernelPlugin {
     pub fn start(&self, handle: &mut dyn VMHandle) -> Result<Value, String> {
         println!("Hello, World!");
         handle.native("@print_stack", &[], &mut None);
-        call(handle, "print", &[Value::from("hello")]);
         Ok(Value::UInteger(0))
     }
 }
@@ -40,6 +39,11 @@ impl Plugin for KernelPlugin {
             "__start" => *output = Some(self.start(handle)),
             _ => *output = Some(Err("Invalid Label, expecting __start".to_string())),
         }
+    }
+
+    fn on_load(&self, handle: &mut dyn VMHandle) {
+        println!("Hello, World! (ON LOAD)");
+        handle.lo
     }
 }
 
