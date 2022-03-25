@@ -18,6 +18,8 @@ pub use jodin_vm_compiler::JodinVM;
 #[cfg(feature = "incremental")]
 pub mod incremental;
 
+pub mod object_path;
+
 /*
 /// Compile a tree into C99 code.
 pub fn compile_c99<W: std::fmt::Write>(

@@ -2,7 +2,7 @@
 name = "jodinc"
 edition = "2021"
 version = "0.1.0"
-authors = ["joshradin"]
+authors = ["joshradin <jradin16@gmail.com>"]
 description = "The compiler for the in-development language jodin."
 readme = false
 repository = "https://github.com/joshradin/jodin-rs"
@@ -27,7 +27,7 @@ incremental = []
 regex = "1.5.4"
 lazy_static = "1.4.0"
 glob = "0.3.0"
-clap = "2.33.3"
+clap = { version = "3.1.6", features = ["derive"] }
 backtrace = "0.3.60"
 itertools = "0.10.1"
 num-traits = "0.2.14"

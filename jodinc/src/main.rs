@@ -5,51 +5,39 @@ use jodinc::cli::JodinRsApp;
 
 use jodinc::passes::frontend::FilesToJodinNodeTool;
 
+use jodinc::compilation::incremental::IncrementalCompiler;
 use jodinc::process_jodin_node;
-use log::{error, LevelFilter};
+use log::{error, info, LevelFilter};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use jodinc::compilation::incremental::IncrementalCompiler;
+
+use clap::Parser;
+use jodinc::compilation::object_path::ObjectPath;
 
 fn main() {
-    let cli = JodinRsApp::new();
-    let matches = cli.into_matches();
+    let args: JodinRsApp = JodinRsApp::parse();
     let mut settings = CompilationSettings::default();
 
-    if let Some(target) = matches.value_of("target") {
+    if let Some(target) = &args.target_directory {
         let path = PathBuf::from(target);
         settings.target_directory = path;
     }
-    if matches.is_present("pt") {
-        settings.output_parse_tree = true;
-    }
-    if matches.is_present("ast") {
-        settings.output_ast = true;
-    }
-    if matches.is_present("tast") {
-        settings.output_tast = true;
-    }
-    if matches.is_present("debug") {
-        let level = match u8::from_str(matches.value_of("debug").unwrap()) {
-            Ok(0) => LevelFilter::Off,
-            Ok(1) => LevelFilter::Error,
-            Ok(2) => LevelFilter::Warn,
-            Ok(3) => LevelFilter::Info,
-            Ok(4) => LevelFilter::Debug,
-            Ok(5) => LevelFilter::Trace,
-            Ok(o) => panic!("No debug level {}", o),
-            Err(_) => panic!("invalid value for debug"),
-        };
-        init_logging(level)
-    } else {
-        init_logging(LevelFilter::Info)
-    }
 
+    let level = match &args.debug_level {
+        0 => LevelFilter::Off,
+        1 => LevelFilter::Error,
+        2 => LevelFilter::Warn,
+        3 => LevelFilter::Info,
+        4 => LevelFilter::Debug,
+        5 => LevelFilter::Trace,
+        o => panic!("No debug level {}", o),
+    };
+    init_logging(level);
 
-    let inputs = matches.values_of("INPUT").unwrap();
+    let inputs = &args.inputs;
     let mut full_paths = vec![];
 
     for input in inputs {
@@ -73,6 +61,14 @@ fn main() {
             }
         }
     }
+
+    let mut object_path = args.objectpath;
+    info!("Using object path from cli: {:?}", object_path);
+    object_path += ObjectPath::from_files(&full_paths);
+
+    info!("Using object path: {:?}", object_path);
+
+    exit(-1);
 
     let mut incremental = IncrementalCompiler::new(settings.target_directory.clone(), settings);
 
@@ -98,5 +94,4 @@ fn main() {
             }
         }
     }
-
 }
