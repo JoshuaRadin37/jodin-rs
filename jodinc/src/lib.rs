@@ -56,6 +56,7 @@ extern crate log;
 #[macro_use]
 extern crate static_assertions;
 
+use crate::error::CompilerError;
 use crate::passes::analysis::analyze;
 use crate::passes::optimization::optimize;
 use jodin_common::ast::JodinNode;
@@ -64,12 +65,17 @@ use jodin_common::types::type_environment::TypeEnvironment;
 
 pub mod cli;
 pub mod compilation;
+pub mod error;
 pub mod error_reporting;
 pub mod passes;
 pub mod test_runner;
 
+pub type Result<T> = std::result::Result<T, CompilerError>;
+
 /// processes the jodin node tree
-pub fn process_jodin_node(node: JodinNode) -> Result<(JodinNode, TypeEnvironment), JodinError> {
+pub fn process_jodin_node(
+    node: JodinNode,
+) -> std::result::Result<(JodinNode, TypeEnvironment), JodinError> {
     let (analyzed, env) = analyze(node)?;
     let optimized = optimize(analyzed)?;
     Ok((optimized, env))

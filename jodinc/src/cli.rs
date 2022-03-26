@@ -22,9 +22,8 @@ pub struct JodinRsApp {
         short = 'o',
         long = "objectpath",
         parse(from_os_str = parse_target_directory),
-        default_value_t = ObjectPath::project_dir()
     )]
-    pub objectpath: ObjectPath,
+    pub objectpath: Vec<crate::Result<ObjectPath>>,
     /// Input files to compile. Can use globbing patterns, like `**/*.jdn`
     pub inputs: Vec<String>,
 }
@@ -45,6 +44,6 @@ fn debug_level_validator(s: &str) -> Result<(), String> {
         })
 }
 
-fn parse_target_directory(input: &OsStr) -> ObjectPath {
-    ObjectPath::from_iter(std::env::split_paths(input))
+fn parse_target_directory(input: &OsStr) -> crate::Result<ObjectPath> {
+    ObjectPath::try_from_iter(std::env::split_paths(input))
 }

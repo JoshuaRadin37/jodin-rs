@@ -17,7 +17,7 @@ use std::str::FromStr;
 use clap::Parser;
 use jodinc::compilation::object_path::ObjectPath;
 
-fn main() {
+fn main() -> jodinc::Result<()> {
     let args: JodinRsApp = JodinRsApp::parse();
     let mut settings = CompilationSettings::default();
 
@@ -62,11 +62,14 @@ fn main() {
         }
     }
 
-    let mut object_path = args.objectpath;
+    let mut object_path: ObjectPath = ObjectPath::empty();
+    let objects = args.objectpath.into_iter().collect::<Result<Vec<_>, _>>()?;
+    object_path += ObjectPath::from_iter(objects);
+
     info!("Using object path from cli: {:?}", object_path);
     object_path += ObjectPath::from_files(&full_paths);
 
-    info!("Using object path: {:?}", object_path);
+    info!("Using object path: {0} ({0:?})", object_path);
 
     exit(-1);
 
@@ -84,7 +87,7 @@ fn main() {
     }
 
     match errors.as_slice() {
-        &[] => return,
+        &[] => return Ok(()),
         errors => {
             for error in errors {
                 error!("{error}");
@@ -94,4 +97,5 @@ fn main() {
             }
         }
     }
+    Ok(())
 }
