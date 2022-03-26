@@ -18,13 +18,17 @@ pub struct JodinRsApp {
     /// The target directory of the compiler
     #[clap(short, long = "--target")]
     pub target_directory: Option<PathBuf>,
-    /// The objectpath for the compiler to use. The compiler will search for declarations here.
+    /// The objectpath for the compiler to use. The compiler will search for declarations here. Nothing
+    /// will be compiled from these paths
     #[clap(
         short = 'o',
         long = "objectpath",
         parse(from_os_str = parse_target_directory),
     )]
     pub objectpath: Vec<crate::Result<ObjectPath>>,
+    /// The compile path is the base directory to search for code files
+    #[clap(short = 'c', long = "codepath", parse(from_os_str))]
+    pub compilepath: Option<PathBuf>,
     /// Set project properties with `key[=value]`
     #[clap(short = 'P', parse(from_str = custom_key_value_pair), use_value_delimiter(false))]
     properties: Vec<(String, Option<String>)>,

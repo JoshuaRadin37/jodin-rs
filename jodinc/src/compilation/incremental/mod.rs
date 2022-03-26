@@ -37,12 +37,19 @@ use std::io::BufReader;
 
 use std::path::{Path, PathBuf};
 
+mod compilation_graph;
+
 pub struct IncrementalCompiler {
     object_path: Vec<PathBuf>,
     output_directory: PathBuf,
     compilation_settings: CompilationSettings,
     translation_units: Vec<TranslationUnit>,
     paths_added: HashSet<PathBuf>,
+}
+
+pub trait Incremental {
+    fn translation_units(&self) -> Vec<TranslationUnit>;
+    fn representative_path(&self) -> PathBuf;
 }
 
 impl IncrementalCompiler {
@@ -92,71 +99,5 @@ impl IncrementalCompiler {
         self.translation_units
             .extend(incremental.translation_units());
         self.paths_added.insert(path);
-    }
-}
-
-#[derive(Debug)]
-pub struct IncrementalDirectory<'path> {
-    dir_path: &'path Path,
-    cache: RefCell<Vec<CompilationObject>>,
-}
-
-impl<'path> Incremental for IncrementalDirectory<'path> {
-    fn translation_units(&self) -> Vec<TranslationUnit> {
-        if self.cache.borrow().is_empty() {
-            let modules = self
-                .to_modules()
-                .expect("Could not turn the directory into a compilable");
-            let mut cache = self.cache.borrow_mut();
-            cache.extend(modules);
-        }
-        self.cache
-            .borrow()
-            .iter()
-            .flat_map(|modules| modules.units.clone())
-            .collect()
-    }
-
-    fn representative_path(&self) -> PathBuf {
-        self.dir_path.to_path_buf()
-    }
-}
-
-impl<'path> IncrementalDirectory<'path> {
-    /// Create a new incremental directory from a path
-    pub fn new(path: &'path Path) -> Option<Self> {
-        match path.is_dir() {
-            true => Some(IncrementalDirectory {
-                dir_path: path,
-                cache: RefCell::new(vec![]),
-            }),
-            false => None,
-        }
-    }
-
-    /// Converts this directory into a vector of modules
-    pub fn to_modules(&self) -> Result<Vec<CompilationObject>, JodinError> {
-        let mut output = vec![];
-        let mut dir_stack = VecDeque::new();
-        dir_stack.push_front(self.dir_path.to_path_buf());
-
-        while let Some(dir) = dir_stack.pop_front() {
-            let read = std::fs::read_dir(dir)?;
-            for entry in read {
-                match entry {
-                    Ok(dir_child) => match dir_child.file_type()? {
-                        fs if fs.is_dir() => dir_stack.push_back(dir_child.path()),
-                        fs if fs.is_file() => {
-                            let obj = CompilationObject::try_from(dir_child.path())?;
-                            output.push(obj);
-                        }
-                        _ => unreachable!(),
-                    },
-                    Err(e) => return Err(e.into()),
-                }
-            }
-        }
-
-        Ok(output)
     }
 }
