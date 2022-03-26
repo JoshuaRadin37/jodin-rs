@@ -1,4 +1,5 @@
 use jodin_common::error::JodinError;
+use jodin_common::utility::IntoBox;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::io;
@@ -16,7 +17,7 @@ pub enum CompilerError {
     JodinError(#[from] JodinError),
     #[error(transparent)]
     IOError(#[from] io::Error),
-    #[error(tranparent)]
+    #[error(transparent)]
     AnyError(Box<dyn Error>),
 }
 
@@ -26,9 +27,12 @@ pub struct MultiError {
 }
 
 impl MultiError {
-    fn new<E: Error>(errors: Vec<E>) -> Self {
+    fn new<E: Error + 'static>(errors: Vec<E>) -> Self {
         Self {
-            errors: errors.into_iter().map(|e| Box::new(e)).collect(),
+            errors: errors
+                .into_iter()
+                .map::<Box<dyn Error>, _>(|e| Box::new(e))
+                .collect(),
         }
     }
 }
@@ -43,7 +47,7 @@ impl Add for MultiError {
     }
 }
 
-impl<E: Error> FromIterator<E> for MultiError {
+impl<E: Error + 'static> FromIterator<E> for MultiError {
     fn from_iter<T: IntoIterator<Item = E>>(iter: T) -> Self {
         Self::new(iter.into_iter().collect())
     }
@@ -59,9 +63,11 @@ impl Display for MultiError {
     }
 }
 
-impl<E: Error> From<E> for MultiError {
+impl<E: Error + 'static> From<E> for MultiError {
     fn from(e: E) -> Self {
-        Self { errors: vec![e] }
+        Self {
+            errors: vec![e.boxed()],
+        }
     }
 }
 
@@ -72,8 +78,5 @@ mod multi_error_tests {
     use jodin_common::utility::IntoBox;
 
     #[test]
-    fn can_create_multi() {
-        let e = anyhow!("test error").boxed();
-        let _: MultiError = e.into();
-    }
+    fn can_create_multi() {}
 }

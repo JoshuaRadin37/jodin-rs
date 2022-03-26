@@ -19,6 +19,9 @@ use jodinc::compilation::object_path::ObjectPath;
 
 fn main() -> jodinc::Result<()> {
     let args: JodinRsApp = JodinRsApp::parse();
+
+    println!("{:#?}", args.valued_properties());
+
     let mut settings = CompilationSettings::default();
 
     if let Some(target) = &args.target_directory {
