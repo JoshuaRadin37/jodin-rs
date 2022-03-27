@@ -9,6 +9,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum CompilerError {
+    #[error("This file has a cyclical dependency on itself (file = {0:?})")]
+    CyclicalDependencyError(PathBuf),
     #[error("The given path is invalid as an object path (path = {0:?})")]
     InvalidObjectPath(PathBuf),
     #[error("{0:?} is missing (error = {1})")]

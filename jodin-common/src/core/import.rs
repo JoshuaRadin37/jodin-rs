@@ -50,37 +50,25 @@ impl Import {
         }
     }
 
-    /// Create an import value by evaluating part of a parse tree.
-    #[cfg(feature = "pest_parser")]
-    pub fn from_pair(pair: Pair<JodinRule>) -> Import {
-        if JodinRule::using_path != pair.as_rule() {
-            panic!(
-                "Non using path given to function, given: {:?}",
-                pair.as_rule()
-            )
+    /// Gets the modules that are imported by this import.
+    ///
+    /// # Important
+    /// This _isn't_ the identifiers that are being imported, but the modules that **OWN** the identifiers
+    pub fn imported_modules(&self) -> Vec<Identifier> {
+        match &self.import_type {
+            ImportType::Direct | ImportType::Aliased { .. } => {
+                self.id.parent().into_iter().cloned().collect()
+            }
+            ImportType::Wildcard => {
+                vec![self.id.clone()]
+            }
+            ImportType::Children { children } => children
+                .iter()
+                .map(|import| import.imported_modules())
+                .map(|modules| modules.into_iter().map(|id| &self.id + &id))
+                .flatten()
+                .collect(),
         }
-
-        let mut inner = pair.into_inner().collect::<Vec<_>>();
-        let base_id = parse_identifier(inner.drain(..=0).next().unwrap()).unwrap();
-        let inner_rules = inner.iter().map(|m| m.as_rule()).collect::<Vec<_>>();
-
-        let import_type = match inner_rules[..] {
-            [] => ImportType::Direct,
-            [JodinRule::t_star] => ImportType::Wildcard,
-            [JodinRule::t_as, JodinRule::single_identifier] => {
-                let id = parse_identifier(inner.pop().unwrap()).unwrap();
-                ImportType::Aliased { alias: id }
-            }
-            _ => {
-                let children = inner
-                    .into_iter()
-                    .map(|using_path| Import::from_pair(using_path))
-                    .collect();
-                ImportType::Children { children }
-            }
-        };
-
-        Import::new(base_id, import_type)
     }
 }
 /// The type of import
@@ -104,43 +92,23 @@ pub enum ImportType {
 
 #[cfg(test)]
 mod tests {
-
-    #[cfg(feature = "pest_parser")]
-    use crate::parsing::complete_parse;
+    use crate::core::import::{Import, ImportType};
+    use crate::identifier::Identifier;
 
     #[test]
-    #[cfg(feature = "pest_parser")]
-    fn parse_using_path() {
-        let string = "std::{vec::*, map, a::b as c}";
-        match complete_parse(JodinRule::using_path, string).map_err(|e| e.into_err_and_bt().0) {
-            Err(JodinErrorType::ParserError(e, ..)) => {
-                println!("{}", e);
-                panic!()
-            }
-            Err(e) => {
-                panic!("{:?}", e)
-            }
-            Ok(mut pairs) => {
-                println!("{:#?}", pairs);
-                let import = Import::from_pair(pairs.nth(0).unwrap());
-                println!("{:#?}", import);
-                let expected = Import::new(
-                    Identifier::from("std"),
-                    ImportType::Children {
-                        children: vec![
-                            Import::new(Identifier::from("vec"), ImportType::Wildcard),
-                            Import::new(Identifier::from("map"), ImportType::Direct),
-                            Import::new(
-                                Identifier::from_array(["a", "b"]),
-                                ImportType::Aliased {
-                                    alias: Identifier::from("c"),
-                                },
-                            ),
-                        ],
-                    },
-                );
-                assert_eq!(import, expected);
-            }
-        }
+    fn get_imports() {
+        let import = Import::new(
+            id!(nm1),
+            ImportType::Children {
+                children: vec![
+                    Import::new(id!(id1), ImportType::Direct),
+                    Import::new(id!(nm2), ImportType::Wildcard),
+                    Import::new(id!(nm3::id2), ImportType::Direct),
+                ],
+            },
+        );
+
+        let modules = import.imported_modules();
+        assert_eq!(modules, vec![id!(nm1::nm2), id!(nm1::nm3)]);
     }
 }

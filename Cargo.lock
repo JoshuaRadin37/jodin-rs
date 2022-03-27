@@ -618,6 +618,7 @@ dependencies = [
  "lazy_static",
  "log",
  "logos",
+ "more_collection_macros",
  "num-traits",
  "petgraph 0.6.0",
  "rand",
