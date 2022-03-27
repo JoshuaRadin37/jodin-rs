@@ -1,4 +1,5 @@
-in std;
+in examples;
+
 
 fn main(argc: int) -> int {
 

@@ -427,6 +427,18 @@ impl From<Identifier> for String {
     }
 }
 
+impl From<Identifier> for PathBuf {
+    fn from(id: Identifier) -> Self {
+        PathBuf::from_iter(id.iter())
+    }
+}
+
+impl From<&Identifier> for PathBuf {
+    fn from(id: &Identifier) -> Self {
+        PathBuf::from_iter(id.iter())
+    }
+}
+
 /// Represents that this type has an associated identifier, and thus can be namespaced
 pub trait Namespaced {
     /// Gets the identifier that this value has.
@@ -565,12 +577,6 @@ impl Div for &Identifier {
     }
 }
 
-impl From<Identifier> for PathBuf {
-    fn from(id: Identifier) -> Self {
-        PathBuf::from_iter(id.iter())
-    }
-}
-
 /// Iterates through the parts of an identifier
 pub struct IdentifierIterator {
     id: VecDeque<String>,
@@ -583,9 +589,6 @@ impl Iterator for IdentifierIterator {
         self.id.pop_back()
     }
 }
-
-
-
 
 /// A wrapper type that can attach an identifier to a type that doesn't implement [Namespaced].
 ///

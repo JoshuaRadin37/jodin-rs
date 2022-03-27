@@ -137,7 +137,6 @@ pub fn join_translation_units<S: AsRef<str>, I: IntoIterator<Item = S>>(iterator
 #[derive(Debug)]
 pub struct CompilationObject {
     magic_number: u64,
-    pub file_location: PathBuf,
     /// The module that the translation units are part of
     pub module: Identifier,
     /// The public/protected translation units of the object
@@ -147,15 +146,9 @@ pub struct CompilationObject {
 }
 
 impl CompilationObject {
-    pub fn new(
-        file_location: PathBuf,
-        module: Identifier,
-        units: Vec<TranslationUnit>,
-        jasm: Assembly,
-    ) -> Self {
+    pub fn new(module: Identifier, units: Vec<TranslationUnit>, jasm: Assembly) -> Self {
         CompilationObject {
             magic_number: Version.to_magic_number(),
-            file_location,
             module,
             units,
             jasm,
@@ -163,33 +156,16 @@ impl CompilationObject {
     }
 
     pub fn merge(self, other: Self) -> Result<Self, JodinError> {
-        if &self.file_location != &other.file_location {
-            return Err(anyhow!(
-                "Compilation objects must have same location (left= {:?}, right= {:?})",
-                self.file_location,
-                other.file_location
-            )
-            .into());
-        }
-
         let mut units = self.units;
         units.extend(other.units);
 
         let mut jasm = self.jasm;
         jasm.extend(other.jasm);
 
-        Ok(Self::new(self.file_location, self.module, units, jasm))
+        Ok(Self::new(self.module, units, jasm))
     }
 
     pub fn merge_from(&mut self, other: Self) -> Result<(), JodinError> {
-        if &self.file_location != &other.file_location {
-            return Err(anyhow!(
-                "Compilation objects must have same location (left= {:?}, right= {:?})",
-                self.file_location,
-                other.file_location
-            )
-            .into());
-        }
         self.units.extend(other.units);
         self.jasm.extend(other.jasm);
         Ok(())
@@ -212,22 +188,9 @@ impl AddAssign for CompilationObject {
 
 impl Display for CompilationObject {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let path: PathBuf = match std::env::current_dir() {
-            Ok(current) => {
-                let file_location = pathdiff::diff_paths(current, &self.file_location).unwrap();
-
-                if file_location.ancestors().count() < self.file_location.ancestors().count() {
-                    file_location
-                } else {
-                    self.file_location.clone()
-                }
-            }
-            Err(_) => self.file_location.clone(),
-        };
         f.debug_struct("CompilationObject")
             .field("units", &self.units.len())
             .field("instructions", &self.jasm.len())
-            .field("location", &path)
             .finish()
     }
 }
@@ -238,7 +201,6 @@ impl<T: Target> Compilable<T> for CompilationObject {
         trace!("Wrote magic num {:?} to file", magic_num_as_bytes);
         w.write_all(&magic_num_as_bytes)?;
         writeln!(w)?;
-        writeln!(w, "{:?}", &self.file_location)?;
         writeln!(w, "{}", &self.module)?;
         write!(w, "{{")?;
         for unit in &self.units {
@@ -314,7 +276,7 @@ impl TryFrom<&[u8]> for CompilationObject {
         let bytecode_raw = &value[translation_units_end + 1..];
         let bytecode: Bytecode = Bytecode::from(bytecode_raw);
         let assembly: Assembly = bytecode.decode();
-        let output = CompilationObject::new(file_location, module, translation_units, assembly);
+        let output = CompilationObject::new(module, translation_units, assembly);
         info!("Generated {}", output);
         Ok(output)
     }

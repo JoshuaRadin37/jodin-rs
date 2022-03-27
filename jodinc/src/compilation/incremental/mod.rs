@@ -22,30 +22,39 @@
 //!
 //! [#74]: https://github.com/joshradin/jodin-rs/issues/74
 
-use crate::compilation::jodin_vm_compiler::JodinVMCompiler;
+use crate::compilation::jodin_vm_compiler::{JodinVMCompiler, SingleUseCompiler};
 
 use crate::passes::analysis::analyze_with_preload;
 use crate::{optimize, JodinError};
-use jodin_common::compilation::{Compilable, Compiler};
+use jodin_common::compilation::{Compilable, Compiler, Context, MicroCompiler, PaddedWriter};
 use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::parsing::parse_program;
 use jodin_common::unit::{CompilationObject, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::BufReader;
 
+use crate::compilation::incremental::compilation_graph::{CompilationGraph, CompilationNode};
+use crate::compilation::object_path::ObjectPath;
+use crate::compilation::JodinVM;
+use jodin_common::ast::JodinNode;
+use jodin_common::core::tags::TagTools;
+use jodin_common::error::JodinResult;
+use jodin_common::identifier::Identifier;
+use jodin_common::utility::PathUtils;
+use petgraph::prelude::GraphMap;
 use std::path::{Path, PathBuf};
 
-mod compilation_graph;
+pub mod compilation_graph;
 mod declarations_holder;
 
 pub struct IncrementalCompiler {
-    object_path: Vec<PathBuf>,
+    object_path: ObjectPath,
+    code_path: PathBuf,
     output_directory: PathBuf,
     compilation_settings: CompilationSettings,
     translation_units: Vec<TranslationUnit>,
-    paths_added: HashSet<PathBuf>,
 }
 
 pub trait Incremental {
@@ -54,51 +63,109 @@ pub trait Incremental {
 }
 
 impl IncrementalCompiler {
-    pub fn new<P: AsRef<Path>>(output_path: P, mut settings: CompilationSettings) -> Self {
+    pub fn new<P: AsRef<Path>>(
+        object_path: ObjectPath,
+        code_path: P,
+        output_path: P,
+        mut settings: CompilationSettings,
+    ) -> Self {
         settings.target_directory = output_path.as_ref().to_path_buf();
         Self {
-            object_path: vec![],
+            object_path,
+            code_path: code_path.as_ref().to_path_buf(),
             output_directory: output_path.as_ref().to_path_buf(),
             compilation_settings: settings,
             translation_units: vec![],
-            paths_added: Default::default(),
         }
     }
 
-    /// Compiles a single input into a compilation objects
-    pub fn compile_to_object<S: AsRef<str>>(&mut self, input: S) -> Result<(), JodinError> {
-        let parsed = parse_program(input)?;
-        let (analyzed, _env) = analyze_with_preload(parsed, &self.translation_units)?;
-
-        let optimized = optimize(analyzed)?;
-
-        let mut compiler = JodinVMCompiler::default();
-
-        compiler.compile(&optimized, &self.compilation_settings)
-    }
-
-    /// Compiles a single file into a compilation objects
-    pub fn compile_file<P: AsRef<Path>>(&mut self, file: P) -> Result<(), JodinError> {
-        let input = std::fs::read_to_string(&file)?;
-        let parsed = parse_program(input)?;
-        let (analyzed, _env) = analyze_with_preload(parsed, &self.translation_units)?;
-
-        let optimized = optimize(analyzed)?;
-
-        let mut compiler = JodinVMCompiler::default();
-        compiler.set_originating_file_path(file);
-
-        compiler.compile(&optimized, &self.compilation_settings)
-    }
-
-    /// Add an incremental object to the compiler
-    pub fn add_incremental<Inc: Incremental>(&mut self, incremental: Inc) {
-        let path = incremental.representative_path();
-        if self.paths_added.contains(&path) {
-            panic!("{:?} already added to compiler", path);
+    // should compile if depended
+    fn should_compile(
+        &self,
+        input: &Path,
+        output: &Path,
+        graph: &CompilationGraph,
+    ) -> crate::Result<bool> {
+        if !output.exists() {
+            return Ok(true);
         }
-        self.translation_units
-            .extend(incremental.translation_units());
-        self.paths_added.insert(path);
+        let input_modified = input.metadata()?.modified()?;
+        let output_modified = output.metadata()?.modified()?;
+
+        // if output is older that input
+        if output_modified < input_modified {
+            return Ok(true);
+        }
+
+        let mut incoming = graph.dependencies(input);
+        for incoming_file in incoming {
+            // if incoming output doesn't exist or is older than an incoming file that has been modified
+            let incoming_file_output = self.as_output_file(incoming_file);
+            if !incoming_file_output.exists()
+                || output_modified < incoming_file.metadata()?.modified()?
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    fn as_output_file(&self, path: &Path) -> PathBuf {
+        PathBuf::from_iter(&[
+            &self.output_directory,
+            &self.code_path.relativize(path).unwrap(),
+        ])
+    }
+
+    /// Compile a compilation graph
+    pub fn compile(&mut self, graph: CompilationGraph) -> crate::Result<()> {
+        let nodes = graph.topological_order();
+        for node in nodes {
+            let input_path = &node.path;
+            let in_module = node
+                .parsed_node
+                .resolved_id()
+                .cloned()
+                .unwrap_or(Identifier::empty());
+
+            let output_path = self.as_output_file(input_path);
+
+            if !self.should_compile(input_path, &*output_path, &graph)? {
+                continue;
+            }
+
+            let mut compile = PreloadCompiler::new(&self.translation_units);
+            let mut compilation_object: CompilationObject =
+                compile.create_compilable(&node.parsed_node)?;
+
+            let created_units = compilation_object.units.clone();
+            self.translation_units.extend(created_units);
+
+            let output_file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(output_path)?;
+
+            let ref mut padded_writer = PaddedWriter::new(output_file);
+            Compilable::<JodinVM>::compile(compilation_object, &Context::new(), padded_writer)?;
+        }
+        Ok(())
+    }
+}
+
+pub struct PreloadCompiler<'a> {
+    translation_units: &'a Vec<TranslationUnit>,
+}
+
+impl<'a> PreloadCompiler<'a> {
+    pub fn new(translation_units: &'a Vec<TranslationUnit>) -> Self {
+        Self { translation_units }
+    }
+}
+
+impl<'a> MicroCompiler<JodinVM, CompilationObject> for PreloadCompiler<'a> {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<CompilationObject> {
+        todo!()
     }
 }

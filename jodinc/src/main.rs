@@ -2,6 +2,7 @@ use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::error::{JodinError, JodinErrorType, JodinResult};
 use jodin_common::init_logging;
 use jodinc::cli::JodinRsApp;
+use std::error::Error;
 
 use jodinc::passes::frontend::FilesToJodinNodeTool;
 
@@ -15,6 +16,7 @@ use std::process::exit;
 use std::str::FromStr;
 
 use clap::Parser;
+use jodinc::compilation::incremental::compilation_graph::CompilationGraphBuilder;
 use jodinc::compilation::object_path::ObjectPath;
 
 fn main() -> jodinc::Result<()> {
@@ -65,6 +67,8 @@ fn main() -> jodinc::Result<()> {
         }
     }
 
+    let code_path = args.code_path();
+
     let mut object_path: ObjectPath = ObjectPath::empty();
     let objects = args.objectpath.into_iter().collect::<Result<Vec<_>, _>>()?;
     object_path += ObjectPath::from_iter(objects);
@@ -74,31 +78,23 @@ fn main() -> jodinc::Result<()> {
 
     info!("Using object path: {0} ({0:?})", object_path);
 
-    exit(-1);
+    let mut incremental = IncrementalCompiler::new(
+        object_path,
+        &code_path,
+        &settings.target_directory.clone(),
+        settings,
+    );
 
-    let mut incremental = IncrementalCompiler::new(settings.target_directory.clone(), settings);
+    let mut compilation_graph_builder = CompilationGraphBuilder::new(&code_path);
 
-    let mut errors = vec![];
+    compilation_graph_builder.add_files(full_paths)?;
 
-    for path in full_paths {
-        match incremental.compile_file(path) {
-            Ok(()) => {}
-            Err(e) => {
-                errors.push(e);
-            }
-        }
+    let as_graph = compilation_graph_builder.build()?;
+
+    if let Err(error) = incremental.compile(as_graph) {
+        error!("{error}");
+        exit(1);
     }
 
-    match errors.as_slice() {
-        &[] => return Ok(()),
-        errors => {
-            for error in errors {
-                error!("{error}");
-                for line in format!("{:?}", error.backtrace()).lines() {
-                    error!("{}", line);
-                }
-            }
-        }
-    }
     Ok(())
 }

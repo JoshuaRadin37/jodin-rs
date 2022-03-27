@@ -9,6 +9,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::error::Error;
 
+use crate::compilation::object_path::ObjectPath;
 use std::io::{BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -152,6 +153,8 @@ impl ProjectBuilder {
         std::fs::create_dir_all(&output_path)?;
         trace!("Outputting to directory: {:?}", output_path);
         let mut compiler = IncrementalCompiler::new(
+            ObjectPath::empty(),
+            &std::env::current_dir().unwrap(),
             &output_path,
             self.settings.unwrap_or(CompilationSettings::default()),
         );
@@ -162,7 +165,8 @@ impl ProjectBuilder {
             }
             Some(ProjectBuilderInput::Raw(s)) => {
                 debug!("Compiling a string...");
-                compiler.compile_to_object(s)?;
+                todo!();
+                // compiler.compile_to_object(s)?;
             }
             Some(ProjectBuilderInput::File(p)) => {
                 let reading_file = std::fs::File::open(p)?;
@@ -170,7 +174,8 @@ impl ProjectBuilder {
                 let mut buffered_reader = BufReader::new(reading_file);
                 buffered_reader.read_to_end(&mut buffer)?;
                 let as_string = String::from_utf8(buffer)?;
-                compiler.compile_to_object(as_string)?;
+                todo!()
+                // compiler.compile_to_object(as_string)?;
             }
             Some(ProjectBuilderInput::Directory(_p)) => {
                 todo!()

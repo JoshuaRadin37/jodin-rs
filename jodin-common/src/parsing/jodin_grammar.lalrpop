@@ -3,6 +3,7 @@ use crate::error::{JodinResult};
 use crate::core::literal::Literal;
 
 use crate::core::operator::Operator;
+use crate::core::import::{Import, ImportType};
 use crate::ast::{JodinNode, JodinNodeType, CompoundType};
 use crate::core::tags::LabeledStatementTag;
 use crate::types::intermediate_type::IntermediateType;
@@ -31,7 +32,17 @@ grammar<'input>(input: &'input str);
 pub SingleIdentifier: Identifier =
     <s:"t_identifier"> => Identifier::from(s);
 
-pub Identifier: Identifier = Joined<"t_identifier", "::"> => Identifier::from_iter(<>);
+
+pub Identifier: Identifier = {
+    <head:"t_identifier"> <tail:IdentifierTail*> => {
+        let mut id_iter = vec![head];
+        id_iter.extend(tail);
+        Identifier::from_iter(id_iter)
+    }
+}
+
+#[inline]
+IdentifierTail = "::" <"t_identifier">;
 
 IdentifierNode: JodinNode = Identifier => JodinNode::new(JodinNodeType::Identifier(<>));
 
@@ -407,6 +418,7 @@ pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<TraitDefinition>,
     WithVisibility<FunctionDefinition>,
     WithVisibility<ExternDeclaration>,
+
     InNamespace,
 };
 
@@ -433,6 +445,28 @@ SpecialInNamespace: JodinResult<JodinNode> = {
         }.into_result()
     }
 }
+
+
+
+UsingIdentifier: JodinResult<JodinNode> = {
+    "using" <import:Import> ";" <next:UsingIdentifier> => {
+        JodinNodeType::ImportIdentifiers {
+            import_data: import,
+            affected: next?
+        }.into_result()
+    }
+}
+
+StartsWithImports<T> = <imports:UsingIdentifier> <next:T> => {
+
+};
+
+Import: Import = {
+    <Identifier> => Import::new(<>, ImportType::Direct),
+    "*" "in" <Identifier> => Import::new(<>, ImportType::Wildcard),
+
+}
+
 
 StorageModifier: StorageModifier ={
     "let" => StorageModifier::Local,

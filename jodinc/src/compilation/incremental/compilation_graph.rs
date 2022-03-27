@@ -6,7 +6,7 @@ use petgraph::Graph;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::ops::Index;
+use std::ops::{Deref, Index};
 use std::path::{Path, PathBuf};
 
 use crate::{CompilerError, Result};
@@ -56,17 +56,18 @@ impl CompilationNodeFactory {
     }
 
     pub fn build_node(&mut self, file_path: impl AsRef<Path>) -> Result<CompilationNode> {
-        todo!()
-    }
+        let path = file_path.as_ref();
+        let node = self.parse_file(path)?;
 
-    fn parse_file_from_identifier(&self, id: &Identifier) -> Result<JodinNode> {
-        let file_path = self.find_file(id)?;
-        self.parse_file(file)
+        let imported = imported_modules(&node);
+        info!("{:?} imports = {:?}", path.file_name().unwrap(), imported);
+
+        Ok(CompilationNode::new(path, node, imported))
     }
 
     fn parse_file(&self, path: &Path) -> Result<JodinNode> {
         let read_file = std::fs::read_to_string(path)?;
-        parse_program(read_file).into()
+        Ok(parse_program(read_file)?)
     }
 }
 
@@ -112,7 +113,7 @@ impl CompilationGraphBuilder {
     /// attempt to find a file using an identifier
     fn find_file(&self, id: &Identifier) -> Result<PathBuf> {
         let mut direct_path = self.base_path.clone();
-        direct_path.push(id);
+        direct_path.push(PathBuf::from(id));
         if direct_path.exists() {
             Ok(direct_path)
         } else {
@@ -180,16 +181,30 @@ impl CompilationGraphBuilder {
 
         graph.reverse();
 
-        Ok(CompilationGraph { graph })
+        Ok(CompilationGraph {
+            graph,
+            map: path_to_node,
+        })
     }
 }
 
 /// The completed compilation graph
 pub struct CompilationGraph {
     graph: DiGraph<CompilationNode, ()>,
+    map: HashMap<PathBuf, NodeIndex>,
 }
 
 impl CompilationGraph {
+    /// Gets a list of all dependent files of this file
+    pub fn dependents(&self, path: impl AsRef<Path>) -> Vec<&Path> {
+        todo!()
+    }
+
+    /// Get a list of files this file is dependent on
+    pub fn dependencies(&self, path: impl AsRef<Path>) -> Vec<&Path> {
+        todo!()
+    }
+
     pub fn topological_order(&self) -> Vec<&CompilationNode> {
         toposort(&self.graph, None)
             .expect("can only be built by a non-cyclical graph")

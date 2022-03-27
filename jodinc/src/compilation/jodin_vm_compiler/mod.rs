@@ -28,9 +28,9 @@ use std::io::Write;
 use std::marker::PhantomData;
 
 use jodin_common::block;
+use jodin_common::types::resolved_type::ResolvedType;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
-use jodin_common::types::resolved_type::ResolvedType;
 
 mod expression_compiler;
 mod function_compiler;
@@ -64,7 +64,6 @@ impl<'c> JodinVMCompiler<'c> {
             lifetime: PhantomData::default(),
         }
     }
-
 
     pub fn set_originating_file_path(&mut self, originating_file_path: impl AsRef<Path>) {
         self.originating_file_path = Some(originating_file_path.as_ref().to_path_buf());
@@ -116,7 +115,8 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
 
         match tree.r#type() {
             JodinNodeType::InNamespace {
-                namespace: found_namespace, inner
+                namespace: found_namespace,
+                inner,
             } => {
                 namespace = Some(found_namespace.resolved_id()?.clone());
                 to_compile = inner;
@@ -124,32 +124,35 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
             JodinNodeType::TopLevelDeclarations { .. } => {
                 to_compile = tree;
             }
-            _ => return Err(JodinError::new(JodinErrorType::InvalidTreeTypeGivenToCompiler("Must be a valid top level declartion".to_string())))
+            _ => {
+                return Err(JodinError::new(
+                    JodinErrorType::InvalidTreeTypeGivenToCompiler(
+                        "Must be a valid top level declartion".to_string(),
+                    ),
+                ))
+            }
         }
 
-
-
-
         let file_name = match &self.originating_file_path {
-            None => { OsString::from("a.out") }
-            Some(file) => { file.file_name().unwrap().to_os_string() }
+            None => OsString::from("a.out"),
+            Some(file) => file.file_name().unwrap().to_os_string(),
         };
 
         let id_to_path = match &namespace {
-            None => { PathBuf::new() }
-            Some(id) => { PathBuf::from(id.clone()) }
+            None => PathBuf::new(),
+            Some(id) => PathBuf::from(id.clone()),
         };
-
 
         let output_path = PathBuf::from_iter(&[
             settings.target_directory.as_path(),
             id_to_path.as_path(),
-            Path::new(&file_name)
+            Path::new(&file_name),
         ]);
 
         info!("Compiling to file {output_path:?}");
         let mut file_compiler = SingleUseCompiler::new(
-            output_path.clone(), namespace.unwrap_or(Identifier::empty())
+            output_path.clone(),
+            namespace.unwrap_or(Identifier::empty()),
         );
 
         let compilable = file_compiler.create_compilable(to_compile)?;
@@ -161,14 +164,13 @@ impl<'c> Compiler<JodinVM> for JodinVMCompiler<'c> {
 
         let mut writer = PaddedWriter::new(file);
 
-       Compilable::<JodinVM>::compile(compilable, &Context::new(), &mut writer)
+        Compilable::<JodinVM>::compile(compilable, &Context::new(), &mut writer)
     }
 }
 
-
 pub struct SingleUseCompiler {
     file: PathBuf,
-    in_module: Identifier
+    in_module: Identifier,
 }
 
 impl SingleUseCompiler {
@@ -187,7 +189,10 @@ impl MicroCompiler<JodinVM, CompilationObject> for SingleUseCompiler {
         let mut created: Vec<CompilationObject> = vec![];
 
         match tree.inner() {
-            JodinNodeType::InNamespace { namespace: _, inner } => {
+            JodinNodeType::InNamespace {
+                namespace: _,
+                inner,
+            } => {
                 created.push(self.create_compilable(inner)?);
             }
             JodinNodeType::TopLevelDeclarations { decs } => {
@@ -211,14 +216,17 @@ impl MicroCompiler<JodinVM, CompilationObject> for SingleUseCompiler {
             }
         }
 
-        let mut output = CompilationObject::new(self.file.clone(), self.in_module.clone(), translation_units, assembly.normalize());
+        let mut output = CompilationObject::new(
+            self.in_module.clone(),
+            translation_units,
+            assembly.normalize(),
+        );
         for object in created {
             output += object;
         }
         Ok(output)
     }
 }
-
 
 pub struct ObjectCompilerBuilder {
     dir_path: PathBuf,
@@ -297,7 +305,6 @@ impl MicroCompiler<JodinVM, CompilationObject> for TranslationObjectCompiler<'_>
                 let mut compiler = FunctionCompiler::default();
                 let block = compiler.create_compilable(tree)?;
                 let obj = CompilationObject::new(
-                    self.object_path(),
                     self.module_compiler.module_id.clone(),
                     vec![],
                     block.normalize(),
@@ -399,7 +406,6 @@ impl<'j> Module<'j> {
         }
         block.insert_asm(block![Asm::push(0u64), Asm::Return,]);
         Ok(CompilationObject::new(
-            path,
             self.identifier.clone(),
             translation_units,
             block.normalize(),
