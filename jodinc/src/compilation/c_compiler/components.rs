@@ -19,7 +19,7 @@ use jodin_common::types::primitives::Primitive;
 use std::fmt::Write;
 
 /// Represents a C translation Unit
-pub enum TranslationUnit {
+pub enum CTranslationUnit {
     /// Represents a C declaration
     Declaration {
         /// The C type of this declaration
@@ -48,23 +48,23 @@ pub enum TranslationUnit {
     },
 }
 
-impl SeparableCompilable for TranslationUnit {
+impl SeparableCompilable for CTranslationUnit {
     fn declaration<W: Write>(&self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         match self {
-            TranslationUnit::Declaration { c_type, identifier } => {
+            CTranslationUnit::Declaration { c_type, identifier } => {
                 let declaration = c_type.declarator(identifier.as_str());
                 writeln!(w, "{};", declaration)?;
                 Ok(())
             }
-            TranslationUnit::FunctionDefinition { function_info } => {
+            CTranslationUnit::FunctionDefinition { function_info } => {
                 function_info.declaration(context, w)
             }
-            TranslationUnit::Typedef { c_type, identifier } => {
+            CTranslationUnit::Typedef { c_type, identifier } => {
                 let declaration = c_type.declarator(identifier.as_str());
                 writeln!(w, "typedef {};", declaration)?;
                 Ok(())
             }
-            TranslationUnit::StructureDeclaration { name, .. } => {
+            CTranslationUnit::StructureDeclaration { name, .. } => {
                 writeln!(w, "struct {};", name)?;
                 Ok(())
             }
@@ -73,10 +73,10 @@ impl SeparableCompilable for TranslationUnit {
 
     fn definition<W: Write>(self, context: &Context, w: &mut PaddedWriter<W>) -> JodinResult<()> {
         match self {
-            TranslationUnit::FunctionDefinition { function_info } => {
+            CTranslationUnit::FunctionDefinition { function_info } => {
                 function_info.definition(context, w)
             }
-            TranslationUnit::StructureDeclaration { name, fields } => {
+            CTranslationUnit::StructureDeclaration { name, fields } => {
                 writeln!(w, "struct {} {{", name)?;
                 w.increase_pad();
                 for (c_type, id) in fields {

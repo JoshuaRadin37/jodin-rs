@@ -2,9 +2,9 @@
 
 use crate::compilation::object_path::ObjectPath;
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::ops::RangeInclusive;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 /// The jodinc compiler is an incremental compiler that searches for relevant imports from given
@@ -27,8 +27,8 @@ pub struct JodinRsApp {
     )]
     pub objectpath: Vec<crate::Result<ObjectPath>>,
     /// The compile path is the base directory to search for code files
-    #[clap(short = 'c', long = "codepath", parse(from_os_str))]
-    pub compilepath: Option<PathBuf>,
+    #[clap(short = 'c', long = "codepath")]
+    compilepath: Option<String>,
     /// Set project properties with `key[=value]`
     #[clap(short = 'P', parse(from_str = custom_key_value_pair), use_value_delimiter(false))]
     properties: Vec<(String, Option<String>)>,
@@ -49,6 +49,14 @@ impl JodinRsApp {
             .iter()
             .map(|(key, _)| key.as_str())
             .collect()
+    }
+
+    /// The compile path for this app
+    pub fn code_path(&self) -> PathBuf {
+        match &self.compilepath {
+            None => std::env::current_dir().expect("could not get a current directory."),
+            Some(c) => PathBuf::from(c),
+        }
     }
 }
 

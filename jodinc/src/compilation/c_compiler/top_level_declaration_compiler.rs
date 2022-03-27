@@ -1,4 +1,4 @@
-use crate::compilation::c_compiler::components::TranslationUnit;
+use crate::compilation::c_compiler::components::CTranslationUnit;
 use crate::compilation::c_compiler::{CType, CTypeCompiler, CValidIdentifier, FunctionCompiler};
 use crate::compilation::C99;
 use jodin_common::ast::{JodinNode, JodinNodeType};
@@ -9,8 +9,8 @@ use jodin_common::error::JodinResult;
 /// Compiles top level declarations in Jodin
 pub struct TopLevelDeclarationCompiler;
 
-impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
-    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
+impl MicroCompiler<C99, Vec<CTranslationUnit>> for TopLevelDeclarationCompiler {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<CTranslationUnit>> {
         use JodinNodeType::*;
         let mut ret = vec![];
         let node = tree.inner();
@@ -45,7 +45,7 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
                         name.get_tag::<ResolvedIdentityTag>()?.absolute_id().clone(),
                     );
 
-                    let translation_unit = TranslationUnit::Declaration {
+                    let translation_unit = CTranslationUnit::Declaration {
                         c_type: c_type.clone(),
                         identifier: c_name,
                     };
@@ -55,7 +55,7 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for TopLevelDeclarationCompiler {
             }
             FunctionDefinition { .. } => {
                 let info = FunctionCompiler.create_compilable(tree)?;
-                ret.push(TranslationUnit::FunctionDefinition {
+                ret.push(CTranslationUnit::FunctionDefinition {
                     function_info: info,
                 });
             }

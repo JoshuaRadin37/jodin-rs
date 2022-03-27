@@ -29,7 +29,7 @@ use crate::{optimize, JodinError};
 use jodin_common::compilation::{Compilable, Compiler};
 use jodin_common::compilation_settings::CompilationSettings;
 use jodin_common::parsing::parse_program;
-use jodin_common::unit::{CompilationObject, Incremental, TranslationUnit};
+use jodin_common::unit::{CompilationObject, TranslationUnit};
 use std::cell::RefCell;
 use std::collections::{HashSet, VecDeque};
 use std::fs::File;
@@ -38,6 +38,7 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 mod compilation_graph;
+mod declarations_holder;
 
 pub struct IncrementalCompiler {
     object_path: Vec<PathBuf>,

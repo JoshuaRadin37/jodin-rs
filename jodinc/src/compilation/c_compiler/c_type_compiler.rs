@@ -1,5 +1,5 @@
 use crate::compilation::c_compiler::{
-    CType, CTypeDeclarator, CTypeSpecifier, CValidIdentifier, TranslationUnit,
+    CTranslationUnit, CType, CTypeDeclarator, CTypeSpecifier, CValidIdentifier,
 };
 use crate::compilation::C99;
 use jodin_common::ast::{JodinNode, JodinNodeType};
@@ -10,8 +10,8 @@ use jodin_common::error::{JodinErrorType, JodinResult};
 /// Compile any type declaration into a c type declaration
 pub struct CTypeCompiler;
 
-impl MicroCompiler<C99, Vec<TranslationUnit>> for CTypeCompiler {
-    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
+impl MicroCompiler<C99, Vec<CTranslationUnit>> for CTypeCompiler {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<CTranslationUnit>> {
         match tree.inner() {
             JodinNodeType::StructureDefinition { .. } => {
                 let mut struct_compiler = StructCompiler;
@@ -27,8 +27,8 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for CTypeCompiler {
 /// Compiles specifically Structure definitions
 pub struct StructCompiler;
 
-impl MicroCompiler<C99, Vec<TranslationUnit>> for StructCompiler {
-    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<TranslationUnit>> {
+impl MicroCompiler<C99, Vec<CTranslationUnit>> for StructCompiler {
+    fn create_compilable(&mut self, tree: &JodinNode) -> JodinResult<Vec<CTranslationUnit>> {
         if let JodinNodeType::StructureDefinition { name, members } = tree.inner() {
             let name_id = name.get_tag::<ResolvedIdentityTag>()?.absolute_id();
             let c_name = CValidIdentifier::new(name_id.clone());
@@ -47,12 +47,12 @@ impl MicroCompiler<C99, Vec<TranslationUnit>> for StructCompiler {
                 }
             }
 
-            let declaration = TranslationUnit::StructureDeclaration {
+            let declaration = CTranslationUnit::StructureDeclaration {
                 name: c_name.clone(),
                 fields,
             };
 
-            let type_def = TranslationUnit::Typedef {
+            let type_def = CTranslationUnit::Typedef {
                 c_type: CType::new(
                     false,
                     CTypeSpecifier::NamedStruct {
