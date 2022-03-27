@@ -457,9 +457,7 @@ UsingIdentifier: JodinResult<JodinNode> = {
     }
 }
 
-StartsWithImports<T> = <imports:UsingIdentifier> <next:T> => {
 
-};
 
 Import: Import = {
     <Identifier> => Import::new(<>, ImportType::Direct),
