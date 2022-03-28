@@ -395,7 +395,13 @@ JumpStatement: ParseResult = {
 }
 
 
-pub JodinFile: JodinResult<JodinNode> = { TopLevelDeclarations, SpecialInNamespace }
+pub JodinFile: JodinResult<JodinNode> = { Program, SpecialInNamespace }
+
+Program: JodinResult<JodinNode> = {
+    <imports:UsingIdentifier*> <decs:TopLevelDeclarations> => {
+        decs
+    }
+}
 
 
 pub TopLevelDeclarations: JodinResult<JodinNode> = {
@@ -418,7 +424,6 @@ pub TopLevelDeclaration: JodinResult<JodinNode> = {
     WithVisibility<TraitDefinition>,
     WithVisibility<FunctionDefinition>,
     WithVisibility<ExternDeclaration>,
-
     InNamespace,
 };
 
@@ -438,22 +443,21 @@ InNamespace: JodinResult<JodinNode> = {
 }
 
 SpecialInNamespace: JodinResult<JodinNode> = {
-    "in" <id:Identifier> ";" <decs:TopLevelDeclarations> => {
+    "in" <id:Identifier> ";" <program:Program> => {
         JodinNodeType::InNamespace {
             namespace: JodinNodeType::Identifier(id).into(),
-            inner: decs?
+            inner: program?
         }.into_result()
     }
 }
 
 
 
-UsingIdentifier: JodinResult<JodinNode> = {
-    "using" <import:Import> ";" <next:UsingIdentifier> => {
+UsingIdentifier: JodinNode= {
+    "using" <import:Import> ";"  => {
         JodinNodeType::ImportIdentifiers {
             import_data: import,
-            affected: next?
-        }.into_result()
+        }.into()
     }
 }
 

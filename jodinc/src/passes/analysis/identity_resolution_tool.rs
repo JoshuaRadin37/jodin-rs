@@ -27,16 +27,19 @@ pub struct IdentityResolutionTool {
 }
 
 impl IdentityResolutionTool {
+    pub fn default_visibility() -> Registry<Visibility> {
+        let mut output = Registry::new();
+        output.insert_with_identifier(Visibility::Public, Identifier::from(NATIVE_OBJECT));
+        output
+    }
+
     /// Creates a new id resolution tool.
     pub fn new() -> Self {
-        let mut tool = Self {
+        Self {
             creator: IdentifierCreator::new(),
             setter: IdentifierSetter::new(),
-            visibility: Registry::new(),
-        };
-        tool.visibility
-            .insert_with_identifier(Visibility::Public, Identifier::from(NATIVE_OBJECT));
-        tool
+            visibility: Self::default_visibility(),
+        }
     }
 
     /// Creates a new id resolution tool.
@@ -105,7 +108,7 @@ pub struct IdentifierCreator {
 }
 
 impl IdentifierCreator {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { block_num: vec![0] }
     }
 
@@ -257,12 +260,7 @@ impl IdentifierCreator {
                     id_resolver.pop_namespace();
                 }
             }
-            JodinNodeType::ImportIdentifiers {
-                import_data: _,
-                affected,
-            } => {
-                self.create_identities(affected, id_resolver, visibility_registry)?;
-            }
+            JodinNodeType::ImportIdentifiers { import_data: _ } => {}
             JodinNodeType::TopLevelDeclarations { decs } => {
                 for child in decs {
                     self.create_identities(child, id_resolver, visibility_registry)?;
@@ -372,7 +370,7 @@ impl IdentifierCreator {
         output
     }
 
-    fn start(
+    pub fn start(
         &mut self,
         mut input: JodinNode,
         registry: &mut Registry<Visibility>,
@@ -460,14 +458,10 @@ impl IdentifierSetter {
                     id_resolver.pop_namespace();
                 }
             }
-            JodinNodeType::ImportIdentifiers {
-                import_data,
-                affected,
-            } => {
+            JodinNodeType::ImportIdentifiers { import_data } => {
                 let imports =
                     self.add_import_data(import_data, id_resolver, visibility_resolver)?;
-                // println!("Imports: {:#?}", self.aliases);
-                self.set_identities(affected, id_resolver, visibility_resolver)?;
+                // println!("Imports: {:#?}", self.aliases);r)?;
                 for import in imports {
                     self.aliases.remove_absolute_identity(&import)?;
                 }

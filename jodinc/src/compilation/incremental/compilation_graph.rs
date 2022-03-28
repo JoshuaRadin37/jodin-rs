@@ -3,13 +3,20 @@
 use jodin_common::ast::{JodinNode, JodinNodeType};
 use jodin_common::unit::TranslationUnit;
 use petgraph::Graph;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::ops::{Deref, Index};
 use std::path::{Path, PathBuf};
 
+use crate::compilation::incremental::variant::{
+    ExposingVariant, IncomingExposedUnit, IncomingVariant, OutgoingVariant, Variant,
+};
+use crate::passes::analysis::with_own_identities;
 use crate::{CompilerError, Result};
+use jodin_common::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::core::import::Import;
+use jodin_common::core::privacy::Visibility;
 use jodin_common::identifier::Identifier;
 use jodin_common::parsing::parse_program;
 use jodin_common::types::base_type::base_type;
@@ -25,16 +32,29 @@ use std::result::Result as StdResult;
 pub struct CompilationNode {
     pub path: PathBuf,
     pub parsed_node: JodinNode,
-    imported_modules: Vec<Identifier>,
+
+    identifier_resolver: Cell<Option<IdentifierResolver>>,
+    visibility: Cell<Option<Registry<Visibility>>>,
+
+    incoming: IncomingVariant,
+    outgoing: OutgoingVariant,
 }
 
-impl CompilationNode {
-    fn new(path: impl AsRef<Path>, node: JodinNode, imported_modules: Vec<Identifier>) -> Self {
-        Self {
-            path: path.as_ref().to_path_buf(),
-            parsed_node: node,
-            imported_modules,
-        }
+impl CompilationNode {}
+
+impl ExposingVariant for CompilationNode {
+    fn exposed_units(&self) -> &OutgoingVariant {
+        &self.outgoing
+    }
+}
+
+impl Variant for CompilationNode {
+    fn incoming_units(&self) -> &IncomingVariant {
+        &self.incoming
+    }
+
+    fn match_to_outgoing(&mut self, out: &OutgoingVariant) {
+        self.incoming.match_outgoing(out);
     }
 }
 
@@ -57,12 +77,25 @@ impl CompilationNodeFactory {
 
     pub fn build_node(&mut self, file_path: impl AsRef<Path>) -> Result<CompilationNode> {
         let path = file_path.as_ref();
-        let node = self.parse_file(path)?;
+        let mut node = self.parse_file(path)?;
 
+        let (node, resolver, visibility) = with_own_identities(node)?;
+        info!("{:?} created identifiers: {:#?}", path, visibility);
         let imported = imported_modules(&node);
-        info!("{:?} imports = {:?}", path.file_name().unwrap(), imported);
+        info!("{:?} imports = {:#?}", path.file_name().unwrap(), imported);
 
-        Ok(CompilationNode::new(path, node, imported))
+        let outgoing_variant: OutgoingVariant = OutgoingVariant::new(path, visibility.ids());
+        info!("{:?} outgoing: {:#?}", path, outgoing_variant);
+        let incoming_variant: IncomingVariant = imported.into_iter().collect();
+
+        Ok(CompilationNode {
+            path: path.to_path_buf(),
+            parsed_node: node,
+            identifier_resolver: Cell::new(Some(resolver)),
+            visibility: Cell::new(Some(visibility)),
+            incoming: incoming_variant,
+            outgoing: outgoing_variant,
+        })
     }
 
     fn parse_file(&self, path: &Path) -> Result<JodinNode> {
@@ -72,17 +105,10 @@ impl CompilationNodeFactory {
 }
 
 /// Gets the imports of a jodin node
-pub fn imported_modules(node: &JodinNode) -> Vec<Identifier> {
+pub fn imported_modules(node: &JodinNode) -> Vec<&Import> {
     let mut output = vec![];
     match node.inner() {
-        JodinNodeType::ImportIdentifiers {
-            import_data,
-            affected,
-        } => {
-            let imports = import_data.imported_modules();
-            output.extend(imports);
-            output.extend(imported_modules(affected));
-        }
+        JodinNodeType::ImportIdentifiers { import_data } => output.push(import_data),
         other => {
             for child in other.children() {
                 output.extend(imported_modules(child));
@@ -94,20 +120,22 @@ pub fn imported_modules(node: &JodinNode) -> Vec<Identifier> {
 
 /// The compilation graph builder.
 pub struct CompilationGraphBuilder {
-    graph: DiGraph<CompilationNode, ()>,
+    node_graph: DiGraph<CompilationNode, ()>,
     factory: CompilationNodeFactory,
     base_path: PathBuf,
     path_to_node: HashMap<PathBuf, NodeIndex>,
+    package_to_file: HashMap<Identifier, PathBuf>,
 }
 
 impl CompilationGraphBuilder {
     /// Create a new compilation graph
     pub fn new(base_path: impl AsRef<Path>) -> Self {
         Self {
-            graph: Graph::new(),
+            node_graph: Graph::new(),
             factory: CompilationNodeFactory::new(base_path.as_ref()),
             base_path: base_path.as_ref().to_path_buf(),
             path_to_node: HashMap::new(),
+            package_to_file: HashMap::new(),
         }
     }
     /// attempt to find a file using an identifier
@@ -126,7 +154,7 @@ impl CompilationGraphBuilder {
         let path = file.as_ref().to_path_buf();
         let compilation_node = self.factory.build_node(&path)?;
 
-        let index = self.graph.add_node(compilation_node);
+        let index = self.node_graph.add_node(compilation_node);
         self.path_to_node.insert(path, index);
         Ok(())
     }
@@ -140,10 +168,7 @@ impl CompilationGraphBuilder {
     }
 
     fn get_dependent_files(&self, node: &CompilationNode) -> Vec<PathBuf> {
-        node.imported_modules
-            .iter()
-            .filter_map(|id| self.find_file(id).ok())
-            .collect()
+        todo!()
     }
 
     /// Attempts to build the fully resolved compilation graph. Will fail if there's a cyclical file
@@ -151,7 +176,7 @@ impl CompilationGraphBuilder {
     pub fn build(mut self) -> Result<CompilationGraph> {
         let mut constructed_dependencies = map!();
         for &idx in self.path_to_node.values() {
-            let node = &self.graph[idx];
+            let node = &self.node_graph[idx];
             let dependent_node_indexes = self
                 .get_dependent_files(node)
                 .into_iter()
@@ -161,10 +186,11 @@ impl CompilationGraphBuilder {
         }
 
         let CompilationGraphBuilder {
-            mut graph,
+            node_graph: mut graph,
             factory: _,
             base_path: _,
             path_to_node,
+            package_to_file: _,
         } = self;
 
         for (idx, to_idxs) in constructed_dependencies {

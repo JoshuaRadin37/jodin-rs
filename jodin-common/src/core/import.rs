@@ -14,7 +14,7 @@ use crate::parsing::JodinRule;
 use pest::iterators::Pair;
 
 /// Represents an import "tree".
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct Import {
     id: Identifier,
     import_type: ImportType,
@@ -72,7 +72,7 @@ impl Import {
     }
 }
 /// The type of import
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum ImportType {
     /// Import exactly this identifier.
     Direct,

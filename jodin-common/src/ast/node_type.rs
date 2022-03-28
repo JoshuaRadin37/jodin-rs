@@ -178,8 +178,6 @@ pub enum JodinNodeType {
     ImportIdentifiers {
         /// The import data.
         import_data: Import,
-        /// The impacted node
-        affected: JodinNode,
     },
     /// A vector of nodes, not meant to be used except as a wrapper
     NodeVector {

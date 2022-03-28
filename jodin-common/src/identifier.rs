@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 /// Contains this id and an optional parent
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone, Serialize, Deserialize)]
 pub struct Identifier {
     parent: Option<Box<Identifier>>,
     id: String,
@@ -350,6 +350,12 @@ impl Identifier {
         }
 
         output
+    }
+}
+
+impl AsRef<Identifier> for Identifier {
+    fn as_ref(&self) -> &Identifier {
+        &self
     }
 }
 

@@ -1,5 +1,6 @@
 //! The main method for tracking, then resolving identifiers.
 
+use std::collections::hash_map::Keys;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::iter::FromIterator;
@@ -752,6 +753,10 @@ impl<T: Debug> Registry<T> {
         self.mapping
             .get_mut(&full_path)
             .ok_or(JodinErrorType::IdentifierDoesNotExist(path.clone()).into())
+    }
+
+    pub fn ids(&self) -> Keys<Identifier, T> {
+        self.mapping.keys()
     }
 }
 

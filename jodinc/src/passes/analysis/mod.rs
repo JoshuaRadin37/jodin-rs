@@ -4,11 +4,14 @@
 
 pub use identity_resolution_tool::IdentityResolutionTool;
 use jodin_common::ast::JodinNode;
+use jodin_common::core::identifier_resolution::{IdentifierResolver, Registry};
+use jodin_common::core::privacy::Visibility;
 pub use jodin_common::core::tags::BlockIdentifierTag;
 pub use jodin_common::core::tags::ResolvedIdentityTag;
 use jodin_common::error::JodinResult;
 use jodin_common::types::type_environment::TypeEnvironment;
 
+use crate::passes::analysis::identity_resolution_tool::IdentifierCreator;
 use crate::passes::analysis::type_resolution_tool::TypeResolutionTool;
 use jodin_common::unit::TranslationUnit;
 
@@ -47,4 +50,14 @@ where
     let environment = type_resolution.finish();
 
     Ok((tree, environment))
+}
+
+pub fn with_own_identities(
+    tree: JodinNode,
+) -> JodinResult<(JodinNode, IdentifierResolver, Registry<Visibility>)> {
+    let mut creator = IdentifierCreator::new();
+    let mut visibility = IdentityResolutionTool::default_visibility();
+    creator
+        .start(tree, &mut visibility)
+        .map(|(tree, resolver)| (tree, resolver, visibility))
 }

@@ -48,6 +48,12 @@ use std::path::{Path, PathBuf};
 
 pub mod compilation_graph;
 mod declarations_holder;
+pub mod variant;
+
+/// Individual files are compiled into this format
+pub const COMPILED_FILE_EXTENSION: &str = "grounds";
+/// An archive file containing compiled jodin files
+pub const ARCHIVE_FILE_EXTENSION: &str = "beans";
 
 pub struct IncrementalCompiler {
     object_path: ObjectPath,
@@ -115,6 +121,7 @@ impl IncrementalCompiler {
             &self.output_directory,
             &self.code_path.relativize(path).unwrap(),
         ])
+        .with_extension(COMPILED_FILE_EXTENSION)
     }
 
     /// Compile a compilation graph
