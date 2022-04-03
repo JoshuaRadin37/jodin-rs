@@ -33,6 +33,13 @@ impl Import {
         Import { id, import_type }
     }
 
+    pub fn with_children(id: Identifier, children: Vec<Import>) -> Self {
+        Import {
+            id,
+            import_type: ImportType::Children { children },
+        }
+    }
+
     /// The base identifier.
     pub fn id(&self) -> &Identifier {
         &self.id

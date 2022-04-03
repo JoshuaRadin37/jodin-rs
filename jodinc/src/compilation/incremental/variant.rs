@@ -28,19 +28,10 @@ impl ExposedUnit for IncomingExposedUnit {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum OutgoingVariantType {
-    /// Allowed to have more than one declarations
-    Module,
-    /// Only one of this can exist
-    Singleton,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OutgoingExposedUnit {
-    pub exposing_file: PathBuf,
-    pub identifier: Identifier,
-    pub unit_type: OutgoingVariantType,
+    exposing_file: PathBuf,
+    identifier: Identifier,
     _phantom: PhantomData<()>, // can't construct
 }
 
@@ -51,17 +42,20 @@ impl ExposedUnit for OutgoingExposedUnit {
 }
 
 impl OutgoingExposedUnit {
-    pub fn new(
-        exposing_file: PathBuf,
-        identifier: Identifier,
-        unit_type: OutgoingVariantType,
-    ) -> Self {
+    pub fn new(exposing_file: PathBuf, identifier: Identifier) -> Self {
         Self {
             exposing_file,
             identifier,
-            unit_type,
             _phantom: PhantomData,
         }
+    }
+
+    pub fn exposing_file(&self) -> &Path {
+        self.exposing_file.as_path()
+    }
+
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
     }
 }
 

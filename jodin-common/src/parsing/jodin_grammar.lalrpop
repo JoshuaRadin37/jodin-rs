@@ -454,7 +454,7 @@ SpecialInNamespace: JodinResult<JodinNode> = {
 
 
 UsingIdentifier: JodinNode= {
-    "using" <import:Import> ";"  => {
+    <import:Import> ";"  => {
         JodinNodeType::ImportIdentifiers {
             import_data: import,
         }.into()
@@ -464,9 +464,10 @@ UsingIdentifier: JodinNode= {
 
 
 Import: Import = {
-    <Identifier> => Import::new(<>, ImportType::Direct),
-    "*" "in" <Identifier> => Import::new(<>, ImportType::Wildcard),
-
+    "using" <Identifier> => Import::new(<>, ImportType::Direct),
+    "in" <module:Identifier> "using" "{" <ids:Identifier+> "}" =>
+       Import::with_children(module, ids.into_iter().map(|i| Import::new(i, ImportType::Direct)).collect()),
+    "in" <Identifier> "using" "*" => Import::new(<>, ImportType::Wildcard),
 }
 
 
