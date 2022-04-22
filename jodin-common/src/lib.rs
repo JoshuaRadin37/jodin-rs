@@ -5,22 +5,6 @@
 #![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![allow(dead_code)]
-#![warn(
-    bad_style,
-    const_err,
-    improper_ctypes,
-    non_shorthand_field_patterns,
-    no_mangle_generic_items,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    private_in_public,
-    unconditional_recursion,
-    unused_allocation,
-    unused_comparisons,
-    unused_parens,
-    while_true
-)]
 
 /// A shorthand way of creating a identifiers. Can either use identifiers or literals seperated by any token,
 /// token, or an expression seperated by a comma
